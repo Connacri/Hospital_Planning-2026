@@ -1,0 +1,6 @@
+{
+  "name": "E.H. Aïn El Türck — Gestion des Plannings & Tableaux d'Activité",
+  "description": "Système hospitalier de gestion, d'édition et d'impression des plannings médicaux, paramédicaux et tableaux d'activité mensuels (Service de Rhumatologie - E.H. d'Aïn El Türck - Dr. Medjber Tami) avec moteur local ObjectBox et export PDF A4 Portrait/Paysage.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

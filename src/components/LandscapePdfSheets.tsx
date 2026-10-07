@@ -1,0 +1,693 @@
+import React, { useState } from 'react';
+import { Plus, Trash2, PaintBucket } from 'lucide-react';
+import {
+  HospitalDocumentConfig,
+  StaffEntity,
+  buildStandard08h16hActivity,
+  buildGuard16hActivity,
+  buildHygiene12hActivity,
+} from '../db/objectboxEngine';
+import { EditableText } from './EditableText';
+
+interface LandscapePdfSheetsProps {
+  activeSubPage: 'all' | 'p1' | 'p2' | 'p3' | 'p4' | 'p5';
+  config: HospitalDocumentConfig;
+  staffList: StaffEntity[];
+  activePaintCode: string | null;
+  onUpdateConfig: (partial: Partial<HospitalDocumentConfig>) => void;
+  onUpdateStaffField: <K extends keyof StaffEntity>(id: number, field: K, value: StaffEntity[K]) => void;
+  onUpdateStaffDayCell: (id: number, day: number, code: string) => void;
+  onAddStaff: (entity: Omit<StaffEntity, 'id'>) => void;
+  onDeleteStaff: (id: number) => void;
+}
+
+const OfficialLandscapeHeader: React.FC<{
+  config: HospitalDocumentConfig;
+  onUpdateConfig: (partial: Partial<HospitalDocumentConfig>) => void;
+  compact?: boolean;
+}> = ({ config, onUpdateConfig, compact = false }) => (
+  <div className="font-pdf text-black">
+    <div className="text-center leading-tight">
+      <div className="text-[19px] font-semibold tracking-tight">
+        <EditableText
+          value={config.republicHeader}
+          onChange={(v) => onUpdateConfig({ republicHeader: v })}
+        />
+      </div>
+      <div className="text-[14.5px] font-medium tracking-tight mt-0.5">
+        <EditableText
+          value={config.ministryHeader}
+          onChange={(v) => onUpdateConfig({ ministryHeader: v })}
+        />
+      </div>
+      <div className="text-[14.5px] font-medium mt-1">
+        <EditableText
+          value={config.hospitalHeader}
+          onChange={(v) => onUpdateConfig({ hospitalHeader: v })}
+        />
+      </div>
+    </div>
+    <div className={`${compact ? 'mt-5' : 'mt-8'} text-[15.5px] font-medium`}>
+      <EditableText
+        value={config.unitTitle}
+        onChange={(v) => onUpdateConfig({ unitTitle: v })}
+      />
+    </div>
+  </div>
+);
+
+const OfficialLandscapeLegendAndFooter: React.FC<{
+  config: HospitalDocumentConfig;
+  onUpdateConfig: (partial: Partial<HospitalDocumentConfig>) => void;
+  showNb?: boolean;
+  showSignatures?: boolean;
+}> = ({ config, onUpdateConfig, showNb = true, showSignatures = true }) => {
+  const sigs = config.signaturesLandscape;
+  const updateSig = (idx: 0 | 1 | 2 | 3, val: string) => {
+    const next: [string, string, string, string] = [...sigs] as [string, string, string, string];
+    next[idx] = val;
+    onUpdateConfig({ signaturesLandscape: next });
+  };
+
+  const updateLegendItem = (idx: number, val: string) => {
+    const next = [...config.legendItems];
+    next[idx] = val;
+    onUpdateConfig({ legendItems: next });
+  };
+
+  return (
+    <div className="font-pdf text-black mt-2">
+      {/* Legend Row + Fait à Aïn el Türck */}
+      <div className="flex items-center justify-between text-[13.5px] font-medium">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          {config.legendItems.map((item, idx) => (
+            <EditableText
+              key={idx}
+              value={item}
+              onChange={(v) => updateLegendItem(idx, v)}
+            />
+          ))}
+        </div>
+        <div className="shrink-0 pl-4">
+          <EditableText
+            value={config.cityDateLandscape}
+            onChange={(v) => onUpdateConfig({ cityDateLandscape: v })}
+          />
+        </div>
+      </div>
+
+      {/* N.B Notice */}
+      {showNb && (
+        <div className="mt-1.5 text-[13px] font-medium">
+          <EditableText
+            value={config.nbNotice}
+            onChange={(v) => onUpdateConfig({ nbNotice: v })}
+          />
+        </div>
+      )}
+
+      {/* Signatures Row */}
+      {showSignatures && (
+        <div className="grid grid-cols-4 text-center text-[14.5px] font-medium mt-8 pb-2">
+          <div>
+            <EditableText value={sigs[0]} onChange={(v) => updateSig(0, v)} />
+          </div>
+          <div>
+            <EditableText value={sigs[1]} onChange={(v) => updateSig(1, v)} />
+          </div>
+          <div>
+            <EditableText value={sigs[2]} onChange={(v) => updateSig(2, v)} />
+          </div>
+          <div>
+            <EditableText value={sigs[3]} onChange={(v) => updateSig(3, v)} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+interface ActivityGridTableProps {
+  rows: StaffEntity[];
+  showTeamColumn: boolean;
+  config: HospitalDocumentConfig;
+  activePaintCode: string | null;
+  compactRows?: boolean;
+  onUpdateConfig: (partial: Partial<HospitalDocumentConfig>) => void;
+  onUpdateStaffField: <K extends keyof StaffEntity>(id: number, field: K, value: StaffEntity[K]) => void;
+  onUpdateStaffDayCell: (id: number, day: number, code: string) => void;
+  onDeleteStaff: (id: number) => void;
+}
+
+const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
+  rows,
+  showTeamColumn,
+  config,
+  activePaintCode,
+  compactRows = false,
+  onUpdateConfig,
+  onUpdateStaffField,
+  onUpdateStaffDayCell,
+  onDeleteStaff,
+}) => {
+  const [isMouseDown, setIsMouseDown] = useState(false);
+
+  const toggleDayBlackColumn = (dayNumber: number) => {
+    const nextCols = config.daysColumns.map((col) =>
+      col.day === dayNumber ? { ...col, isBlackColumn: !col.isBlackColumn } : col
+    );
+    onUpdateConfig({ daysColumns: nextCols });
+  };
+
+  const updateDayDowLabel = (dayNumber: number, newDow: string) => {
+    const nextCols = config.daysColumns.map((col) =>
+      col.day === dayNumber ? { ...col, dow: newDow } : col
+    );
+    onUpdateConfig({ daysColumns: nextCols });
+  };
+
+  const rowHeightClass = compactRows ? 'h-[21px] text-[12px]' : 'h-[26px] text-[13px]';
+
+  return (
+    <div
+      onMouseLeave={() => setIsMouseDown(false)}
+      onMouseUp={() => setIsMouseDown(false)}
+      className="w-full select-none"
+    >
+      <table className="w-full border-collapse border border-[#B5B5B5] text-center font-pdf">
+        <thead>
+          <tr className="h-[34px] text-[12px] leading-[1.15]">
+            <th className="border border-[#B5B5B5] bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black font-medium w-[14.5%] px-1">
+              <EditableText
+                value={config.pdf2NameColHeader}
+                onChange={(v) => onUpdateConfig({ pdf2NameColHeader: v })}
+              />
+            </th>
+            <th className="border border-[#B5B5B5] bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black font-medium w-[9.5%] px-1">
+              <EditableText
+                value={config.pdf2GradeColHeader}
+                onChange={(v) => onUpdateConfig({ pdf2GradeColHeader: v })}
+              />
+            </th>
+            {showTeamColumn && (
+              <th className="border border-[#B5B5B5] bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black font-medium w-[3.8%] px-0.5">
+                <EditableText
+                  value={config.pdf2TeamColHeader}
+                  onChange={(v) => onUpdateConfig({ pdf2TeamColHeader: v })}
+                />
+              </th>
+            )}
+            {config.daysColumns.map((col) => (
+              <th
+                key={col.day}
+                className={`group/th border border-[#B5B5B5] font-medium px-0.5 relative ${
+                  col.isBlackColumn
+                    ? 'bg-black text-white border-black'
+                    : 'bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black'
+                }`}
+              >
+                <div className="tabular-nums text-[11.5px] font-semibold leading-none">
+                  {col.day}
+                </div>
+                <div className="text-[10.5px] leading-none mt-0.5">
+                  <EditableText
+                    value={col.dow}
+                    darkSurface={col.isBlackColumn}
+                    onChange={(v) => updateDayDowLabel(col.day, v)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleDayBlackColumn(col.day)}
+                  title="Basculer colonne noire (Week-end)"
+                  className="no-print opacity-0 group-hover/th:opacity-100 absolute -top-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white rounded-full p-0.5 shadow"
+                >
+                  <PaintBucket className="w-2.5 h-2.5" />
+                </button>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((staff) => (
+            <tr
+              key={staff.id}
+              className={`group ${rowHeightClass} font-medium transition-colors`}
+            >
+              {/* Nom et Prénom */}
+              <td className="border border-[#CCCCCC] bg-white text-black px-1.5 relative whitespace-nowrap">
+                <EditableText
+                  value={staff.fullName}
+                  onChange={(v) => onUpdateStaffField(staff.id, 'fullName', v)}
+                />
+                <button
+                  type="button"
+                  onClick={() => onDeleteStaff(staff.id)}
+                  title="Supprimer cette ligne"
+                  className="no-print opacity-0 group-hover:opacity-100 absolute left-0.5 top-1/2 -translate-y-1/2 p-0.5 text-red-600 hover:bg-red-100 rounded"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </td>
+
+              {/* Grade */}
+              <td className="border border-[#CCCCCC] bg-white text-black px-1 whitespace-nowrap">
+                <EditableText
+                  value={staff.gradeLandscape}
+                  onChange={(v) => onUpdateStaffField(staff.id, 'gradeLandscape', v)}
+                />
+              </td>
+
+              {/* Équipe (only on Page 3 - 16h) */}
+              {showTeamColumn && (
+                <td className="border border-[#CCCCCC] bg-white text-black px-0.5 font-semibold">
+                  <EditableText
+                    value={staff.teamGroup}
+                    onChange={(v) => onUpdateStaffField(staff.id, 'teamGroup', v)}
+                  />
+                </td>
+              )}
+
+              {/* 31 Days Cells */}
+              {config.daysColumns.map((col) => {
+                const cellVal = staff.dailyActivity[col.day] ?? 'N';
+                const isBlack = col.isBlackColumn;
+
+                if (activePaintCode !== null) {
+                  return (
+                    <td
+                      key={col.day}
+                      onMouseDown={() => {
+                        setIsMouseDown(true);
+                        onUpdateStaffDayCell(staff.id, col.day, activePaintCode);
+                      }}
+                      onMouseEnter={() => {
+                        if (isMouseDown) {
+                          onUpdateStaffDayCell(staff.id, col.day, activePaintCode);
+                        }
+                      }}
+                      title={`Peindre "${activePaintCode}" (Jour ${col.day})`}
+                      className={`border cursor-crosshair px-0.5 transition-transform active:scale-95 ${
+                        isBlack
+                          ? 'bg-black text-white border-[#333333] hover:bg-neutral-800'
+                          : 'bg-white text-black border-[#CCCCCC] hover:bg-amber-100'
+                      }`}
+                    >
+                      <span>{cellVal}</span>
+                    </td>
+                  );
+                }
+
+                return (
+                  <td
+                    key={col.day}
+                    className={`border px-0.5 ${
+                      isBlack
+                        ? 'bg-black text-white border-[#222222]'
+                        : 'bg-white text-black border-[#CCCCCC]'
+                    }`}
+                  >
+                    <EditableText
+                      value={cellVal}
+                      darkSurface={isBlack}
+                      onChange={(v) => onUpdateStaffDayCell(staff.id, col.day, v)}
+                    />
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
+  activeSubPage,
+  config,
+  staffList,
+  activePaintCode,
+  onUpdateConfig,
+  onUpdateStaffField,
+  onUpdateStaffDayCell,
+  onAddStaff,
+  onDeleteStaff,
+}) => {
+  const medicalRows = staffList
+    .filter((s) => s.category === 'medical')
+    .sort((a, b) => a.landscapeOrder - b.landscapeOrder || a.id - b.id);
+
+  const paramedicalDayRows = staffList
+    .filter((s) => s.category === 'paramedical_day')
+    .sort((a, b) => a.landscapeOrder - b.landscapeOrder || a.id - b.id);
+
+  const paramedicalGuardRows = staffList
+    .filter((s) => s.category === 'paramedical_guard')
+    .sort((a, b) => a.landscapeOrder - b.landscapeOrder || a.id - b.id);
+
+  const hygieneRows = staffList
+    .filter((s) => s.category === 'hygiene')
+    .sort((a, b) => a.landscapeOrder - b.landscapeOrder || a.id - b.id);
+
+  const emptyWeekly = {
+    dimanche: 'SERVICE',
+    lundi: 'SERVICE',
+    mardi: 'SERVICE',
+    mercredi: 'SERVICE',
+    jeudi: 'SERVICE',
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-8 print-only-container">
+      {/* =====================================================================
+          PDF 2 — PAGE 1: TABLEAU D'ACTIVITÉ | 08h–16h — Personnel Médical
+         ===================================================================== */}
+      {(activeSubPage === 'all' || activeSubPage === 'p1') && (
+        <section
+          aria-label="PDF 2 Page 1 - Tableau d'activité Personnel Médical"
+          className="a4-landscape-sheet shadow-xl border border-slate-300 px-[10mm] py-[10mm] flex flex-col justify-between font-pdf"
+        >
+          <div>
+            <OfficialLandscapeHeader config={config} onUpdateConfig={onUpdateConfig} />
+
+            <div className="mt-12 mb-2.5 text-center">
+              <h2 className="text-[20px] font-semibold tracking-tight text-black">
+                <EditableText
+                  value={config.pdf2Page1Title}
+                  onChange={(v) => onUpdateConfig({ pdf2Page1Title: v })}
+                />
+              </h2>
+            </div>
+
+            <ActivityGridTable
+              rows={medicalRows}
+              showTeamColumn={false}
+              config={config}
+              activePaintCode={activePaintCode}
+              onUpdateConfig={onUpdateConfig}
+              onUpdateStaffField={onUpdateStaffField}
+              onUpdateStaffDayCell={onUpdateStaffDayCell}
+              onDeleteStaff={onDeleteStaff}
+            />
+
+            <div className="no-print mt-1.5 flex justify-end">
+              <button
+                type="button"
+                onClick={() =>
+                  onAddStaff({
+                    fullName: 'Nouveau Médecin',
+                    category: 'medical',
+                    rolePortrait: 'Médecin Généraliste',
+                    gradeLandscape: 'Médecin',
+                    obsPortrait: '08h-16h',
+                    horaireBlock: '08h-16h',
+                    teamGroup: '',
+                    portraitOrder: medicalRows.length + 1,
+                    landscapeOrder: medicalRows.length + 1,
+                    weeklySchedule: { ...emptyWeekly },
+                    dailyActivity: buildStandard08h16hActivity(),
+                  })
+                }
+                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-sans font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded"
+              >
+                <Plus className="w-3 h-3" />
+                <span>Ajouter ligne</span>
+              </button>
+            </div>
+
+            <OfficialLandscapeLegendAndFooter
+              config={config}
+              onUpdateConfig={onUpdateConfig}
+              showNb
+              showSignatures
+            />
+          </div>
+        </section>
+      )}
+
+      {/* =====================================================================
+          PDF 2 — PAGE 2: TABLEAU D'ACTIVITÉ | 08h–16h (Paramédical Jour)
+         ===================================================================== */}
+      {(activeSubPage === 'all' || activeSubPage === 'p2') && (
+        <section
+          aria-label="PDF 2 Page 2 - Tableau d'activité 08h-16h"
+          className="a4-landscape-sheet shadow-xl border border-slate-300 px-[10mm] py-[10mm] flex flex-col justify-between font-pdf"
+        >
+          <div>
+            <OfficialLandscapeHeader config={config} onUpdateConfig={onUpdateConfig} />
+
+            <div className="mt-8 mb-2 text-center">
+              <h2 className="text-[20px] font-semibold tracking-tight text-black">
+                <EditableText
+                  value={config.pdf2Page2Title}
+                  onChange={(v) => onUpdateConfig({ pdf2Page2Title: v })}
+                />
+              </h2>
+            </div>
+
+            <ActivityGridTable
+              rows={paramedicalDayRows}
+              showTeamColumn={false}
+              config={config}
+              activePaintCode={activePaintCode}
+              onUpdateConfig={onUpdateConfig}
+              onUpdateStaffField={onUpdateStaffField}
+              onUpdateStaffDayCell={onUpdateStaffDayCell}
+              onDeleteStaff={onDeleteStaff}
+            />
+
+            <div className="no-print mt-1.5 flex justify-end">
+              <button
+                type="button"
+                onClick={() =>
+                  onAddStaff({
+                    fullName: 'Nouvel Agent 08h-16h',
+                    category: 'paramedical_day',
+                    rolePortrait: 'ATS',
+                    gradeLandscape: 'ATS',
+                    obsPortrait: '',
+                    horaireBlock: '08h-16h',
+                    teamGroup: '',
+                    portraitOrder: paramedicalDayRows.length + 1,
+                    landscapeOrder: paramedicalDayRows.length + 1,
+                    weeklySchedule: { ...emptyWeekly },
+                    dailyActivity: buildStandard08h16hActivity(),
+                  })
+                }
+                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-sans font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded"
+              >
+                <Plus className="w-3 h-3" />
+                <span>Ajouter ligne</span>
+              </button>
+            </div>
+
+            <OfficialLandscapeLegendAndFooter
+              config={config}
+              onUpdateConfig={onUpdateConfig}
+              showNb
+              showSignatures
+            />
+          </div>
+        </section>
+      )}
+
+      {/* =====================================================================
+          PDF 2 — PAGE 3: TABLEAU D'ACTIVITÉ | 16h (Équipes A, B, C, D, E)
+         ===================================================================== */}
+      {(activeSubPage === 'all' || activeSubPage === 'p3') && (
+        <section
+          aria-label="PDF 2 Page 3 - Tableau d'activité 16h Équipes A-E"
+          className="a4-landscape-sheet shadow-xl border border-slate-300 px-[10mm] py-[8mm] flex flex-col justify-between font-pdf"
+        >
+          <div>
+            <OfficialLandscapeHeader
+              config={config}
+              onUpdateConfig={onUpdateConfig}
+              compact
+            />
+
+            <div className="mt-2 mb-1.5 text-center">
+              <h2 className="text-[20px] font-semibold tracking-tight text-black">
+                <EditableText
+                  value={config.pdf2Page3Title}
+                  onChange={(v) => onUpdateConfig({ pdf2Page3Title: v })}
+                />
+              </h2>
+            </div>
+
+            <ActivityGridTable
+              rows={paramedicalGuardRows}
+              showTeamColumn={true}
+              compactRows
+              config={config}
+              activePaintCode={activePaintCode}
+              onUpdateConfig={onUpdateConfig}
+              onUpdateStaffField={onUpdateStaffField}
+              onUpdateStaffDayCell={onUpdateStaffDayCell}
+              onDeleteStaff={onDeleteStaff}
+            />
+
+            <div className="no-print mt-1 flex justify-end">
+              <button
+                type="button"
+                onClick={() =>
+                  onAddStaff({
+                    fullName: 'Nouvel Agent 16h',
+                    category: 'paramedical_guard',
+                    rolePortrait: 'ATS',
+                    gradeLandscape: 'ATS',
+                    obsPortrait: '',
+                    horaireBlock: '16h',
+                    teamGroup: 'A',
+                    portraitOrder: paramedicalGuardRows.length + 1,
+                    landscapeOrder: paramedicalGuardRows.length + 1,
+                    weeklySchedule: { ...emptyWeekly },
+                    dailyActivity: buildGuard16hActivity('A'),
+                  })
+                }
+                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-sans font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded"
+              >
+                <Plus className="w-3 h-3" />
+                <span>Ajouter ligne</span>
+              </button>
+            </div>
+
+            <OfficialLandscapeLegendAndFooter
+              config={config}
+              onUpdateConfig={onUpdateConfig}
+              showNb={false}
+              showSignatures
+            />
+          </div>
+        </section>
+      )}
+
+      {/* =====================================================================
+          PDF 2 — PAGE 4: Page de suite / N.B & Signatures (exactement comme P.4 du PDF 2)
+         ===================================================================== */}
+      {(activeSubPage === 'all' || activeSubPage === 'p4') && (
+        <section
+          aria-label="PDF 2 Page 4 - Suite N.B et Signatures"
+          className="a4-landscape-sheet shadow-xl border border-slate-300 px-[10mm] py-[10mm] flex flex-col justify-between font-pdf"
+        >
+          <div>
+            <div className="text-center leading-tight text-black">
+              <div className="text-[19px] font-semibold tracking-tight">
+                <EditableText
+                  value={config.republicHeader}
+                  onChange={(v) => onUpdateConfig({ republicHeader: v })}
+                />
+              </div>
+              <div className="text-[14.5px] font-medium tracking-tight mt-0.5">
+                <EditableText
+                  value={config.ministryHeader}
+                  onChange={(v) => onUpdateConfig({ ministryHeader: v })}
+                />
+              </div>
+              <div className="text-[14.5px] font-medium mt-1">
+                <EditableText
+                  value={config.hospitalHeader}
+                  onChange={(v) => onUpdateConfig({ hospitalHeader: v })}
+                />
+              </div>
+            </div>
+
+            <div className="mt-8 text-[13.5px] font-medium text-black">
+              <EditableText
+                value={config.nbNotice}
+                onChange={(v) => onUpdateConfig({ nbNotice: v })}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 text-center text-[14.5px] font-medium text-black pb-16">
+            {config.signaturesLandscape.map((sig, idx) => (
+              <div key={idx}>
+                <EditableText
+                  value={sig}
+                  onChange={(v) => {
+                    const next = [...config.signaturesLandscape] as [
+                      string,
+                      string,
+                      string,
+                      string
+                    ];
+                    next[idx] = v;
+                    onUpdateConfig({ signaturesLandscape: next });
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* =====================================================================
+          PDF 2 — PAGE 5: TABLEAU D'ACTIVITÉ | Agents d'Hygiène — 12h
+         ===================================================================== */}
+      {(activeSubPage === 'all' || activeSubPage === 'p5') && (
+        <section
+          aria-label="PDF 2 Page 5 - Tableau d'activité Agents d'Hygiène 12h"
+          className="a4-landscape-sheet shadow-xl border border-slate-300 px-[10mm] py-[10mm] flex flex-col justify-between font-pdf"
+        >
+          <div>
+            <OfficialLandscapeHeader config={config} onUpdateConfig={onUpdateConfig} />
+
+            <div className="mt-24 mb-3 text-center">
+              <h2 className="text-[20px] font-semibold tracking-tight text-black">
+                <EditableText
+                  value={config.pdf2Page5Title}
+                  onChange={(v) => onUpdateConfig({ pdf2Page5Title: v })}
+                />
+              </h2>
+            </div>
+
+            <ActivityGridTable
+              rows={hygieneRows}
+              showTeamColumn={false}
+              config={config}
+              activePaintCode={activePaintCode}
+              onUpdateConfig={onUpdateConfig}
+              onUpdateStaffField={onUpdateStaffField}
+              onUpdateStaffDayCell={onUpdateStaffDayCell}
+              onDeleteStaff={onDeleteStaff}
+            />
+
+            <div className="no-print mt-1.5 flex justify-end">
+              <button
+                type="button"
+                onClick={() =>
+                  onAddStaff({
+                    fullName: "Nouvel Agent d'Hygiène",
+                    category: 'hygiene',
+                    rolePortrait: "Agent d'hygiène",
+                    gradeLandscape: "Agent d'hygiène",
+                    obsPortrait: '',
+                    horaireBlock: '12h',
+                    teamGroup: '',
+                    portraitOrder: hygieneRows.length + 1,
+                    landscapeOrder: hygieneRows.length + 1,
+                    weeklySchedule: { ...emptyWeekly },
+                    dailyActivity: buildHygiene12hActivity(hygieneRows.length % 2 === 0),
+                  })
+                }
+                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-sans font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded"
+              >
+                <Plus className="w-3 h-3" />
+                <span>Ajouter ligne</span>
+              </button>
+            </div>
+
+            <OfficialLandscapeLegendAndFooter
+              config={config}
+              onUpdateConfig={onUpdateConfig}
+              showNb
+              showSignatures
+            />
+          </div>
+        </section>
+      )}
+    </div>
+  );
+};
