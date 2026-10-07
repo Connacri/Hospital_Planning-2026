@@ -41,6 +41,7 @@ import {
   SlidersHorizontal,
   Tag,
   Repeat,
+  HeartHandshake,
 } from 'lucide-react';
 import {
   objectBoxStore,
@@ -60,6 +61,7 @@ import { LandscapePdfSheets } from './components/LandscapePdfSheets';
 import { QuickActionsFloatingMenu } from './components/QuickActionsFloatingMenu';
 import { GuardRotationModal } from './components/GuardRotationModal';
 import { LeaveTypesModal } from './components/LeaveTypesModal';
+import { MaternityModal } from './components/MaternityModal';
 import { translations, SupportedLocale } from './i18n/translations';
 
 type ActiveTab = 'documents' | 'staff' | 'objectbox' | 'flutter' | 'privacy';
@@ -100,14 +102,52 @@ export default function App() {
   const [portraitSubPage, setPortraitSubPage] = useState<'all' | 'p1' | 'p2' | 'p3'>('all');
   const [landscapeSubPage, setLandscapeSubPage] = useState<'all' | 'p1' | 'p2' | 'p3' | 'p4' | 'p5'>('all');
   const [activePaintCode, setActivePaintCode] = useState<string | null>(null);
-  const [zoomLevel, setZoomLevel] = useState<number>(100);
+  const [zoomLevel, setZoomLevel] = useState<number>(75);
+  const [printMarginMm, setPrintMarginMm] = useState<number>(8);
+
+  // Synchronise les marges d'impression physiques pour l'export PDF
+  useEffect(() => {
+    let styleEl = document.getElementById('print-margins-style') as HTMLStyleElement | null;
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = 'print-margins-style';
+      document.head.appendChild(styleEl);
+    }
+    styleEl.textContent = `@media print { @page { margin: ${printMarginMm}mm ${Math.max(5, printMarginMm - 1)}mm !important; size: auto; } }`;
+  }, [printMarginMm]);
+
+  // Affiche la page A4 verticale complètement de haut en bas sans coupure
+  const handleFitPageComplete = () => {
+    if (typeof window !== 'undefined') {
+      const availH = window.innerHeight - 230;
+      const target = orientation === 'portrait' ? 1122.5 : 794;
+      const calculated = Math.min(100, Math.max(45, Math.round((availH / target) * 100)));
+      setZoomLevel(calculated);
+    } else {
+      setZoomLevel(orientation === 'portrait' ? 68 : 75);
+    }
+  };
 
   const handleFitWidth = () => {
-    // If landscape: 75% fits all 31 days comfortably on screens >= 850px without horizontal scroll
     if (orientation === 'landscape') {
       setZoomLevel((current) => (current === 75 ? 100 : 75));
     } else {
-      setZoomLevel((current) => (current === 90 ? 100 : 90));
+      setZoomLevel((current) => (current === 88 ? 100 : 88));
+    }
+  };
+
+  const handleChangeOrientation = (nextO: 'portrait' | 'landscape') => {
+    setOrientation(nextO);
+    if (nextO === 'portrait') {
+      // Pour le A4 vertical, afficher complètement
+      if (typeof window !== 'undefined' && window.innerHeight < 950) {
+        const availH = window.innerHeight - 230;
+        setZoomLevel(Math.min(100, Math.max(45, Math.round((availH / 1122.5) * 100))));
+      } else {
+        setZoomLevel(70);
+      }
+    } else {
+      setZoomLevel(75);
     }
   };
 
@@ -140,9 +180,52 @@ export default function App() {
   const [queryLimit, setQueryLimit] = useState<number>(10);
   const [queryOrderField, setQueryOrderField] = useState<'name' | 'id' | 'portraitOrder'>('id');
 
-  // Modals for Guard Rotation & Leave Types Management
+  // Modals for Guard Rotation, Leave Types & Maternity Leave Management
   const [isGuardRotationModalOpen, setIsGuardRotationModalOpen] = useState(false);
   const [isLeaveTypesModalOpen, setIsLeaveTypesModalOpen] = useState(false);
+  const [isMaternityModalOpen, setIsMaternityModalOpen] = useState(false);
+  const [maternityTargetStaff, setMaternityTargetStaff] = useState<StaffEntity | null>(null);
+
+  const handleOpenMaternityModal = (staff?: StaffEntity) => {
+    setMaternityTargetStaff(staff || null);
+    setIsMaternityModalOpen(true);
+  };
+
+  const handleApplyMaternityLeave = (
+    staffId: number,
+    startDay: number,
+    endDay: number,
+    datesText: string,
+    label: string
+  ) => {
+    objectBoxStore.setMaternityLeave(staffId, startDay, endDay, datesText, label);
+    showToast('Congé de maternité configuré avec cellule fusionnée et mention officielle !');
+  };
+
+  const handleRemoveMaternityLeave = (staffId: number) => {
+    objectBoxStore.removeMaternityLeave(staffId);
+    showToast('Congé de maternité retiré.');
+  };
+
+  const handleToggleModificatif = () => {
+    const nextVal = !config.isModificatif;
+    objectBoxStore.updateConfig({ isModificatif: nextVal });
+    showToast(
+      nextVal
+        ? "Mode Modificatif activé : « (Modificatif) » s'affiche en gras sur les plannings."
+        : 'Mode Modificatif désactivé.'
+    );
+  };
+
+  const handleLoadApril2026 = () => {
+    objectBoxStore.loadAprilPreset();
+    showToast("Plannings officiels d'Avril 2026 (avec Bakhouche Sarra en maternité) chargés !");
+  };
+
+  const handleLoadJanuary2026 = () => {
+    objectBoxStore.loadJanuaryPreset();
+    showToast('Planning Janvier 2026 (Modificatif) chargé !');
+  };
 
   const handleApplyGuardRotation = (
     rotationOrder: string[],
@@ -769,7 +852,7 @@ class HospitalPdfGenerator {
                 <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs font-semibold">
                   <button
                     type="button"
-                    onClick={() => setOrientation('portrait')}
+                    onClick={() => handleChangeOrientation('portrait')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${
                       orientation === 'portrait'
                         ? 'bg-sky-600 text-white shadow-sm'
@@ -781,7 +864,7 @@ class HospitalPdfGenerator {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setOrientation('landscape')}
+                    onClick={() => handleChangeOrientation('landscape')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${
                       orientation === 'landscape'
                         ? 'bg-sky-600 text-white shadow-sm'
@@ -853,7 +936,7 @@ class HospitalPdfGenerator {
                             : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
                         }`}
                       >
-                        {t.viewAllInGroup} (1–5)
+                        {t.viewAllInGroup} (1–4)
                       </button>
                       <button
                         type="button"
@@ -892,18 +975,7 @@ class HospitalPdfGenerator {
                         type="button"
                         onClick={() => setLandscapeSubPage('p4')}
                         className={`px-2.5 py-1.5 rounded-lg border transition-colors ${
-                          landscapeSubPage === 'p4'
-                            ? 'bg-sky-600 border-sky-500 text-white font-medium'
-                            : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
-                        }`}
-                      >
-                        {t.actPage4GuardSignatures}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setLandscapeSubPage('p5')}
-                        className={`px-2.5 py-1.5 rounded-lg border transition-colors ${
-                          landscapeSubPage === 'p5'
+                          landscapeSubPage === 'p4' || landscapeSubPage === 'p5'
                             ? 'bg-sky-600 border-sky-500 text-white font-medium'
                             : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
                         }`}
@@ -912,6 +984,61 @@ class HospitalPdfGenerator {
                       </button>
                     </>
                   )}
+                </div>
+
+                {/* Modificatif Toggle Button */}
+                <button
+                  type="button"
+                  onClick={handleToggleModificatif}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${
+                    config.isModificatif
+                      ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-sm ring-2 ring-amber-300'
+                      : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800'
+                  }`}
+                  title="Afficher ou masquer la mention « (Modificatif) » en gras sur les titres des plannings"
+                >
+                  <span>(Modificatif)</span>
+                  <span
+                    className={`text-[9.5px] px-1 py-0.2 rounded font-mono font-extrabold ${
+                      config.isModificatif
+                        ? 'bg-slate-950 text-amber-300'
+                        : 'bg-slate-800 text-slate-400'
+                    }`}
+                  >
+                    {config.isModificatif ? 'ACTIF' : 'OFF'}
+                  </span>
+                </button>
+
+                {/* Maternity Quick Tool Button */}
+                <button
+                  type="button"
+                  onClick={() => handleOpenMaternityModal()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-800/80 bg-rose-950/60 hover:bg-rose-900 text-rose-200 text-xs font-bold transition-colors shadow-sm"
+                  title="Gérer le congé de maternité avec cellule fusionnée (Bakhouche Sarra)"
+                >
+                  <HeartHandshake className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Congé Maternité</span>
+                </button>
+
+                {/* Quick Presets (Avril 2026 & Janvier 2026) */}
+                <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs">
+                  <button
+                    type="button"
+                    onClick={handleLoadApril2026}
+                    className="px-2 py-1 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors text-[11px] font-medium"
+                    title="Charger le planning officiel d'Avril 2026 avec congé de maternité Bakhouche Sarra"
+                  >
+                    Avril 2026
+                  </button>
+                  <span className="text-slate-600">|</span>
+                  <button
+                    type="button"
+                    onClick={handleLoadJanuary2026}
+                    className="px-2 py-1 rounded hover:bg-slate-800 text-amber-300 hover:text-amber-200 transition-colors text-[11px] font-medium"
+                    title="Charger le planning Janvier 2026 avec mention (Modificatif)"
+                  >
+                    Janvier (Modif)
+                  </button>
                 </div>
 
                 {/* Mode Selector (Lecture Seule vs Édition) */}
@@ -973,13 +1100,38 @@ class HospitalPdfGenerator {
                   </button>
                   <button
                     type="button"
+                    onClick={handleFitPageComplete}
+                    title="Afficher la page complète (A4 vertical entier 100% visible de haut en bas)"
+                    className="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 text-[10px] font-bold transition-colors"
+                  >
+                    <Eye className="w-3 h-3" />
+                    <span>Page Entière</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={handleFitWidth}
-                    title="Ajuster l'affichage pour voir les 31 jours complets d'Octobre 2026 sans coupure"
+                    title="Ajuster la largeur pour voir les 30/31 jours sans coupure"
                     className="flex items-center gap-1 px-2 py-0.5 rounded bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800 text-[10px] font-bold transition-colors"
                   >
                     <Maximize2 className="w-3 h-3" />
-                    <span>Ajuster (31j)</span>
+                    <span>Largeur</span>
                   </button>
+                </div>
+
+                {/* PDF Print Margins Selector */}
+                <div className="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800 text-xs">
+                  <span className="text-slate-400 font-medium">Marges PDF :</span>
+                  <select
+                    value={printMarginMm}
+                    onChange={(e) => setPrintMarginMm(Number(e.target.value))}
+                    className="bg-slate-950 text-white font-semibold text-xs border border-slate-700 rounded px-1.5 py-0.5 focus:outline-none focus:border-sky-500"
+                    title="Marges d'impression physiques pour l'export PDF (8mm officiel recommandé)"
+                  >
+                    <option value={5}>Fines (5 mm)</option>
+                    <option value={8}>Standard (8 mm)</option>
+                    <option value={10}>Confort (10 mm)</option>
+                    <option value={12}>Larges (12 mm)</option>
+                  </select>
                 </div>
               </div>
 
@@ -1072,6 +1224,7 @@ class HospitalPdfGenerator {
               style={{
                 transform: zoomLevel !== 100 ? `scale(${zoomLevel / 100})` : undefined,
                 transformOrigin: 'top center',
+                marginBottom: zoomLevel < 100 ? `-${Math.round((100 - zoomLevel) * 11.2)}px` : undefined,
               }}
             >
               {orientation === 'portrait' ? (
@@ -1087,6 +1240,7 @@ class HospitalPdfGenerator {
                   onDeleteStaff={handleDeleteStaff}
                   onOpenGuardRotationModal={() => setIsGuardRotationModalOpen(true)}
                   onOpenLeaveTypesModal={() => setIsLeaveTypesModalOpen(true)}
+                  onOpenMaternityModal={handleOpenMaternityModal}
                 />
               ) : (
                 <LandscapePdfSheets
@@ -1102,6 +1256,7 @@ class HospitalPdfGenerator {
                   onDeleteStaff={handleDeleteStaff}
                   onOpenGuardRotationModal={() => setIsGuardRotationModalOpen(true)}
                   onOpenLeaveTypesModal={() => setIsLeaveTypesModalOpen(true)}
+                  onOpenMaternityModal={handleOpenMaternityModal}
                 />
               )}
             </div>
@@ -1111,14 +1266,20 @@ class HospitalPdfGenerator {
               isReadOnly={isReadOnly}
               onToggleReadOnly={toggleReadOnly}
               orientation={orientation}
-              onChangeOrientation={setOrientation}
+              onChangeOrientation={handleChangeOrientation}
               zoomLevel={zoomLevel}
               onChangeZoom={setZoomLevel}
               onResetZoom={() => setZoomLevel(100)}
               onFitWidth={handleFitWidth}
+              onFitPageComplete={handleFitPageComplete}
               onPrint={() => window.print()}
               onOpenGuardRotationModal={() => setIsGuardRotationModalOpen(true)}
               onOpenLeaveTypesModal={() => setIsLeaveTypesModalOpen(true)}
+              onOpenMaternityModal={() => handleOpenMaternityModal()}
+              isModificatif={config.isModificatif}
+              onToggleModificatif={handleToggleModificatif}
+              onLoadAprilPreset={handleLoadApril2026}
+              onLoadJanuaryPreset={handleLoadJanuary2026}
               locale={locale}
               t={t}
             />
@@ -1870,6 +2031,17 @@ class HospitalPdfGenerator {
         onAddLeaveType={handleAddLeaveType}
         onUpdateLeaveType={handleUpdateLeaveType}
         onDeleteLeaveType={handleDeleteLeaveType}
+      />
+
+      {/* MODAL: MATERNITY LEAVE (MERGED CELL & OFFICIAL OBS) */}
+      <MaternityModal
+        isOpen={isMaternityModalOpen}
+        onClose={() => setIsMaternityModalOpen(false)}
+        staffList={staffList}
+        daysColumns={config.daysColumns}
+        targetStaff={maternityTargetStaff}
+        onApplyMaternityLeave={handleApplyMaternityLeave}
+        onRemoveMaternityLeave={handleRemoveMaternityLeave}
       />
 
       {/* FOOTER */}

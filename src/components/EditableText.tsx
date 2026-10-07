@@ -53,13 +53,29 @@ export const EditableText: React.FC<EditableTextProps> = ({
     }
   };
 
+  const renderFormattedLine = (line: string) => {
+    if (/\(Modificatif\)/i.test(line)) {
+      const parts = line.split(/(\(Modificatif\))/i);
+      return parts.map((part, pIdx) =>
+        /^\(Modificatif\)$/i.test(part) ? (
+          <strong key={pIdx} className="font-bold text-black font-pdf">
+            (Modificatif)
+          </strong>
+        ) : (
+          <React.Fragment key={pIdx}>{part}</React.Fragment>
+        )
+      );
+    }
+    return line;
+  };
+
   if (readOnly) {
     return (
       <span className={`inline-block select-text ${className}`}>
         {value ? (
           value.split('\n').map((line, i, arr) => (
             <React.Fragment key={i}>
-              {line}
+              {renderFormattedLine(line)}
               {i < arr.length - 1 && <br />}
             </React.Fragment>
           ))
@@ -133,7 +149,7 @@ export const EditableText: React.FC<EditableTextProps> = ({
       {value ? (
         value.split('\n').map((line, i, arr) => (
           <React.Fragment key={i}>
-            {line}
+            {renderFormattedLine(line)}
             {i < arr.length - 1 && <br />}
           </React.Fragment>
         ))

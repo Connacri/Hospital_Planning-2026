@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, PaintBucket, Repeat, Tag } from 'lucide-react';
+import { Plus, Trash2, PaintBucket, Repeat, Tag, HeartHandshake } from 'lucide-react';
 import {
   HospitalDocumentConfig,
   StaffEntity,
   buildStandard08h16hActivity,
   buildGuard16hActivity,
   buildHygiene12hActivity,
+  getStaffMaternitySpan,
 } from '../db/objectboxEngine';
 import { EditableText } from './EditableText';
 
@@ -22,6 +23,7 @@ interface LandscapePdfSheetsProps {
   onDeleteStaff: (id: number) => void;
   onOpenGuardRotationModal?: () => void;
   onOpenLeaveTypesModal?: () => void;
+  onOpenMaternityModal?: (staff?: StaffEntity) => void;
 }
 
 const OfficialLandscapeHeader: React.FC<{
@@ -32,21 +34,21 @@ const OfficialLandscapeHeader: React.FC<{
 }> = ({ config, onUpdateConfig, compact = false, readOnly = false }) => (
   <div className="font-pdf text-black">
     <div className="text-center leading-tight">
-      <div className="text-[19px] font-semibold tracking-tight">
+      <div className={`${compact ? 'text-[17px]' : 'text-[19px]'} font-semibold tracking-tight`}>
         <EditableText
           value={config.republicHeader}
           readOnly={readOnly}
           onChange={(v) => onUpdateConfig({ republicHeader: v })}
         />
       </div>
-      <div className="text-[14.5px] font-medium tracking-tight mt-0.5">
+      <div className={`${compact ? 'text-[13px]' : 'text-[14.5px]'} font-medium tracking-tight mt-0.5`}>
         <EditableText
           value={config.ministryHeader}
           readOnly={readOnly}
           onChange={(v) => onUpdateConfig({ ministryHeader: v })}
         />
       </div>
-      <div className="text-[14.5px] font-medium mt-1">
+      <div className={`${compact ? 'text-[13px]' : 'text-[14.5px]'} font-medium mt-0.5`}>
         <EditableText
           value={config.hospitalHeader}
           readOnly={readOnly}
@@ -54,7 +56,7 @@ const OfficialLandscapeHeader: React.FC<{
         />
       </div>
     </div>
-    <div className={`${compact ? 'mt-5' : 'mt-8'} text-[15.5px] font-medium`}>
+    <div className={`${compact ? 'mt-2 text-[14px]' : 'mt-6 text-[15.5px]'} font-medium`}>
       <EditableText
         value={config.unitTitle}
         readOnly={readOnly}
@@ -119,9 +121,9 @@ const OfficialLandscapeLegendAndFooter: React.FC<{
         </div>
       </div>
 
-      {/* N.B Notice */}
+      {/* N.B Notice placed directly under the table */}
       {showNb && (
-        <div className="mt-1.5 text-[13px] font-medium">
+        <div className="mt-1 text-[11.5px] font-medium">
           <EditableText
             value={config.nbNotice}
             readOnly={readOnly}
@@ -132,7 +134,7 @@ const OfficialLandscapeLegendAndFooter: React.FC<{
 
       {/* Signatures Row */}
       {showSignatures && (
-        <div className="grid grid-cols-4 text-center text-[14.5px] font-medium mt-8 pb-2">
+        <div className="grid grid-cols-4 text-center text-[13px] font-medium mt-2 pb-0.5">
           <div>
             <EditableText value={sigs[0]} readOnly={readOnly} onChange={(v) => updateSig(0, v)} />
           </div>
@@ -162,6 +164,7 @@ interface ActivityGridTableProps {
   onUpdateStaffField: <K extends keyof StaffEntity>(id: number, field: K, value: StaffEntity[K]) => void;
   onUpdateStaffDayCell: (id: number, day: number, code: string) => void;
   onDeleteStaff: (id: number) => void;
+  onOpenMaternityModal?: (staff?: StaffEntity) => void;
 }
 
 const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
@@ -175,6 +178,7 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
   onUpdateStaffField,
   onUpdateStaffDayCell,
   onDeleteStaff,
+  onOpenMaternityModal,
 }) => {
   const [isMouseDown, setIsMouseDown] = useState(false);
 
@@ -192,7 +196,7 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
     onUpdateConfig({ daysColumns: nextCols });
   };
 
-  const rowHeightClass = compactRows ? 'h-[21px] text-[12px]' : 'h-[26px] text-[13px]';
+  const rowHeightClass = compactRows ? 'h-[17px] text-[11px] leading-tight' : 'h-[25px] text-[12.5px]';
 
   return (
     <div
@@ -202,7 +206,7 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
     >
       <table className="w-full border-collapse border border-[#B5B5B5] text-center font-pdf">
         <thead>
-          <tr className="h-[34px] text-[12px] leading-[1.15]">
+          <tr className={`${compactRows ? 'h-[24px]' : 'h-[32px]'} text-[11.5px] leading-[1.1]`}>
             <th className="border border-[#B5B5B5] bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black font-medium w-[14.5%] px-1">
               <EditableText
                 value={config.pdf2NameColHeader}
@@ -305,69 +309,123 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
                 </td>
               )}
 
-              {/* 31 Days Cells */}
-              {config.daysColumns.map((col) => {
-                const cellVal = staff.dailyActivity[col.day] ?? 'N';
-                const isBlack = col.isBlackColumn;
+              {/* 30/31 Days Cells with Horizontally Merged Cells for Maternity Leave */}
+              {(() => {
+                const matSpan = getStaffMaternitySpan(staff, config.daysColumns);
+                const cells: React.ReactNode[] = [];
+                let cIdx = 0;
 
-                if (readOnly) {
-                  return (
-                    <td
-                      key={col.day}
-                      className={`border px-0.5 select-none ${
-                        isBlack
-                          ? 'bg-black text-white border-[#222222]'
-                          : 'bg-white text-black border-[#CCCCCC]'
-                      }`}
-                    >
-                      <span>{cellVal}</span>
-                    </td>
-                  );
-                }
+                while (cIdx < config.daysColumns.length) {
+                  const col = config.daysColumns[cIdx];
 
-                if (activePaintCode !== null) {
-                  return (
-                    <td
-                      key={col.day}
-                      onMouseDown={() => {
-                        setIsMouseDown(true);
-                        onUpdateStaffDayCell(staff.id, col.day, activePaintCode);
-                      }}
-                      onMouseEnter={() => {
-                        if (isMouseDown) {
+                  // Check if this column starts a maternity leave merged span
+                  if (matSpan && col.day === matSpan.startDay) {
+                    let spanCount = 0;
+                    let walkIdx = cIdx;
+                    while (
+                      walkIdx < config.daysColumns.length &&
+                      config.daysColumns[walkIdx].day <= matSpan.endDay
+                    ) {
+                      spanCount++;
+                      walkIdx++;
+                    }
+
+                    cells.push(
+                      <td
+                        key={`mat-merged-${staff.id}-${col.day}`}
+                        colSpan={spanCount}
+                        onClick={() => {
+                          if (!readOnly && onOpenMaternityModal) {
+                            onOpenMaternityModal(staff);
+                          }
+                        }}
+                        className={`border border-[#CCCCCC] bg-white text-black font-semibold text-[13px] text-center align-middle px-2 select-none tracking-normal ${
+                          !readOnly ? 'cursor-pointer hover:bg-rose-50' : ''
+                        }`}
+                        title={`Congé de Maternité (Jours ${matSpan.startDay} à ${matSpan.endDay}) - Cellule fusionnée`}
+                      >
+                        <div className="flex items-center justify-center gap-1.5 py-0.5">
+                          <span className="font-semibold text-black tracking-normal">
+                            {matSpan.label || 'Congé de Maternité'}
+                          </span>
+                          {!readOnly && (
+                            <span className="no-print text-[9px] text-rose-700 bg-rose-100 font-normal px-1 py-0.2 rounded border border-rose-200">
+                              J{matSpan.startDay}-J{matSpan.endDay}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    );
+
+                    cIdx = walkIdx;
+                    continue;
+                  }
+
+                  // Standard Day Cell
+                  const cellVal = staff.dailyActivity[col.day] ?? 'N';
+                  const isBlack = col.isBlackColumn;
+
+                  if (readOnly) {
+                    cells.push(
+                      <td
+                        key={col.day}
+                        className={`border px-0.5 select-none ${
+                          isBlack
+                            ? 'bg-black text-white border-[#222222]'
+                            : 'bg-white text-black border-[#CCCCCC]'
+                        }`}
+                      >
+                        <span>{cellVal}</span>
+                      </td>
+                    );
+                  } else if (activePaintCode !== null) {
+                    cells.push(
+                      <td
+                        key={col.day}
+                        onMouseDown={() => {
+                          setIsMouseDown(true);
                           onUpdateStaffDayCell(staff.id, col.day, activePaintCode);
-                        }
-                      }}
-                      title={`Peindre "${activePaintCode}" (Jour ${col.day})`}
-                      className={`border cursor-crosshair px-0.5 transition-transform active:scale-95 ${
-                        isBlack
-                          ? 'bg-black text-white border-[#333333] hover:bg-neutral-800'
-                          : 'bg-white text-black border-[#CCCCCC] hover:bg-amber-100'
-                      }`}
-                    >
-                      <span>{cellVal}</span>
-                    </td>
-                  );
+                        }}
+                        onMouseEnter={() => {
+                          if (isMouseDown) {
+                            onUpdateStaffDayCell(staff.id, col.day, activePaintCode);
+                          }
+                        }}
+                        title={`Peindre "${activePaintCode}" (Jour ${col.day})`}
+                        className={`border cursor-crosshair px-0.5 transition-transform active:scale-95 ${
+                          isBlack
+                            ? 'bg-black text-white border-[#333333] hover:bg-neutral-800'
+                            : 'bg-white text-black border-[#CCCCCC] hover:bg-amber-100'
+                        }`}
+                      >
+                        <span>{cellVal}</span>
+                      </td>
+                    );
+                  } else {
+                    cells.push(
+                      <td
+                        key={col.day}
+                        className={`border px-0.5 ${
+                          isBlack
+                            ? 'bg-black text-white border-[#222222]'
+                            : 'bg-white text-black border-[#CCCCCC]'
+                        }`}
+                      >
+                        <EditableText
+                          value={cellVal}
+                          darkSurface={isBlack}
+                          readOnly={readOnly}
+                          onChange={(v) => onUpdateStaffDayCell(staff.id, col.day, v)}
+                        />
+                      </td>
+                    );
+                  }
+
+                  cIdx++;
                 }
 
-                return (
-                  <td
-                    key={col.day}
-                    className={`border px-0.5 ${
-                      isBlack
-                        ? 'bg-black text-white border-[#222222]'
-                        : 'bg-white text-black border-[#CCCCCC]'
-                    }`}
-                  >
-                    <EditableText
-                      value={cellVal}
-                      darkSurface={isBlack}
-                      readOnly={readOnly}
-                      onChange={(v) => onUpdateStaffDayCell(staff.id, col.day, v)}
-                    />
-                  </td>
-                );
-              })}
+                return cells;
+              })()}
             </tr>
           ))}
         </tbody>
@@ -389,6 +447,7 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
   onDeleteStaff,
   onOpenGuardRotationModal,
   onOpenLeaveTypesModal,
+  onOpenMaternityModal,
 }) => {
   const medicalRows = staffList
     .filter((s) => s.category === 'medical')
@@ -422,18 +481,23 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
       {(activeSubPage === 'all' || activeSubPage === 'p1') && (
         <section
           aria-label="PDF 2 Page 1 - Tableau d'activité Personnel Médical"
-          className="a4-landscape-sheet shadow-xl border border-slate-300 px-[10mm] py-[10mm] flex flex-col justify-between font-pdf"
+          className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
         >
           <div>
             <OfficialLandscapeHeader config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} />
 
             <div className="mt-12 mb-2.5 text-center">
-              <h2 className="text-[20px] font-semibold tracking-tight text-black">
+              <h2 className="text-[20px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
                 <EditableText
                   value={config.pdf2Page1Title}
                   readOnly={readOnly}
                   onChange={(v) => onUpdateConfig({ pdf2Page1Title: v })}
                 />
+                {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf2Page1Title) && (
+                  <strong className="font-bold text-black font-pdf">
+                    (Modificatif)
+                  </strong>
+                )}
               </h2>
             </div>
 
@@ -447,6 +511,7 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
               onUpdateStaffField={onUpdateStaffField}
               onUpdateStaffDayCell={onUpdateStaffDayCell}
               onDeleteStaff={onDeleteStaff}
+              onOpenMaternityModal={onOpenMaternityModal}
             />
 
             {!readOnly && (
@@ -494,18 +559,23 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
       {(activeSubPage === 'all' || activeSubPage === 'p2') && (
         <section
           aria-label="PDF 2 Page 2 - Tableau d'activité 08h-16h"
-          className="a4-landscape-sheet shadow-xl border border-slate-300 px-[10mm] py-[10mm] flex flex-col justify-between font-pdf"
+          className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
         >
           <div>
             <OfficialLandscapeHeader config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} />
 
             <div className="mt-12 mb-2.5 text-center">
-              <h2 className="text-[20px] font-semibold tracking-tight text-black">
+              <h2 className="text-[20px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
                 <EditableText
                   value={config.pdf2Page2Title}
                   readOnly={readOnly}
                   onChange={(v) => onUpdateConfig({ pdf2Page2Title: v })}
                 />
+                {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf2Page2Title) && (
+                  <strong className="font-bold text-black font-pdf">
+                    (Modificatif)
+                  </strong>
+                )}
               </h2>
             </div>
 
@@ -519,6 +589,7 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
               onUpdateStaffField={onUpdateStaffField}
               onUpdateStaffDayCell={onUpdateStaffDayCell}
               onDeleteStaff={onDeleteStaff}
+              onOpenMaternityModal={onOpenMaternityModal}
             />
 
             {!readOnly && (
@@ -561,12 +632,12 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
       )}
 
       {/* =====================================================================
-          PDF 2 — PAGE 3: TABLEAU D'ACTIVITÉ | 16h (Équipes A, B, C, D, E)
+          PDF 2 — PAGE 3: TABLEAU D'ACTIVITÉ | 24h / 16h (Équipes A, B, C, D)
          ===================================================================== */}
       {(activeSubPage === 'all' || activeSubPage === 'p3') && (
         <section
-          aria-label="PDF 2 Page 3 - Tableau d'activité 16h Équipes A-E"
-          className="a4-landscape-sheet shadow-xl border border-slate-300 px-[10mm] py-[8mm] flex flex-col justify-between font-pdf"
+          aria-label="PDF 2 Page 3 - Tableau d'activité 16h / 24h Équipes A-E"
+          className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
         >
           <div>
             <OfficialLandscapeHeader
@@ -576,13 +647,18 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
               readOnly={readOnly}
             />
 
-            <div className="mt-2 mb-1.5 text-center">
-              <h2 className="text-[20px] font-semibold tracking-tight text-black">
+            <div className="mt-1.5 mb-1 text-center">
+              <h2 className="text-[17px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
                 <EditableText
                   value={config.pdf2Page3Title}
                   readOnly={readOnly}
                   onChange={(v) => onUpdateConfig({ pdf2Page3Title: v })}
                 />
+                {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf2Page3Title) && (
+                  <strong className="font-bold text-black font-pdf">
+                    (Modificatif)
+                  </strong>
+                )}
               </h2>
             </div>
 
@@ -597,21 +673,38 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
               onUpdateStaffField={onUpdateStaffField}
               onUpdateStaffDayCell={onUpdateStaffDayCell}
               onDeleteStaff={onDeleteStaff}
+              onOpenMaternityModal={onOpenMaternityModal}
             />
 
             {!readOnly && (
               <div className="no-print mt-1.5 flex flex-wrap items-center justify-between gap-2">
-                {onOpenGuardRotationModal && (
-                  <button
-                    type="button"
-                    onClick={onOpenGuardRotationModal}
-                    title="Gérer la rotation des équipes (période ou perpétuelle)"
-                    className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-sans font-bold text-sky-800 bg-sky-50 hover:bg-sky-100 border border-sky-300 rounded shadow-sm transition-colors"
-                  >
-                    <Repeat className="w-3.5 h-3.5 text-sky-600" />
-                    <span>Rotation des Équipes (Période / Perpétuelle)</span>
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {onOpenMaternityModal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const bakhouche = staffList.find((s) => s.fullName.toLowerCase().includes('bakhouche'));
+                        onOpenMaternityModal(bakhouche || undefined);
+                      }}
+                      title="Gérer le congé de maternité (cellule fusionnée J1-J26)"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-sans font-bold text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-300 rounded shadow-xs transition-colors"
+                    >
+                      <HeartHandshake className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Congé de Maternité (Cellule Fusionnée)</span>
+                    </button>
+                  )}
+                  {onOpenGuardRotationModal && (
+                    <button
+                      type="button"
+                      onClick={onOpenGuardRotationModal}
+                      title="Gérer la rotation des équipes (période ou perpétuelle)"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-sans font-bold text-sky-800 bg-sky-50 hover:bg-sky-100 border border-sky-300 rounded shadow-xs transition-colors"
+                    >
+                      <Repeat className="w-3.5 h-3.5 text-sky-600" />
+                      <span>Rotation des Équipes</span>
+                    </button>
+                  )}
+                </div>
 
                 <button
                   type="button"
@@ -641,7 +734,7 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
             <OfficialLandscapeLegendAndFooter
               config={config}
               onUpdateConfig={onUpdateConfig}
-              showNb={false}
+              showNb={true}
               showSignatures
               readOnly={readOnly}
               onOpenLeaveTypesModal={onOpenLeaveTypesModal}
@@ -651,88 +744,28 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
       )}
 
       {/* =====================================================================
-          PDF 2 — PAGE 4: Page de suite / N.B & Signatures (exactement comme P.4 du PDF 2)
+          PDF 2 — PAGE 4: TABLEAU D'ACTIVITÉ | Agents d'Hygiène — 12h
          ===================================================================== */}
-      {(activeSubPage === 'all' || activeSubPage === 'p4') && (
+      {(activeSubPage === 'all' || activeSubPage === 'p4' || (activeSubPage as string) === 'p5') && (
         <section
-          aria-label="PDF 2 Page 4 - Suite N.B et Signatures"
-          className="a4-landscape-sheet shadow-xl border border-slate-300 px-[10mm] py-[10mm] flex flex-col justify-between font-pdf"
-        >
-          <div>
-            <div className="text-center leading-tight text-black">
-              <div className="text-[19px] font-semibold tracking-tight">
-                <EditableText
-                  value={config.republicHeader}
-                  readOnly={readOnly}
-                  onChange={(v) => onUpdateConfig({ republicHeader: v })}
-                />
-              </div>
-              <div className="text-[14.5px] font-medium tracking-tight mt-0.5">
-                <EditableText
-                  value={config.ministryHeader}
-                  readOnly={readOnly}
-                  onChange={(v) => onUpdateConfig({ ministryHeader: v })}
-                />
-              </div>
-              <div className="text-[14.5px] font-medium mt-1">
-                <EditableText
-                  value={config.hospitalHeader}
-                  readOnly={readOnly}
-                  onChange={(v) => onUpdateConfig({ hospitalHeader: v })}
-                />
-              </div>
-            </div>
-
-            <div className="mt-8 text-[13.5px] font-medium text-black">
-              <EditableText
-                value={config.nbNotice}
-                readOnly={readOnly}
-                onChange={(v) => onUpdateConfig({ nbNotice: v })}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-4 text-center text-[14.5px] font-medium text-black pb-16">
-            {config.signaturesLandscape.map((sig, idx) => (
-              <div key={idx}>
-                <EditableText
-                  value={sig}
-                  readOnly={readOnly}
-                  onChange={(v) => {
-                    const next = [...config.signaturesLandscape] as [
-                      string,
-                      string,
-                      string,
-                      string
-                    ];
-                    next[idx] = v;
-                    onUpdateConfig({ signaturesLandscape: next });
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* =====================================================================
-          PDF 2 — PAGE 5: TABLEAU D'ACTIVITÉ | Agents d'Hygiène — 12h
-         ===================================================================== */}
-      {(activeSubPage === 'all' || activeSubPage === 'p5') && (
-        <section
-          aria-label="PDF 2 Page 5 - Tableau d'activité Agents d'Hygiène 12h"
-          className="a4-landscape-sheet shadow-xl border border-slate-300 px-[10mm] py-[10mm] flex flex-col justify-between font-pdf"
+          aria-label="PDF 2 Page 4 - Tableau d'activité Agents d'Hygiène 12h"
+          className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
         >
           <div>
             <OfficialLandscapeHeader config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} />
 
             <div className="mt-24 mb-3 text-center">
-              <h2 className="text-[20px] font-semibold tracking-tight text-black">
+              <h2 className="text-[20px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
                 <EditableText
                   value={config.pdf2Page5Title}
                   readOnly={readOnly}
                   onChange={(v) => onUpdateConfig({ pdf2Page5Title: v })}
                 />
+                {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf2Page5Title) && (
+                  <strong className="font-bold text-black font-pdf">
+                    (Modificatif)
+                  </strong>
+                )}
               </h2>
             </div>
 
@@ -746,6 +779,7 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
               onUpdateStaffField={onUpdateStaffField}
               onUpdateStaffDayCell={onUpdateStaffDayCell}
               onDeleteStaff={onDeleteStaff}
+              onOpenMaternityModal={onOpenMaternityModal}
             />
 
             {!readOnly && (

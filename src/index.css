@@ -32,11 +32,13 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Exact A4 Paper Dimensions & Print Fidelity */
+/* Exact Strict A4 Paper Dimensions (21cm x 29.7cm) & 1.27cm (12.7mm) Margins */
 .a4-portrait-sheet {
   width: 210mm;
   height: 297mm;
+  min-height: 297mm;
   max-height: 297mm;
+  padding: 1.27cm;
   background: #ffffff;
   color: #000000;
   box-sizing: border-box;
@@ -47,7 +49,9 @@
 .a4-landscape-sheet {
   width: 297mm;
   height: 210mm;
+  min-height: 210mm;
   max-height: 210mm;
+  padding: 1.27cm;
   background: #ffffff;
   color: #000000;
   box-sizing: border-box;
@@ -57,27 +61,17 @@
 
 @media print {
   @page {
-    margin: 0;
-  }
-
-  body[data-orientation="portrait"] {
-    @page {
-      size: 210mm 297mm;
-      margin: 0;
-    }
-  }
-
-  body[data-orientation="landscape"] {
-    @page {
-      size: 297mm 210mm;
-      margin: 0;
-    }
+    /* Marges d'impression physiques strictes : 1.27cm des 4 côtés */
+    margin: 1.27cm;
+    size: auto;
   }
 
   body {
     background: #ffffff !important;
     margin: 0 !important;
     padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .no-print {
@@ -89,40 +83,49 @@
     padding: 0 !important;
     box-shadow: none !important;
     transform: none !important;
+    width: 100% !important;
   }
 
   .a4-portrait-sheet {
-    width: 210mm !important;
-    height: 297mm !important;
-    max-height: 297mm !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
     box-shadow: none !important;
     margin: 0 !important;
     border: none !important;
-    page-break-after: always;
-    break-after: page;
+    padding: 0 !important; /* Le margin: 1.27cm de @page assure la marge exacte de 1.27cm */
+    page-break-after: always !important;
+    break-after: page !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     overflow: hidden !important;
+    box-sizing: border-box !important;
   }
 
   .a4-landscape-sheet {
-    width: 297mm !important;
-    height: 210mm !important;
-    max-height: 210mm !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
     box-shadow: none !important;
     margin: 0 !important;
     border: none !important;
-    page-break-after: always;
-    break-after: page;
+    padding: 0 !important; /* Le margin: 1.27cm de @page assure la marge exacte de 1.27cm */
+    page-break-after: always !important;
+    break-after: page !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     overflow: hidden !important;
+    box-sizing: border-box !important;
   }
 
   .a4-portrait-sheet:last-child,
   .a4-landscape-sheet:last-child {
-    page-break-after: auto;
-    break-after: auto;
+    page-break-after: auto !important;
+    break-after: auto !important;
   }
 }
 

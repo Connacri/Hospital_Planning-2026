@@ -18,6 +18,7 @@ import {
   ArrowUp,
   Repeat,
   Tag,
+  HeartHandshake,
 } from 'lucide-react';
 import { TranslationDictionary, SupportedLocale } from '../i18n/translations';
 
@@ -30,10 +31,16 @@ interface QuickActionsFloatingMenuProps {
   onChangeZoom: (updater: (prev: number) => number) => void;
   onResetZoom: () => void;
   onFitWidth?: () => void;
+  onFitPageComplete?: () => void;
   onPrint: () => void;
   onResetDefaults?: () => void;
   onOpenGuardRotationModal?: () => void;
   onOpenLeaveTypesModal?: () => void;
+  onOpenMaternityModal?: () => void;
+  isModificatif?: boolean;
+  onToggleModificatif?: () => void;
+  onLoadAprilPreset?: () => void;
+  onLoadJanuaryPreset?: () => void;
   locale: SupportedLocale;
   t: TranslationDictionary;
 }
@@ -47,10 +54,16 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
   onChangeZoom,
   onResetZoom,
   onFitWidth,
+  onFitPageComplete,
   onPrint,
   onResetDefaults,
   onOpenGuardRotationModal,
   onOpenLeaveTypesModal,
+  onOpenMaternityModal,
+  isModificatif = false,
+  onToggleModificatif,
+  onLoadAprilPreset,
+  onLoadJanuaryPreset,
   locale,
   t,
 }) => {
@@ -94,6 +107,12 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
               </>
             )}
           </button>
+
+          {isModificatif && (
+            <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-1 rounded-lg border border-amber-500/40">
+              (Modificatif)
+            </span>
+          )}
 
           <button
             type="button"
@@ -153,11 +172,11 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
             </div>
           </div>
 
-          <div className="p-3.5 space-y-3.5 text-xs">
+          <div className="p-3.5 space-y-3 text-xs max-h-[82vh] overflow-y-auto">
             {/* PRIMARY TOGGLE: READ-ONLY VS EDIT MODE */}
             <div>
               <div className="flex items-center justify-between text-slate-300 font-semibold mb-1.5">
-                <span>Mode de Consultation & Saisie</span>
+                <span>Mode de Consultation &amp; Saisie</span>
                 <span className="text-[10px] text-slate-500 font-normal">Protection</span>
               </div>
 
@@ -208,21 +227,43 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
                   </span>
                 </button>
               </div>
+            </div>
 
-              {/* Status explanation notice */}
-              <p className="mt-1.5 text-[11px] leading-relaxed text-slate-400">
-                {isReadOnly ? (
-                  <span className="text-emerald-400/90 flex items-start gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5 shrink-0 mt-0.5 text-emerald-400" />
-                    <span>{t.modeReadOnlyDesc}</span>
-                  </span>
-                ) : (
-                  <span className="text-amber-400/90 flex items-start gap-1">
-                    <Edit3 className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-400" />
-                    <span>{t.modeEditDesc}</span>
-                  </span>
+            {/* VERSION MODIFICATIVE / (MODIFICATIF) TOGGLE */}
+            <div className="pt-2 border-t border-slate-800/80">
+              <div className="flex items-center justify-between text-slate-300 font-semibold mb-1">
+                <span>Version du Planning</span>
+                <span className="text-[10px] text-slate-500 font-normal">Mention officielle</span>
+              </div>
+              <div className="p-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className={`w-2 h-2 rounded-full ${isModificatif ? 'bg-amber-400 animate-pulse' : 'bg-slate-600'}`} />
+                    <span className="text-xs font-bold text-white truncate">Planning Modificatif</span>
+                    {isModificatif && (
+                      <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-1.5 py-0.2 rounded border border-amber-500/40">
+                        (Modificatif)
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">
+                    Affiche <strong>(Modificatif)</strong> en gras sur tous les titres
+                  </p>
+                </div>
+                {onToggleModificatif && (
+                  <button
+                    type="button"
+                    onClick={onToggleModificatif}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors shrink-0 ${
+                      isModificatif
+                        ? 'bg-amber-500 hover:bg-amber-400 text-black shadow-xs'
+                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                    }`}
+                  >
+                    {isModificatif ? 'Actif' : 'Activer'}
+                  </button>
                 )}
-              </p>
+              </div>
             </div>
 
             {/* QUICK FORMAT & ORIENTATION TOGGLE */}
@@ -261,13 +302,24 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
               </div>
             </div>
 
-            {/* HOSPITAL TOOLS: GUARD ROTATION & LEAVE TYPES */}
-            {(onOpenGuardRotationModal || onOpenLeaveTypesModal) && (
-              <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
-                <div className="text-slate-300 font-semibold text-[11px] flex items-center justify-between">
-                  <span>Outils de Gestion Spécifiques</span>
-                  <span className="text-[10px] text-slate-500 font-normal">Actions</span>
-                </div>
+            {/* HOSPITAL TOOLS: MATERNITY LEAVE, GUARD ROTATION & LEAVE TYPES */}
+            <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
+              <div className="text-slate-300 font-semibold text-[11px] flex items-center justify-between">
+                <span>Outils &amp; Congés Spécifiques</span>
+                <span className="text-[10px] text-slate-500 font-normal">Actions</span>
+              </div>
+              <div className="space-y-1.5">
+                {onOpenMaternityModal && (
+                  <button
+                    type="button"
+                    onClick={onOpenMaternityModal}
+                    className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-rose-950/70 hover:bg-rose-900 border border-rose-800/90 text-rose-200 text-[11px] font-semibold transition-colors"
+                    title="Gérer le congé de maternité (cellule fusionnée J1-J26)"
+                  >
+                    <HeartHandshake className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Congé de Maternité (Cellule Fusionnée)</span>
+                  </button>
+                )}
                 <div className="grid grid-cols-2 gap-1.5">
                   {onOpenGuardRotationModal && (
                     <button
@@ -289,6 +341,37 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
                     >
                       <Tag className="w-3.5 h-3.5 text-amber-400" />
                       <span>Types Congés</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* MONTH / PDF PRESETS */}
+            {(onLoadAprilPreset || onLoadJanuaryPreset) && (
+              <div className="pt-2 border-t border-slate-800/80 space-y-1">
+                <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider flex items-center justify-between">
+                  <span>Modèles PDF Officiels</span>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {onLoadAprilPreset && (
+                    <button
+                      type="button"
+                      onClick={onLoadAprilPreset}
+                      className="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded text-[10.5px] font-medium text-left truncate transition-colors"
+                      title="Charger le modèle officiel Avril 2026"
+                    >
+                      🌸 Avril 2026 (PDF)
+                    </button>
+                  )}
+                  {onLoadJanuaryPreset && (
+                    <button
+                      type="button"
+                      onClick={onLoadJanuaryPreset}
+                      className="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded text-[10.5px] font-medium text-left truncate transition-colors"
+                      title="Charger l'exemple Janvier 2026 (Modificatif)"
+                    >
+                      ❄️ Janvier 2026 <strong>(Modif)</strong>
                     </button>
                   )}
                 </div>
@@ -327,9 +410,19 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
                     type="button"
                     onClick={onFitWidth}
                     className="px-1.5 py-0.5 text-[10px] font-semibold bg-sky-950 text-sky-300 hover:bg-sky-900 rounded border border-sky-800 transition-colors"
-                    title="Ajuster la vue pour voir tous les 31 jours"
+                    title="Ajuster la vue pour voir tous les 30/31 jours"
                   >
-                    31j
+                    30j
+                  </button>
+                )}
+                {onFitPageComplete && (
+                  <button
+                    type="button"
+                    onClick={onFitPageComplete}
+                    className="px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-950 text-emerald-300 hover:bg-emerald-900 rounded border border-emerald-800 transition-colors"
+                    title="Afficher la page complète (A4 vertical 100% visible)"
+                  >
+                    Entier
                   </button>
                 )}
               </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Tag, Repeat, Check } from 'lucide-react';
+import { Plus, Trash2, Tag, Repeat, Check, HeartHandshake } from 'lucide-react';
 import {
   HospitalDocumentConfig,
   StaffEntity,
@@ -24,13 +24,15 @@ interface PortraitPdfSheetsProps {
   onDeleteStaff: (id: number) => void;
   onOpenGuardRotationModal?: () => void;
   onOpenLeaveTypesModal?: () => void;
+  onOpenMaternityModal?: (staff?: StaffEntity) => void;
 }
 
 const LeavePickerButton: React.FC<{
   leaveTypes: LeaveTypeItem[];
   onSelect: (val: string) => void;
   onOpenLeaveTypesModal?: () => void;
-}> = ({ leaveTypes, onSelect, onOpenLeaveTypesModal }) => {
+  onOpenMaternityModal?: () => void;
+}> = ({ leaveTypes, onSelect, onOpenLeaveTypesModal, onOpenMaternityModal }) => {
   const [open, setOpen] = useState(false);
 
   return (
@@ -58,13 +60,30 @@ const LeavePickerButton: React.FC<{
           />
           <div
             onClick={(e) => e.stopPropagation()}
-            className="absolute right-0 top-full mt-1 w-56 bg-slate-950 text-white border border-slate-700 rounded-lg shadow-2xl p-1.5 z-40 text-left text-[11px] font-sans divide-y divide-slate-800"
+            className="absolute right-0 top-full mt-1 w-64 bg-slate-950 text-white border border-slate-700 rounded-lg shadow-2xl p-1.5 z-40 text-left text-[11px] font-sans divide-y divide-slate-800"
           >
             <div className="px-2 py-1 text-[10px] text-slate-400 font-semibold uppercase tracking-wider flex items-center justify-between">
               <span>Types de Congés & OBS</span>
               <span className="text-[9px] text-amber-400 font-normal">Clic = insérer</span>
             </div>
-            <div className="py-1 max-h-52 overflow-y-auto space-y-0.5">
+
+            {/* Quick official maternity option */}
+            <div className="py-1">
+              <button
+                type="button"
+                onClick={() => {
+                  onSelect('CONGÉ de MATERNITÉ. 25/11/2025 au 26/04/2026');
+                  setOpen(false);
+                }}
+                className="w-full text-left px-2 py-1.5 rounded bg-rose-950/70 hover:bg-rose-900 border border-rose-800/80 text-rose-200 text-[10.5px] font-medium transition-colors flex items-center gap-1.5"
+                title="Insérer la mention exacte du PDF pour Bakhouche Sarra"
+              >
+                <HeartHandshake className="w-3 h-3 text-rose-400 shrink-0" />
+                <span className="truncate">CONGÉ de MATERNITÉ. 25/11/2025 au 26/04/2026</span>
+              </button>
+            </div>
+
+            <div className="py-1 max-h-48 overflow-y-auto space-y-0.5">
               {leaveTypes.map((lt) => (
                 <div
                   key={lt.id}
@@ -117,7 +136,8 @@ const LeavePickerButton: React.FC<{
                   'Remplaçant',
                   '08h-16h',
                   'Garde',
-                  'Astreinte',
+                  'Surveillant Médical',
+                  'Chargée de DMO',
                   'Effacer',
                 ].map((opt) => (
                   <button
@@ -138,8 +158,21 @@ const LeavePickerButton: React.FC<{
                 ))}
               </div>
             </div>
-            {onOpenLeaveTypesModal && (
-              <div className="pt-1.5 mt-1">
+            <div className="pt-1.5 mt-1 space-y-1">
+              {onOpenMaternityModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    onOpenMaternityModal();
+                  }}
+                  className="w-full flex items-center justify-center gap-1.5 px-2 py-1 rounded bg-rose-950/60 hover:bg-rose-900 border border-rose-800/80 text-rose-200 text-[10px] font-bold transition-colors"
+                >
+                  <HeartHandshake className="w-3 h-3 text-rose-400" />
+                  <span>Gérer Congé Maternité (Fusion)</span>
+                </button>
+              )}
+              {onOpenLeaveTypesModal && (
                 <button
                   type="button"
                   onClick={() => {
@@ -151,8 +184,8 @@ const LeavePickerButton: React.FC<{
                   <Tag className="w-3 h-3 text-amber-400" />
                   <span>Gérer / Ajouter des congés</span>
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </>
       )}
@@ -164,7 +197,8 @@ const OfficialPortraitHeader: React.FC<{
   config: HospitalDocumentConfig;
   onUpdateConfig: (partial: Partial<HospitalDocumentConfig>) => void;
   readOnly?: boolean;
-}> = ({ config, onUpdateConfig, readOnly = false }) => (
+  compact?: boolean;
+}> = ({ config, onUpdateConfig, readOnly = false, compact = false }) => (
   <div className="font-pdf text-black">
     <div className="text-center leading-tight">
       <div className="text-[15px] font-semibold tracking-tight">
@@ -189,7 +223,7 @@ const OfficialPortraitHeader: React.FC<{
         />
       </div>
     </div>
-    <div className="mt-10 text-[13px] font-medium">
+    <div className={`${compact ? 'mt-3' : 'mt-6'} text-[13px] font-medium`}>
       <EditableText
         value={config.unitTitle}
         readOnly={readOnly}
@@ -203,7 +237,9 @@ const OfficialPortraitFooter: React.FC<{
   config: HospitalDocumentConfig;
   onUpdateConfig: (partial: Partial<HospitalDocumentConfig>) => void;
   readOnly?: boolean;
-}> = ({ config, onUpdateConfig, readOnly = false }) => {
+  compact?: boolean;
+  showNb?: boolean;
+}> = ({ config, onUpdateConfig, readOnly = false, compact = false, showNb = false }) => {
   const sigs = config.signaturesPortrait;
   const updateSig = (idx: 0 | 1 | 2 | 3, val: string) => {
     const next: [string, string, string, string] = [...sigs] as [string, string, string, string];
@@ -212,15 +248,26 @@ const OfficialPortraitFooter: React.FC<{
   };
 
   return (
-    <div className="font-pdf text-black mt-auto pt-6">
-      <div className="text-right text-[13px] font-medium pr-2 mb-5">
+    <div className={`font-pdf text-black mt-auto ${compact ? 'pt-1.5' : 'pt-3'}`}>
+      {/* N.B Notice placed directly under the table if enabled */}
+      {showNb && config.nbNotice && (
+        <div className="mb-1 text-[11.5px] font-medium text-left">
+          <EditableText
+            value={config.nbNotice}
+            readOnly={readOnly}
+            onChange={(v) => onUpdateConfig({ nbNotice: v })}
+          />
+        </div>
+      )}
+
+      <div className={`text-right text-[12.5px] font-medium pr-2 ${compact ? 'mb-1.5' : 'mb-3'}`}>
         <EditableText
           value={config.cityDatePortrait}
           readOnly={readOnly}
           onChange={(v) => onUpdateConfig({ cityDatePortrait: v })}
         />
       </div>
-      <div className="grid grid-cols-4 text-center text-[13px] font-medium pb-4">
+      <div className={`grid grid-cols-4 text-center text-[12.5px] font-medium ${compact ? 'pb-1' : 'pb-2'}`}>
         <div>
           <EditableText value={sigs[0]} readOnly={readOnly} onChange={(v) => updateSig(0, v)} />
         </div>
@@ -250,6 +297,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
   onDeleteStaff,
   onOpenGuardRotationModal,
   onOpenLeaveTypesModal,
+  onOpenMaternityModal,
 }) => {
   const doctors = staffList
     .filter((s) => s.category === 'medical')
@@ -373,19 +421,24 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
       {(activeSubPage === 'all' || activeSubPage === 'p1') && (
         <section
           aria-label="PDF 1 Page 1 - Planning des Médecins"
-          className="a4-portrait-sheet shadow-xl border border-slate-300 px-[14mm] py-[14mm] flex flex-col justify-between font-pdf"
+          className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
         >
           <div>
             <OfficialPortraitHeader config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} />
 
             {/* Title Block */}
-            <div className="mt-20 mb-4 text-center">
-              <h2 className="text-[18px] font-semibold tracking-tight text-black">
+            <div className="mt-8 mb-4 text-center">
+              <h2 className="text-[18px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
                 <EditableText
                   value={config.pdf1Page1Title}
                   readOnly={readOnly}
                   onChange={(v) => onUpdateConfig({ pdf1Page1Title: v })}
                 />
+                {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf1Page1Title) && (
+                  <strong className="font-bold text-black font-pdf">
+                    (Modificatif)
+                  </strong>
+                )}
               </h2>
               <div className="text-[15px] font-medium text-black mt-1">
                 <EditableText
@@ -487,13 +540,15 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
               </div>
             )}
 
-            {/* Observation Line */}
-            <div className="mt-3 text-[13.5px] font-medium text-black">
-              <EditableText
-                value={config.pdf1Page1Obs}
-                readOnly={readOnly}
-                onChange={(v) => onUpdateConfig({ pdf1Page1Obs: v })}
-              />
+            {/* Observation Box — Exact PDF reproduction */}
+            <div className="mt-4 border border-black rounded-[4px] px-3.5 py-1.5 text-[14px] font-medium text-black bg-white flex items-center justify-between">
+              <div className="flex-1">
+                <EditableText
+                  value={config.pdf1Page1Obs || 'OBS : Journée de RCP tous les Mardis à 11 h'}
+                  readOnly={readOnly}
+                  onChange={(v) => onUpdateConfig({ pdf1Page1Obs: v })}
+                />
+              </div>
             </div>
           </div>
 
@@ -507,19 +562,24 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
       {(activeSubPage === 'all' || activeSubPage === 'p2') && (
         <section
           aria-label="PDF 1 Page 2 - Liste du personnel médical"
-          className="a4-portrait-sheet shadow-xl border border-slate-300 px-[14mm] py-[14mm] flex flex-col justify-between font-pdf"
+          className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
         >
           <div>
             <OfficialPortraitHeader config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} />
 
             {/* Title Block */}
-            <div className="mt-28 mb-4 text-center">
-              <h2 className="text-[16.5px] font-semibold tracking-tight text-black">
+            <div className="mt-12 mb-4 text-center">
+              <h2 className="text-[16.5px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
                 <EditableText
                   value={config.pdf1Page2Title}
                   readOnly={readOnly}
                   onChange={(v) => onUpdateConfig({ pdf1Page2Title: v })}
                 />
+                {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf1Page2Title) && (
+                  <strong className="font-bold text-black font-pdf">
+                    (Modificatif)
+                  </strong>
+                )}
               </h2>
               <div className="text-[14px] font-medium text-black mt-1.5">
                 <EditableText
@@ -615,29 +675,48 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
       )}
 
       {/* =====================================================================
-          PDF 1 — PAGE 3: Planning du Personnel Paramédical du Mois d'Octobre 2026
+          PDF 1 — PAGE 3: Planning du Personnel Paramédical du Mois
          ===================================================================== */}
       {(activeSubPage === 'all' || activeSubPage === 'p3') && (
         <section
           aria-label="PDF 1 Page 3 - Planning du Personnel Paramédical"
-          className="a4-portrait-sheet shadow-xl border border-slate-300 px-[14mm] py-[12mm] flex flex-col justify-between font-pdf"
+          className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
         >
           <div>
-            <OfficialPortraitHeader config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} />
+            <OfficialPortraitHeader config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} compact={true} />
 
             {/* Title Block */}
-            <div className="mt-6 mb-2.5 text-center">
-              <h2 className="text-[16.5px] font-semibold tracking-tight text-black">
+            <div className="mt-3 mb-2 text-center">
+              <h2 className="text-[16.5px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
                 <EditableText
                   value={config.pdf1Page3Title}
                   readOnly={readOnly}
                   onChange={(v) => onUpdateConfig({ pdf1Page3Title: v })}
                 />
+                {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf1Page3Title) && (
+                  <strong className="font-bold text-black font-pdf">
+                    (Modificatif)
+                  </strong>
+                )}
               </h2>
             </div>
 
-            {!readOnly && (onOpenLeaveTypesModal || onOpenGuardRotationModal) && (
-              <div className="no-print mb-2 flex items-center justify-end gap-2 text-xs">
+            {!readOnly && (onOpenLeaveTypesModal || onOpenGuardRotationModal || onOpenMaternityModal) && (
+              <div className="no-print mb-2 flex items-center justify-end gap-2 text-xs flex-wrap">
+                {onOpenMaternityModal && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const bakhouche = staffList.find((s) => s.fullName.toLowerCase().includes('bakhouche'));
+                      onOpenMaternityModal(bakhouche || undefined);
+                    }}
+                    title="Gérer le congé de maternité (cellule fusionnée et OBS)"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-sans font-medium bg-rose-50 hover:bg-rose-100 text-rose-900 border border-rose-300 shadow-xs transition-colors"
+                  >
+                    <HeartHandshake className="w-3 h-3 text-rose-700" />
+                    <span>Congé Maternité (Fusion)</span>
+                  </button>
+                )}
                 {onOpenLeaveTypesModal && (
                   <button
                     type="button"
@@ -784,7 +863,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                         onChange={(v) => onUpdateStaffField(staff.id, 'rolePortrait', v)}
                       />
                     </td>
-                    <td className="border border-black px-1.5 py-[1px] text-center font-medium relative group/obs">
+                    <td className="border-r border-black border-y-0 px-1.5 py-[1px] text-center font-medium relative group/obs">
                       <EditableText
                         value={staff.obsPortrait}
                         placeholder="OBS / Congé..."
@@ -796,6 +875,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                           leaveTypes={config.leaveTypes ?? DEFAULT_LEAVE_TYPES}
                           onSelect={(leaveText) => onUpdateStaffField(staff.id, 'obsPortrait', leaveText)}
                           onOpenLeaveTypesModal={onOpenLeaveTypesModal}
+                          onOpenMaternityModal={() => onOpenMaternityModal && onOpenMaternityModal(staff)}
                         />
                       )}
                     </td>
@@ -822,7 +902,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                             rowSpan={Math.max(1, total16hRows)}
                             className="border border-black text-center align-middle font-medium text-[14px]"
                           >
-                            <span>16h</span>
+                            <span>24h</span>
                             {!readOnly && onOpenGuardRotationModal && (
                               <button
                                 type="button"
@@ -849,7 +929,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                           )}
                         </td>
                         <td className="border-r border-black px-1.5 py-[1px]"></td>
-                        <td className="border border-black px-1.5 py-[1px] text-center font-medium bg-neutral-100 text-[11px] text-neutral-500">
+                        <td className="border-r border-black border-y-0 px-1.5 py-[1px] text-center font-medium text-[11px] text-neutral-500">
                           {isFirst16hRow && config.pdf1Page3Obs16h ? (
                             <EditableText
                               value={config.pdf1Page3Obs16h}
@@ -899,7 +979,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                               onChange={(v) => onUpdateStaffField(member.id, 'rolePortrait', v)}
                             />
                           </td>
-                          <td className="border border-black px-1.5 py-[1px] text-center font-medium relative group/obs">
+                          <td className="border-r border-black border-y-0 px-1.5 py-[1px] text-center font-medium relative group/obs">
                             <EditableText
                               value={member.obsPortrait}
                               placeholder="OBS / Congé..."
@@ -911,6 +991,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                                 leaveTypes={config.leaveTypes ?? DEFAULT_LEAVE_TYPES}
                                 onSelect={(leaveText) => onUpdateStaffField(member.id, 'obsPortrait', leaveText)}
                                 onOpenLeaveTypesModal={onOpenLeaveTypesModal}
+                                onOpenMaternityModal={() => onOpenMaternityModal && onOpenMaternityModal(member)}
                               />
                             )}
                           </td>
@@ -959,7 +1040,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                           title="Supprimer"
                           className="no-print opacity-0 group-hover:opacity-100 absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-red-600 hover:bg-red-100 rounded"
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </td>
@@ -970,7 +1051,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                         onChange={(v) => onUpdateStaffField(staff.id, 'rolePortrait', v)}
                       />
                     </td>
-                    <td className="border border-black px-1.5 py-[1px] text-center font-medium relative group/obs">
+                    <td className={`border-r border-black ${idx === hygieneStaff.length - 1 ? 'border-b-[1.5px] border-b-black' : 'border-y-0'} px-1.5 py-[1px] text-center font-medium relative group/obs`}>
                       <EditableText
                         value={staff.obsPortrait}
                         placeholder="OBS / Congé..."
@@ -982,6 +1063,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                           leaveTypes={config.leaveTypes ?? DEFAULT_LEAVE_TYPES}
                           onSelect={(leaveText) => onUpdateStaffField(staff.id, 'obsPortrait', leaveText)}
                           onOpenLeaveTypesModal={onOpenLeaveTypesModal}
+                          onOpenMaternityModal={() => onOpenMaternityModal && onOpenMaternityModal(staff)}
                         />
                       )}
                     </td>
@@ -991,7 +1073,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
             </table>
           </div>
 
-          <OfficialPortraitFooter config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} />
+          <OfficialPortraitFooter config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} compact={true} showNb={true} />
         </section>
       )}
     </div>

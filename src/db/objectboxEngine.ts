@@ -1,7 +1,7 @@
 /**
  * ObjectBox Local Reactive Database Engine (Web IndexedDB/LocalStorage + Dart ObjectBox Parity)
  * Supports @Entity, @Id, @Index, Box<T>, QueryBuilder with .offset() and .limit() pagination,
- * and instant persistence for all PDF tables, headers, staff members, and 31-day schedules.
+ * and instant persistence for all PDF tables, headers, staff members, and 30/31-day schedules.
  */
 
 export type StaffCategory = 'medical' | 'paramedical_day' | 'paramedical_guard' | 'hygiene';
@@ -20,19 +20,27 @@ export interface DoctorWeeklySchedule {
   jeudi: string;
 }
 
+export interface MaternityLeaveConfig {
+  startDay: number;
+  endDay: number;
+  label?: string; // e.g. "Congé de Maternité"
+  datesText?: string; // e.g. "25/11/2025 au 26/04/2026"
+}
+
 export interface StaffEntity {
   id: number; // @Id() in ObjectBox
   fullName: string; // @Index()
   category: StaffCategory; // @Index()
   rolePortrait: string; // Fonction in PDF 1 (e.g. "Médecin Chef Rhumatologue")
   gradeLandscape: string; // Grade in PDF 2 (e.g. "Médecin Chef")
-  obsPortrait: string; // O.B.S in PDF 1 Page 2 (e.g. "08h-16h")
-  horaireBlock: string; // "08h-16h" | "16h" | "12h"
+  obsPortrait: string; // O.B.S in PDF 1 Page 2 (e.g. "08h-16h", "CONGÉ de MATERNITÉ. 25/11/2025 au 26/04/2026")
+  horaireBlock: string; // "08h-16h" | "16h" | "24h" | "12h"
   teamGroup: string; // "" | "A" | "B" | "C" | "D" | "E"
   portraitOrder: number; // @Index()
   landscapeOrder: number; // @Index()
   weeklySchedule: DoctorWeeklySchedule; // Used on PDF 1 Page 1 for doctors
-  dailyActivity: Record<number, string>; // Days 1..31 -> "N" | "RE" | "Jour" | "Nuit" | "C" | "CM" | "M" | "F"
+  dailyActivity: Record<number, string>; // Days 1..31 -> "N" | "RE" | "G" | "Jour" | "Nuit" | "C" | "CM" | "Congé de Maternité"
+  maternityLeave?: MaternityLeaveConfig; // Merged horizontal span in activity grid
 }
 
 export interface LeaveTypeItem {
@@ -50,6 +58,8 @@ export interface HospitalDocumentConfig {
   ministryHeader: string;
   hospitalHeader: string;
   unitTitle: string;
+  isModificatif?: boolean; // Toggles "(Modificatif)" in bold in document titles
+  currentPreset?: 'april_2026' | 'january_2026' | 'october_2026' | 'custom';
   // PDF 1 (Portrait) titles & metadata
   pdf1Page1Title: string;
   pdf1Page1Subtitle: string;
@@ -92,7 +102,35 @@ export interface ObjectBoxDatabaseSnapshot {
   staffBox: StaffEntity[];
 }
 
-const STORAGE_KEY = 'eh_ain_el_turck_objectbox_store_v2';
+const STORAGE_KEY = 'eh_ain_el_turck_objectbox_store_v4';
+
+const FRENCH_DOW_APRIL_2026: string[] = [
+  'MER', 'JEU', 'VEN', 'SAM', 'DIM', 'LUN', 'MAR'
+];
+
+export function buildApril2026Days(): DayColumnMeta[] {
+  const cols: DayColumnMeta[] = [];
+  for (let d = 1; d <= 30; d++) {
+    const dow = FRENCH_DOW_APRIL_2026[(d - 1) % 7];
+    const isBlackColumn = dow === 'VEN' || dow === 'SAM';
+    cols.push({ day: d, dow, isBlackColumn });
+  }
+  return cols;
+}
+
+const FRENCH_DOW_JANUARY_2026: string[] = [
+  'JEU', 'VEN', 'SAM', 'DIM', 'LUN', 'MAR', 'MER'
+];
+
+export function buildJanuary2026Days(): DayColumnMeta[] {
+  const cols: DayColumnMeta[] = [];
+  for (let d = 1; d <= 31; d++) {
+    const dow = FRENCH_DOW_JANUARY_2026[(d - 1) % 7];
+    const isBlackColumn = dow === 'VEN' || dow === 'SAM';
+    cols.push({ day: d, dow, isBlackColumn });
+  }
+  return cols;
+}
 
 const FRENCH_DOW_OCT_2026: string[] = [
   'JEU', 'VEN', 'SAM', 'DIM', 'LUN', 'MAR', 'MER'
@@ -109,54 +147,103 @@ export function buildOctober2026Days(): DayColumnMeta[] {
 }
 
 /**
- * Standard 08h-16h schedule: N on Dim-Jeu, RE on Ven-Sam (days 2,3, 9,10, 16,17, 23,24, 30,31)
+ * Helper to retrieve maternity leave span for a staff entity
  */
-export function buildStandard08h16hActivity(): Record<number, string> {
+export function getStaffMaternitySpan(
+  staff: StaffEntity,
+  daysColumns: DayColumnMeta[]
+): { startDay: number; endDay: number; label: string } | null {
+  // 1. Explicit configuration on the staff entity
+  if (staff.maternityLeave && staff.maternityLeave.startDay > 0 && staff.maternityLeave.endDay >= staff.maternityLeave.startDay) {
+    return {
+      startDay: staff.maternityLeave.startDay,
+      endDay: staff.maternityLeave.endDay,
+      label: staff.maternityLeave.label || 'Congé de Maternité',
+    };
+  }
+
+  // 2. Bakhouche Sarra special handling / automatic detection based on OBS
+  const obsLower = (staff.obsPortrait || '').toLowerCase();
+  if (obsLower.includes('maternité') || obsLower.includes('maternite') || staff.fullName.toLowerCase().includes('bakhouche')) {
+    // If dates mention "au 26/04/2026", end day is 26
+    let endDay = 26;
+    const match = staff.obsPortrait.match(/au\s*(\d{1,2})\//i);
+    if (match) {
+      endDay = parseInt(match[1], 10);
+    }
+    const maxDay = daysColumns.length > 0 ? daysColumns[daysColumns.length - 1].day : 30;
+    return {
+      startDay: 1,
+      endDay: Math.min(endDay, maxDay),
+      label: 'Congé de Maternité',
+    };
+  }
+
+  // 3. Check for consecutive days marked with 'Congé de Maternité' or 'Maternité'
+  let firstDay: number | null = null;
+  let lastDay: number | null = null;
+  for (const col of daysColumns) {
+    const val = (staff.dailyActivity[col.day] || '').toLowerCase();
+    if (val.includes('maternité') || val.includes('maternite')) {
+      if (firstDay === null) firstDay = col.day;
+      lastDay = col.day;
+    } else if (firstDay !== null && lastDay !== null) {
+      break;
+    }
+  }
+
+  if (firstDay !== null && lastDay !== null && lastDay > firstDay) {
+    return {
+      startDay: firstDay,
+      endDay: lastDay,
+      label: 'Congé de Maternité',
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Standard 08h-16h schedule: N on Dim-Jeu, RE on Ven-Sam
+ */
+export function buildStandard08h16hActivity(daysInMonth = 30, daysColumns = buildApril2026Days()): Record<number, string> {
   const map: Record<number, string> = {};
-  for (let d = 1; d <= 31; d++) {
-    const dow = FRENCH_DOW_OCT_2026[(d - 1) % 7];
-    map[d] = dow === 'VEN' || dow === 'SAM' ? 'RE' : 'N';
+  for (const col of daysColumns) {
+    map[col.day] = col.isBlackColumn ? 'RE' : 'N';
   }
   return map;
 }
 
 /**
- * Ordre officiel de rotation des équipes de garde (16h) prenant le poste de « Jour » :
- * - Jour 1 : Équipe A
- * - Jour 2 : Équipe D
- * - Jour 3 : Équipe B
- * - Jour 4 : Équipe E
- * - Jour 5 : Équipe C
- * Puis la boucle continue indéfiniment : A ➔ D ➔ B ➔ E ➔ C ➔ A ➔ D ...
+ * Ordre de rotation des équipes de garde (16h / 24h) :
+ * Cycle de 4 jours (G, RE, RE, RE)
  */
 export const DEFAULT_GUARD_ROTATION_ORDER = ['A', 'D', 'B', 'E', 'C'];
 
-export interface GuardMonthInfo {
+export interface GuardMonthPreset {
   name: string;
   daysCount: number;
   cumulativeOffsetDays: number;
 }
 
-export const GUARD_MONTHS_PRESETS: GuardMonthInfo[] = [
-  { name: 'Octobre 2026', daysCount: 31, cumulativeOffsetDays: 0 },
-  { name: 'Novembre 2026', daysCount: 30, cumulativeOffsetDays: 31 },
-  { name: 'Décembre 2026', daysCount: 31, cumulativeOffsetDays: 61 },
-  { name: 'Janvier 2027', daysCount: 31, cumulativeOffsetDays: 92 },
-  { name: 'Février 2027', daysCount: 28, cumulativeOffsetDays: 123 },
-  { name: 'Mars 2027', daysCount: 31, cumulativeOffsetDays: 151 },
+export const GUARD_MONTHS_PRESETS: GuardMonthPreset[] = [
+  { name: 'Avril 2026', daysCount: 30, cumulativeOffsetDays: 0 },
+  { name: 'Mai 2026', daysCount: 31, cumulativeOffsetDays: 30 },
+  { name: 'Juin 2026', daysCount: 30, cumulativeOffsetDays: 61 },
+  { name: 'Juillet 2026', daysCount: 31, cumulativeOffsetDays: 91 },
+  { name: 'Août 2026', daysCount: 31, cumulativeOffsetDays: 122 },
+  { name: 'Septembre 2026', daysCount: 30, cumulativeOffsetDays: 153 },
+  { name: 'Octobre 2026', daysCount: 31, cumulativeOffsetDays: 183 },
+  { name: 'Janvier 2026', daysCount: 31, cumulativeOffsetDays: 0 },
+  { name: 'Février 2026', daysCount: 28, cumulativeOffsetDays: 31 },
+  { name: 'Mars 2026', daysCount: 31, cumulativeOffsetDays: 59 },
 ];
 
-/**
- * Calcul de la rotation continue des équipes de garde (16h) :
- * - Garde continue sans rupture dans les mois suivants
- * - Ne modifie pas l'ordre des agents ni des équipes dans la liste du personnel
- * - L'utilisateur peut modifier l'ordre de passage (rotationOrder) à tout moment
- */
 export function buildContinuousGuard16hActivity(
   team: string,
   rotationOrder: string[] = DEFAULT_GUARD_ROTATION_ORDER,
   cumulativeOffsetDays = 0,
-  daysInMonth = 31,
+  daysInMonth = 30,
   specialBouazizOverride = false
 ): Record<number, string> {
   const teamIndex = rotationOrder.indexOf(team);
@@ -168,14 +255,11 @@ export function buildContinuousGuard16hActivity(
   const map: Record<number, string> = {};
 
   for (let d = 1; d <= daysInMonth; d++) {
-    // Index continu de jour : (d - 1 + cumulativeOffsetDays)
     const absoluteDay = d - 1 + cumulativeOffsetDays;
-    // Quand absoluteDay % 5 === teamIndex, l'équipe est de Jour (phase 0), le lendemain Nuit (phase 1), puis 3x RE
     const phase = ((absoluteDay - teamIndex) % 5 + 5) % 5;
     map[d] = cycle[phase];
   }
 
-  // Fidélité exacte au tableau officiel d'octobre 2026 : Bouaziz Nacer a RE les 9 et 10 oct
   if (specialBouazizOverride && cumulativeOffsetDays === 0) {
     map[9] = 'RE';
     map[10] = 'RE';
@@ -184,93 +268,102 @@ export function buildContinuousGuard16hActivity(
   return map;
 }
 
-/**
- * 5-day Guard Team Rotation (16h) for Teams A, B, C, D, E (Mois de base Octobre 2026):
- * Cycle of 5 states: ['Jour', 'Nuit', 'RE', 'RE', 'RE']
- */
 export function buildGuard16hActivity(team: string, specialBouazizOverride = false): Record<number, string> {
   return buildContinuousGuard16hActivity(
     team,
     DEFAULT_GUARD_ROTATION_ORDER,
     0,
-    31,
+    30,
     specialBouazizOverride
   );
 }
 
 /**
  * 12h Hygiene Agents alternating schedule:
- * - startWithRE = true (Mohand Fatiha): Odd days = RE, Even days = N
- * - startWithRE = false (Touati Fatima): Odd days = N, Even days = RE
+ * - startWithRE = true (Mohand Fatiha): Odd days = N, Even days = RE in April
  */
-export function buildHygiene12hActivity(startWithRE: boolean): Record<number, string> {
+export function buildHygiene12hActivity(startWithN: boolean, daysCount = 30): Record<number, string> {
   const map: Record<number, string> = {};
-  for (let d = 1; d <= 31; d++) {
+  for (let d = 1; d <= daysCount; d++) {
     const isOdd = d % 2 === 1;
-    if (startWithRE) {
-      map[d] = isOdd ? 'RE' : 'N';
-    } else {
+    if (startWithN) {
       map[d] = isOdd ? 'N' : 'RE';
+    } else {
+      map[d] = isOdd ? 'RE' : 'N';
     }
   }
   return map;
 }
 
 export const DEFAULT_LEAVE_TYPES: LeaveTypeItem[] = [
-  { id: 'jour', code: 'Jour', label: 'Garde de Jour (16h)', isSystem: true, color: '#0284c7' },
-  { id: 'nuit', code: 'Nuit', label: 'Garde de Nuit (16h)', isSystem: true, color: '#4338ca' },
+  { id: 'g', code: 'G', label: 'Garde', isSystem: true, color: '#0284c7' },
   { id: 're', code: 'RE', label: 'Récupération', isSystem: true, color: '#059669' },
   { id: 'c', code: 'C', label: 'Congé', isSystem: false, color: '#d97706' },
   { id: 'cm', code: 'CM', label: 'Congé Maladie', isSystem: false, color: '#e11d48' },
-  { id: 'm', code: 'M', label: 'Maternité', isSystem: false, color: '#9333ea' },
+  { id: 'm', code: 'Congé de Maternité', label: 'Congé de Maternité (fusionné)', isSystem: false, color: '#ec4899' },
   { id: 'n', code: 'N', label: 'Normal', isSystem: true, color: '#475569' },
-  { id: 'f', code: 'F', label: 'Jour Férié', isSystem: false, color: '#0d9488' },
 ];
 
 export function buildLegendFromLeaveTypes(leaveTypes: LeaveTypeItem[]): string[] {
   return leaveTypes.map((item) => {
-    if (item.code === 'Jour' || item.code === 'Nuit') return item.code;
+    if (item.code === 'G' || item.code === 'RE' || item.code === 'N') return `${item.code} : ${item.label}`;
+    if (item.code === 'Congé de Maternité') return item.label;
     return `${item.code} : ${item.label}`;
   });
 }
 
-export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
+/**
+ * Create official April 2026 snapshot matching the user's provided PDF documents
+ */
+export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
+  const daysColumns = buildApril2026Days();
+
   const config: HospitalDocumentConfig = {
     id: 1,
     republicHeader: 'RÉPUBLIQUE ALGÉRIENNE DÉMOCRATIQUE ET POPULAIRE',
     ministryHeader: 'MINISTÈRE DE LA SANTÉ, DE LA POPULATION ET DE LA RÉFORME HOSPITALIÈRE',
     hospitalHeader: "Établissement Hospitalier d'Aïn El Türck - Dr. Medjber Tami",
     unitTitle: 'Unité : Service de Rhumatologie',
-    pdf1Page1Title: "Planning des Médecins « Mois d'Octobre 2026 »",
+    isModificatif: false,
+    currentPreset: 'april_2026',
+    // PDF 1 (Portrait)
+    pdf1Page1Title: "Planning des Médecins « Mois d'Avril 2026 »",
     pdf1Page1Subtitle: 'DE 8H À 16H',
     pdf1Page1Columns: ['Nom et Prénom', 'Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi'],
     pdf1Page1Obs: 'OBS : Journée de RCP tous les Mardis à 11 h',
-    pdf1Page2Title: "La liste du personnel médical du mois d'Octobre 2026",
+    pdf1Page2Title: "La liste du personnel médical du mois d'Avril 2026",
     pdf1Page2Subtitle: 'DE 8H À 16H',
     pdf1Page2Columns: ['Nom et Prénom', 'Fonction', 'O.B.S'],
-    pdf1Page3Title: "Planning du Personnel Paramédical du Mois d'Octobre 2026",
+    pdf1Page3Title: "Planning du Personnel Paramédical du Mois d'Avril 2026",
     pdf1Page3Columns: ['Horaire', 'Nom et Prénom', 'Fonction', 'OBS'],
     pdf1Page3Obs08h16h: '',
     pdf1Page3Obs16h: '',
     pdf1Page3Obs12h: '',
-    pdf2Page1Title: "TABLEAU D'ACTIVITÉ DU MOIS D'OCTOBRE 2026 | 08h–16h — Personnel Médical",
-    pdf2Page2Title: "TABLEAU D'ACTIVITÉ DU MOIS D'OCTOBRE 2026 | 08h–16h",
-    pdf2Page3Title: "TABLEAU D'ACTIVITÉ DU MOIS D'OCTOBRE 2026 | 16h",
-    pdf2Page5Title: "TABLEAU D'ACTIVITÉ DU MOIS D'OCTOBRE 2026 | Agents d'Hygiène — 12h",
+    // PDF 2 (Landscape)
+    pdf2Page1Title: "TABLEAU D'ACTIVITÉ DU MOIS D'AVRIL 2026 | 08h–16h — Personnel Médical",
+    pdf2Page2Title: "TABLEAU D'ACTIVITÉ DU MOIS D'AVRIL 2026 | 08h–16h",
+    pdf2Page3Title: "TABLEAU D'ACTIVITÉ DU MOIS D'AVRIL 2026 | 24h",
+    pdf2Page5Title: "TABLEAU D'ACTIVITÉ DU MOIS D'AVRIL 2026 | Agents d'Hygiène — 12h",
     pdf2NameColHeader: 'Nom et Prénom',
     pdf2GradeColHeader: 'Grade',
     pdf2TeamColHeader: 'Équipe',
-    cityDatePortrait: 'fait à Aïn el Türck le : 26/09/2026',
-    cityDateLandscape: 'Fait à Aïn el Türck le : 26/09/2026',
-    legendItems: buildLegendFromLeaveTypes(DEFAULT_LEAVE_TYPES),
+    cityDatePortrait: 'fait à Aïn el Türck le : 24/03/2026',
+    cityDateLandscape: 'Fait à Aïn el Türck le : 24/03/2026',
+    legendItems: [
+      'G : Garde',
+      'RE : Récupération',
+      'C : Congé',
+      'CM : Congé Maladie',
+      'N : Normal',
+    ],
     leaveTypes: [...DEFAULT_LEAVE_TYPES],
-    guardRotationOrder: [...DEFAULT_GUARD_ROTATION_ORDER],
-    guardMonthName: 'Octobre 2026',
+    guardRotationOrder: ['A', 'B', 'C', 'D'],
+    guardMonthName: 'Avril 2026',
     guardMonthOffsetDays: 0,
     nbNotice: "N.B : Toutes modifications de programme ne doivent se faire qu'après accord de la direction",
     signaturesPortrait: ['Le Médecin chef', 'Le Surveillant Médical', 'DAPM', 'Le Directeur Général'],
     signaturesLandscape: ['Le Médecin Chef', 'Le Surveillant Médical', 'DAPM', 'Le Directeur Général'],
-    daysColumns: buildOctober2026Days(),
+    daysColumns,
   };
 
   const emptyWeekly: DoctorWeeklySchedule = {
@@ -281,6 +374,15 @@ export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
     jeudi: 'SERVICE',
   };
 
+  // Helper for normal 08h-16h schedule in April 2026 (days 3,4, 10,11, 17,18, 24,25 are VEN/SAM RE)
+  const buildAprilNormal = (): Record<number, string> => {
+    const act: Record<number, string> = {};
+    for (let d = 1; d <= 30; d++) {
+      act[d] = d === 3 || d === 4 || d === 10 || d === 11 || d === 17 || d === 18 || d === 24 || d === 25 ? 'RE' : 'N';
+    }
+    return act;
+  };
+
   const staffBox: StaffEntity[] = [
     // ======================== 1. PERSONNEL MÉDICAL (6 Doctors) ========================
     {
@@ -288,8 +390,8 @@ export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Medjadi Mohsine',
       category: 'medical',
       rolePortrait: 'Médecin Chef Rhumatologue',
-      gradeLandscape: 'Médecin Chef\nRhumatologue',
-      obsPortrait: '08h-16h',
+      gradeLandscape: 'Médecin Chef Rhumatologue',
+      obsPortrait: 'Médecin Chef',
       horaireBlock: '08h-16h',
       teamGroup: '',
       portraitOrder: 1,
@@ -298,114 +400,136 @@ export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
         dimanche: 'Service Biothérapie',
         lundi: 'DMO',
         mardi: 'Visite Générale',
-        mercredi: 'ConsultationE.P.S.P\nBenSmir',
-        jeudi: 'Journée\nPédagogique',
+        mercredi: 'Consultation E.P.S.P Ben\nSmir',
+        jeudi: 'Journée Pédagogique',
       },
-      dailyActivity: buildStandard08h16hActivity(),
+      dailyActivity: buildAprilNormal(),
     },
     {
       id: 2,
       fullName: 'Ouadah Souad',
       category: 'medical',
       rolePortrait: 'Médecin Principal en Rhumatologie',
-      gradeLandscape: 'Médecin Principal\nen Rhumatologie',
+      gradeLandscape: 'Médecin Principal en Rhumatologie',
       obsPortrait: '08h-16h',
       horaireBlock: '08h-16h',
       teamGroup: '',
       portraitOrder: 2,
       landscapeOrder: 2,
       weeklySchedule: {
-        dimanche: 'Journée\nPédagogique',
+        dimanche: 'Journée Pédagogique',
         lundi: 'Consultation E.P.S.P\nMers El Kebir',
         mardi: 'Visite Générale',
         mercredi: 'DMO',
         jeudi: 'Service Biothérapie',
       },
-      dailyActivity: buildStandard08h16hActivity(),
+      dailyActivity: buildAprilNormal(),
     },
     {
       id: 3,
-      fullName: 'Tlemsani Naziha',
+      fullName: 'Bouziane Kheira',
       category: 'medical',
-      rolePortrait: 'Médecin Généraliste Principal',
-      gradeLandscape: 'Médecin\nGénéraliste',
-      obsPortrait: '08h-16h',
+      rolePortrait: 'Médecin Principal en Rhumatologie',
+      gradeLandscape: 'Médecin Principal en Rhumatologie',
+      obsPortrait: 'Congé (29/03 - 22/04)',
       horaireBlock: '08h-16h',
       teamGroup: '',
       portraitOrder: 3,
       landscapeOrder: 3,
       weeklySchedule: {
-        dimanche: 'SERVICE',
-        lundi: 'SERVICE',
-        mardi: 'ConsultationE.P.S.P\nBenSmir',
-        mercredi: 'SERVICE',
-        jeudi: 'SERVICE',
+        dimanche: 'Consultation E.P.S.P Ben\nSmir',
+        lundi: 'Journée Pédagogique',
+        mardi: 'Visite Générale',
+        mercredi: 'Service',
+        jeudi: 'DMO',
       },
-      dailyActivity: buildStandard08h16hActivity(),
+      dailyActivity: (() => {
+        const act = buildAprilNormal();
+        for (let d = 1; d <= 22; d++) act[d] = 'C';
+        return act;
+      })(),
     },
     {
       id: 4,
-      fullName: 'Boumazouzi Hind',
+      fullName: 'Tlemsani Naziha',
       category: 'medical',
-      rolePortrait: 'Médecin Généraliste Principal',
-      gradeLandscape: 'Médecin\nGénéraliste',
-      obsPortrait: '08h-16h',
+      rolePortrait: 'Médecin Généraliste Principale',
+      gradeLandscape: 'Médecin Généraliste Principale',
+      obsPortrait: 'Congé (24/03 - 07/04)',
       horaireBlock: '08h-16h',
       teamGroup: '',
       portraitOrder: 4,
       landscapeOrder: 4,
       weeklySchedule: {
-        dimanche: 'SERVICE',
-        lundi: 'SERVICE',
-        mardi: 'Visite Générale',
-        mercredi: 'SERVICE',
-        jeudi: 'SERVICE',
+        dimanche: 'Service',
+        lundi: 'Service',
+        mardi: 'Consultation E.P.S.P Ben\nSmir',
+        mercredi: 'Service',
+        jeudi: 'Service',
       },
-      dailyActivity: buildStandard08h16hActivity(),
+      dailyActivity: (() => {
+        const act = buildAprilNormal();
+        for (let d = 1; d <= 7; d++) act[d] = 'C';
+        return act;
+      })(),
     },
     {
       id: 5,
-      fullName: 'Benrahal Yasmina',
+      fullName: 'Boumazouzi Hind',
       category: 'medical',
-      rolePortrait: 'Médecin Généraliste',
-      gradeLandscape: 'Médecin\nGénéraliste',
-      obsPortrait: '08h-16h',
+      rolePortrait: 'Médecin Généraliste Principale',
+      gradeLandscape: 'Médecin Généraliste Principale',
+      obsPortrait: 'Congé (26/03 - 05/04)',
       horaireBlock: '08h-16h',
       teamGroup: '',
       portraitOrder: 5,
       landscapeOrder: 5,
-      weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildStandard08h16hActivity(),
+      weeklySchedule: {
+        dimanche: 'Service',
+        lundi: 'Service',
+        mardi: 'Visite Générale',
+        mercredi: 'Service',
+        jeudi: 'Consultation E.P.S.P Ben\nSmir',
+      },
+      dailyActivity: (() => {
+        const act = buildAprilNormal();
+        for (let d = 1; d <= 5; d++) act[d] = 'C';
+        return act;
+      })(),
     },
     {
       id: 6,
-      fullName: 'Chouchelamane Soumia',
+      fullName: 'Benrahal Yasmina',
       category: 'medical',
       rolePortrait: 'Médecin Généraliste',
-      gradeLandscape: 'Médecin\nGénéraliste',
-      obsPortrait: '08h-16h',
+      gradeLandscape: 'Médecin Généraliste',
+      obsPortrait: 'Congé (06/04 - 12/04)',
       horaireBlock: '08h-16h',
       teamGroup: '',
       portraitOrder: 6,
       landscapeOrder: 6,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildStandard08h16hActivity(),
+      dailyActivity: (() => {
+        const act = buildAprilNormal();
+        for (let d = 6; d <= 12; d++) act[d] = 'C';
+        return act;
+      })(),
     },
 
-    // ======================== 2. PARAMÉDICAL 08h-16h (10 Staff) ========================
+    // ======================== 2. PARAMÉDICAL 08h-16h (9 Staff) ========================
     {
       id: 7,
       fullName: 'Kerarma Djelloul',
       category: 'paramedical_day',
       rolePortrait: 'I.SSP Surveillant Médical',
-      gradeLandscape: 'I.SSP Surveillant\nMédical',
-      obsPortrait: '',
+      gradeLandscape: 'I.SSP Surveillant Médical',
+      obsPortrait: 'Surveillant Médical',
       horaireBlock: '08h-16h',
       teamGroup: '',
       portraitOrder: 1,
       landscapeOrder: 1,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildStandard08h16hActivity(),
+      dailyActivity: buildAprilNormal(),
     },
     {
       id: 8,
@@ -413,86 +537,53 @@ export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
       category: 'paramedical_day',
       rolePortrait: 'Psychologue',
       gradeLandscape: 'Psychologue',
-      obsPortrait: '',
+      obsPortrait: 'Congé (24/03 - 02/04)',
       horaireBlock: '08h-16h',
       teamGroup: '',
       portraitOrder: 2,
       landscapeOrder: 2,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildStandard08h16hActivity(),
+      dailyActivity: (() => {
+        const act = buildAprilNormal();
+        act[1] = 'C';
+        act[2] = 'C';
+        return act;
+      })(),
     },
     {
       id: 9,
-      fullName: 'Behloul Zahra',
-      category: 'paramedical_day',
-      rolePortrait: 'Administrateur',
-      gradeLandscape: 'Administrateur',
-      obsPortrait: '',
-      horaireBlock: '08h-16h',
-      teamGroup: '',
-      portraitOrder: 3,
-      landscapeOrder: 3,
-      weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildStandard08h16hActivity(),
-    },
-    {
-      id: 10,
-      fullName: 'Zalegh Fatima',
-      category: 'paramedical_day',
-      rolePortrait: 'Agent de bureau',
-      gradeLandscape: 'Agent de bureau',
-      obsPortrait: '',
-      horaireBlock: '08h-16h',
-      teamGroup: '',
-      portraitOrder: 4,
-      landscapeOrder: 5, // In PDF 2 Page 2, Baoud Kholoud is row 4 and Zalegh Fatima is row 5
-      weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildStandard08h16hActivity(),
-    },
-    {
-      id: 11,
-      fullName: 'Baoud Kholoud',
-      category: 'paramedical_day',
-      rolePortrait: 'Agent de bureau',
-      gradeLandscape: 'Agent de bureau',
-      obsPortrait: '',
-      horaireBlock: '08h-16h',
-      teamGroup: '',
-      portraitOrder: 5,
-      landscapeOrder: 4,
-      weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildStandard08h16hActivity(),
-    },
-    {
-      id: 12,
-      fullName: 'Naamoun Sarra',
-      category: 'paramedical_day',
-      rolePortrait: 'Chargée de pharmacie',
-      gradeLandscape: 'Chargée de\npharmacie',
-      obsPortrait: '',
-      horaireBlock: '08h-16h',
-      teamGroup: '',
-      portraitOrder: 6,
-      landscapeOrder: 6,
-      weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildStandard08h16hActivity(),
-    },
-    {
-      id: 13,
-      fullName: 'Rahmani Ibtissem',
+      fullName: 'Bouaziz Nacer',
       category: 'paramedical_day',
       rolePortrait: 'ATS principal',
       gradeLandscape: 'ATS principal',
       obsPortrait: '',
       horaireBlock: '08h-16h',
       teamGroup: '',
-      portraitOrder: 7,
-      landscapeOrder: 8, // In PDF 2 Page 2, Djaziri Cherifa is row 7, Rahmani 8, Kassab 9
+      portraitOrder: 3,
+      landscapeOrder: 7,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildStandard08h16hActivity(),
+      dailyActivity: buildAprilNormal(),
     },
     {
-      id: 14,
+      id: 10,
+      fullName: 'Rahmani Ibtissem',
+      category: 'paramedical_day',
+      rolePortrait: 'ATS principal',
+      gradeLandscape: 'ATS principal',
+      obsPortrait: 'Congé (23/03 - 06/04)',
+      horaireBlock: '08h-16h',
+      teamGroup: '',
+      portraitOrder: 4,
+      landscapeOrder: 8,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: (() => {
+        const act = buildAprilNormal();
+        for (let d = 1; d <= 6; d++) act[d] = 'C';
+        return act;
+      })(),
+    },
+    {
+      id: 11,
       fullName: 'Kassab Hichem',
       category: 'paramedical_day',
       rolePortrait: 'ATS principal',
@@ -500,212 +591,353 @@ export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
       obsPortrait: '',
       horaireBlock: '08h-16h',
       teamGroup: '',
-      portraitOrder: 8,
+      portraitOrder: 5,
       landscapeOrder: 9,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildStandard08h16hActivity(),
+      dailyActivity: buildAprilNormal(),
+    },
+    {
+      id: 12,
+      fullName: 'Behloul Zahra',
+      category: 'paramedical_day',
+      rolePortrait: 'Administrateur',
+      gradeLandscape: 'Administrateur',
+      obsPortrait: 'Chargée de DMO',
+      horaireBlock: '08h-16h',
+      teamGroup: '',
+      portraitOrder: 6,
+      landscapeOrder: 3,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: buildAprilNormal(),
+    },
+    {
+      id: 13,
+      fullName: 'Naamoun Sarra',
+      category: 'paramedical_day',
+      rolePortrait: 'Chargée de pharmacie',
+      gradeLandscape: 'Chargée de pharmacie',
+      obsPortrait: 'Congé (15/03 - 02/04)',
+      horaireBlock: '08h-16h',
+      teamGroup: '',
+      portraitOrder: 7,
+      landscapeOrder: 6,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: (() => {
+        const act = buildAprilNormal();
+        act[1] = 'C';
+        act[2] = 'C';
+        return act;
+      })(),
+    },
+    {
+      id: 14,
+      fullName: 'Zalegh Fatima',
+      category: 'paramedical_day',
+      rolePortrait: 'Agent de bureau',
+      gradeLandscape: 'Agent de bureau',
+      obsPortrait: '',
+      horaireBlock: '08h-16h',
+      teamGroup: '',
+      portraitOrder: 8,
+      landscapeOrder: 4,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: buildAprilNormal(),
     },
     {
       id: 15,
-      fullName: 'Djaziri Cherifa',
+      fullName: 'Baoud Kholoud',
       category: 'paramedical_day',
-      rolePortrait: 'Chargé de pharmacie',
-      gradeLandscape: 'Chargé de\npharmacie',
-      obsPortrait: '',
+      rolePortrait: 'Agent de bureau',
+      gradeLandscape: 'Agent de bureau',
+      obsPortrait: 'Congé (23/03 - 11/04)',
       horaireBlock: '08h-16h',
       teamGroup: '',
       portraitOrder: 9,
-      landscapeOrder: 7,
+      landscapeOrder: 5,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildStandard08h16hActivity(),
-    },
-    {
-      id: 16,
-      fullName: 'Hellal Merouane',
-      category: 'paramedical_day',
-      rolePortrait: 'ATS',
-      gradeLandscape: 'ATS',
-      obsPortrait: '',
-      horaireBlock: '08h-16h',
-      teamGroup: '',
-      portraitOrder: 10,
-      landscapeOrder: 10,
-      weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildStandard08h16hActivity(),
+      dailyActivity: (() => {
+        const act = buildAprilNormal();
+        for (let d = 1; d <= 11; d++) act[d] = 'C';
+        return act;
+      })(),
     },
 
-    // ======================== 3. PARAMÉDICAL GARDE 16h (16 Staff · Groupes A-E) ========================
+    // ======================== 3. PARAMÉDICAL GARDE 24h (15 Staff · Groupes A-D) ========================
     // Groupe A
     {
-      id: 17,
+      id: 16,
       fullName: 'Bakhouche Sarra',
       category: 'paramedical_guard',
       rolePortrait: 'ATS',
       gradeLandscape: 'ATS',
       obsPortrait: '',
-      horaireBlock: '16h',
+      horaireBlock: '24h',
       teamGroup: 'A',
       portraitOrder: 1,
       landscapeOrder: 1,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildGuard16hActivity('A'),
+      dailyActivity: (() => {
+        // Team A: Garde on 1, 5, 9, 13, 17, 21, 25, 29; else RE
+        const act: Record<number, string> = {};
+        for (let d = 1; d <= 30; d++) {
+          act[d] = (d - 1) % 4 === 0 ? 'G' : 'RE';
+        }
+        return act;
+      })(),
     },
     {
-      id: 18,
+      id: 17,
       fullName: 'Behloul Sihem',
       category: 'paramedical_guard',
       rolePortrait: 'ATS',
       gradeLandscape: 'ATS',
       obsPortrait: '',
-      horaireBlock: '16h',
+      horaireBlock: '24h',
       teamGroup: 'A',
       portraitOrder: 2,
       landscapeOrder: 2,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildGuard16hActivity('A'),
+      dailyActivity: (() => {
+        // Team A: Garde on 1, 5, 9, 13, 17, 21, 25, 29; else RE
+        const act: Record<number, string> = {};
+        for (let d = 1; d <= 30; d++) {
+          act[d] = (d - 1) % 4 === 0 ? 'G' : 'RE';
+        }
+        return act;
+      })(),
     },
     {
-      id: 19,
+      id: 18,
       fullName: 'Bouabida Ikram',
       category: 'paramedical_guard',
       rolePortrait: 'ATS principal',
       gradeLandscape: 'ATS principal',
       obsPortrait: '',
-      horaireBlock: '16h',
+      horaireBlock: '24h',
       teamGroup: 'A',
       portraitOrder: 3,
       landscapeOrder: 3,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildGuard16hActivity('A'),
+      dailyActivity: (() => {
+        const act: Record<number, string> = {};
+        for (let d = 1; d <= 30; d++) {
+          act[d] = (d - 1) % 4 === 0 ? 'G' : 'RE';
+        }
+        return act;
+      })(),
     },
     {
-      id: 20,
+      id: 19,
       fullName: 'Ben Kara Ahmed',
       category: 'paramedical_guard',
       rolePortrait: 'ATS',
       gradeLandscape: 'ATS',
       obsPortrait: '',
-      horaireBlock: '16h',
+      horaireBlock: '24h',
       teamGroup: 'A',
       portraitOrder: 4,
       landscapeOrder: 4,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildGuard16hActivity('A'),
+      dailyActivity: (() => {
+        const act: Record<number, string> = {};
+        for (let d = 1; d <= 30; d++) {
+          act[d] = (d - 1) % 4 === 0 ? 'G' : 'RE';
+        }
+        act[29] = 'C';
+        act[30] = 'C';
+        return act;
+      })(),
     },
+
     // Groupe B
     {
-      id: 21,
+      id: 20,
       fullName: 'Kadri Karima',
       category: 'paramedical_guard',
       rolePortrait: 'ATS principal',
       gradeLandscape: 'ATS principal',
       obsPortrait: '',
-      horaireBlock: '16h',
+      horaireBlock: '24h',
       teamGroup: 'B',
       portraitOrder: 5,
       landscapeOrder: 5,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildGuard16hActivity('B'),
+      dailyActivity: (() => {
+        const act: Record<number, string> = {};
+        // Team B: Garde on 2, 6, 10, 14, 18, 22, 26, 30
+        for (let d = 1; d <= 30; d++) {
+          act[d] = (d - 2) % 4 === 0 ? 'G' : 'RE';
+        }
+        for (let d = 1; d <= 10; d++) act[d] = 'C';
+        return act;
+      })(),
     },
     {
-      id: 22,
+      id: 21,
       fullName: 'Hiadsi Souad',
       category: 'paramedical_guard',
       rolePortrait: 'ATS principal',
       gradeLandscape: 'ATS principal',
       obsPortrait: '',
-      horaireBlock: '16h',
+      horaireBlock: '24h',
       teamGroup: 'B',
       portraitOrder: 6,
       landscapeOrder: 6,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildGuard16hActivity('B'),
+      dailyActivity: (() => {
+        const act: Record<number, string> = {};
+        for (let d = 1; d <= 30; d++) {
+          act[d] = (d - 2) % 4 === 0 ? 'G' : 'RE';
+        }
+        return act;
+      })(),
     },
     {
-      id: 23,
-      fullName: 'Belhadj kacem fatima',
+      id: 22,
+      fullName: 'Ait Menguellat Lilia',
       category: 'paramedical_guard',
-      rolePortrait: 'ATS',
-      gradeLandscape: 'ATS',
+      rolePortrait: 'ATS principal',
+      gradeLandscape: 'ATS principal',
       obsPortrait: '',
-      horaireBlock: '16h',
+      horaireBlock: '24h',
       teamGroup: 'B',
       portraitOrder: 7,
       landscapeOrder: 7,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildGuard16hActivity('B'),
+      dailyActivity: (() => {
+        const act: Record<number, string> = {};
+        for (let d = 1; d <= 30; d++) {
+          act[d] = (d - 2) % 4 === 0 ? 'G' : 'RE';
+        }
+        return act;
+      })(),
     },
+
     // Groupe C
     {
-      id: 24,
+      id: 23,
       fullName: 'Chaabane Abdelhamid',
       category: 'paramedical_guard',
       rolePortrait: 'infirmier major',
       gradeLandscape: 'infirmier major',
       obsPortrait: '',
-      horaireBlock: '16h',
+      horaireBlock: '24h',
       teamGroup: 'C',
       portraitOrder: 8,
       landscapeOrder: 8,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildGuard16hActivity('C'),
+      dailyActivity: (() => {
+        const act: Record<number, string> = {};
+        // Team C: Garde on 3, 7, 11, 15, 19, 23, 27
+        for (let d = 1; d <= 30; d++) {
+          act[d] = (d - 3) % 4 === 0 ? 'G' : 'RE';
+        }
+        for (let d = 1; d <= 20; d++) act[d] = 'C';
+        return act;
+      })(),
     },
     {
-      id: 25,
+      id: 24,
       fullName: 'Mahdjoubi Sami',
       category: 'paramedical_guard',
       rolePortrait: 'ATS',
       gradeLandscape: 'ATS',
       obsPortrait: '',
-      horaireBlock: '16h',
+      horaireBlock: '24h',
       teamGroup: 'C',
       portraitOrder: 9,
       landscapeOrder: 9,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildGuard16hActivity('C'),
+      dailyActivity: (() => {
+        const act: Record<number, string> = {};
+        for (let d = 1; d <= 30; d++) {
+          act[d] = (d - 3) % 4 === 0 ? 'G' : 'RE';
+        }
+        return act;
+      })(),
     },
     {
-      id: 26,
+      id: 25,
       fullName: 'Belarbi Mohamed',
       category: 'paramedical_guard',
       rolePortrait: 'ATS',
       gradeLandscape: 'ATS',
       obsPortrait: '',
-      horaireBlock: '16h',
+      horaireBlock: '24h',
       teamGroup: 'C',
       portraitOrder: 10,
       landscapeOrder: 10,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildGuard16hActivity('C'),
+      dailyActivity: (() => {
+        const act: Record<number, string> = {};
+        for (let d = 1; d <= 30; d++) {
+          act[d] = (d - 3) % 4 === 0 ? 'G' : 'RE';
+        }
+        return act;
+      })(),
     },
     {
-      id: 27,
+      id: 26,
       fullName: 'Bouderouez Fatiha',
       category: 'paramedical_guard',
       rolePortrait: 'IDE',
       gradeLandscape: 'IDE',
       obsPortrait: '',
-      horaireBlock: '16h',
+      horaireBlock: '24h',
       teamGroup: 'C',
       portraitOrder: 11,
       landscapeOrder: 11,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildGuard16hActivity('C'),
+      dailyActivity: (() => {
+        const act: Record<number, string> = {};
+        for (let d = 1; d <= 30; d++) {
+          act[d] = (d - 3) % 4 === 0 ? 'G' : 'RE';
+        }
+        return act;
+      })(),
     },
+
     // Groupe D
     {
-      id: 28,
+      id: 27,
       fullName: 'Hamdi Souad',
       category: 'paramedical_guard',
       rolePortrait: 'IDE',
       gradeLandscape: 'IDE',
       obsPortrait: '',
-      horaireBlock: '16h',
+      horaireBlock: '24h',
       teamGroup: 'D',
       portraitOrder: 12,
-      landscapeOrder: 12,
+      landscapeOrder: 13,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildGuard16hActivity('D'),
+      dailyActivity: (() => {
+        const act: Record<number, string> = {};
+        // Team D: Garde on 4, 8, 12, 16, 20, 24, 28
+        for (let d = 1; d <= 30; d++) {
+          act[d] = (d - 4) % 4 === 0 ? 'G' : 'RE';
+        }
+        return act;
+      })(),
+    },
+    {
+      id: 28,
+      fullName: 'Guerle Mohamed Yacine',
+      category: 'paramedical_guard',
+      rolePortrait: 'ATS',
+      gradeLandscape: 'ATS',
+      obsPortrait: '',
+      horaireBlock: '24h',
+      teamGroup: 'D',
+      portraitOrder: 13,
+      landscapeOrder: 14,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: (() => {
+        const act: Record<number, string> = {};
+        for (let d = 1; d <= 30; d++) {
+          act[d] = (d - 4) % 4 === 0 ? 'G' : 'RE';
+        }
+        return act;
+      })(),
     },
     {
       id: 29,
@@ -713,61 +945,46 @@ export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
       category: 'paramedical_guard',
       rolePortrait: 'ATS principal',
       gradeLandscape: 'ATS principal',
-      obsPortrait: '',
-      horaireBlock: '16h',
+      obsPortrait: 'Congé (25/03 - 10/04)',
+      horaireBlock: '24h',
       teamGroup: 'D',
-      portraitOrder: 13,
-      landscapeOrder: 13,
+      portraitOrder: 14,
+      landscapeOrder: 12,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildGuard16hActivity('D'),
+      dailyActivity: (() => {
+        const act: Record<number, string> = {};
+        for (let d = 1; d <= 30; d++) {
+          act[d] = (d - 4) % 4 === 0 ? 'G' : 'RE';
+        }
+        for (let d = 1; d <= 10; d++) act[d] = 'C';
+        return act;
+      })(),
     },
-    // Groupe E (Portrait: Bouaziz Nacer, Isselma Mohamed Nabi, Guerle Mohamed Yacine; Landscape: Guerle, Isselma, Bouaziz)
     {
       id: 30,
-      fullName: 'Bouaziz Nacer',
-      category: 'paramedical_guard',
-      rolePortrait: 'ATS principal',
-      gradeLandscape: 'ATS principal',
-      obsPortrait: '',
-      horaireBlock: '16h',
-      teamGroup: 'E',
-      portraitOrder: 14,
-      landscapeOrder: 16,
-      weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildGuard16hActivity('E', true),
-    },
-    {
-      id: 31,
       fullName: 'Isselma Mohamed Nabi',
       category: 'paramedical_guard',
       rolePortrait: 'ATS',
       gradeLandscape: 'ATS',
-      obsPortrait: '',
-      horaireBlock: '16h',
-      teamGroup: 'E',
+      obsPortrait: 'Congé (24/03 - 17/04)',
+      horaireBlock: '24h',
+      teamGroup: 'D',
       portraitOrder: 15,
       landscapeOrder: 15,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildGuard16hActivity('E'),
-    },
-    {
-      id: 32,
-      fullName: 'Guerle Mohamed Yacine',
-      category: 'paramedical_guard',
-      rolePortrait: 'ATS',
-      gradeLandscape: 'ATS',
-      obsPortrait: '',
-      horaireBlock: '16h',
-      teamGroup: 'E',
-      portraitOrder: 16,
-      landscapeOrder: 14,
-      weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildGuard16hActivity('E'),
+      dailyActivity: (() => {
+        const act: Record<number, string> = {};
+        for (let d = 1; d <= 30; d++) {
+          act[d] = (d - 4) % 4 === 0 ? 'G' : 'RE';
+        }
+        for (let d = 1; d <= 17; d++) act[d] = 'C';
+        return act;
+      })(),
     },
 
     // ======================== 4. AGENTS D'HYGIÈNE 12h (2 Staff) ========================
     {
-      id: 33,
+      id: 31,
       fullName: 'Mohand Fatiha',
       category: 'hygiene',
       rolePortrait: "Agent d'hygiène",
@@ -778,10 +995,10 @@ export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
       portraitOrder: 1,
       landscapeOrder: 1,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildHygiene12hActivity(true),
+      dailyActivity: buildHygiene12hActivity(true, 30),
     },
     {
-      id: 34,
+      id: 32,
       fullName: 'Touati Fatima',
       category: 'hygiene',
       rolePortrait: "Agent d'hygiène",
@@ -792,12 +1009,12 @@ export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
       portraitOrder: 2,
       landscapeOrder: 2,
       weeklySchedule: { ...emptyWeekly },
-      dailyActivity: buildHygiene12hActivity(false),
+      dailyActivity: buildHygiene12hActivity(false, 30),
     },
   ];
 
   return {
-    version: 1,
+    version: 4,
     updatedAt: new Date().toISOString(),
     config,
     staffBox,
@@ -805,7 +1022,54 @@ export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
 }
 
 /**
- * Paginated Query Builder matching ObjectBox best practices (AGENTS.md §11):
+ * Create January 2026 (Modificatif) snapshot matching Planning_janvier_2026_11h52m21s465.pdf
+ */
+export function createJanuary2026Snapshot(): ObjectBoxDatabaseSnapshot {
+  const base = createApril2026Snapshot();
+  const daysColumns = buildJanuary2026Days();
+
+  base.config.guardMonthName = 'Janvier 2026';
+  base.config.isModificatif = true;
+  base.config.currentPreset = 'january_2026';
+  base.config.daysColumns = daysColumns;
+  base.config.cityDateLandscape = 'Fait à Aïn el Türck le : 15/01/2026';
+  base.config.cityDatePortrait = 'fait à Aïn el Türck le : 15/01/2026';
+  base.config.pdf1Page1Title = 'Planning des Médecins « Mois de Janvier 2026 » (Modificatif)';
+  base.config.pdf1Page2Title = 'La liste du personnel médical du mois de Janvier 2026 (Modificatif)';
+  base.config.pdf1Page3Title = 'Planning du Personnel Paramédical du Mois de Janvier 2026 (Modificatif)';
+  base.config.pdf2Page1Title = "TABLEAU D'ACTIVITÉ DU MOIS DE JANVIER 2026 (Modificatif) | 08h–16h — Personnel Médical";
+  base.config.pdf2Page2Title = "TABLEAU D'ACTIVITÉ DU MOIS DE JANVIER 2026 (Modificatif) | 08h–16h";
+  base.config.pdf2Page3Title = "TABLEAU D'ACTIVITÉ DU MOIS DE JANVIER 2026 (Modificatif) 24h";
+  base.config.pdf2Page5Title = "TABLEAU D'ACTIVITÉ DU MOIS DE JANVIER 2026 (Modificatif) 24h";
+
+  // In January 2026, Bakhouche Sarra has maternity leave for all 31 days (since 25/11/2025 to 26/04/2026 covers all January)
+  base.staffBox = base.staffBox.map((s) => {
+    if (s.fullName.toLowerCase().includes('bakhouche')) {
+      const act: Record<number, string> = {};
+      for (let d = 1; d <= 31; d++) act[d] = 'Congé de Maternité';
+      return {
+        ...s,
+        maternityLeave: {
+          startDay: 1,
+          endDay: 31,
+          label: 'Congé de Maternité',
+          datesText: '25/11/2025 au 26/04/2026',
+        },
+        dailyActivity: act,
+      };
+    }
+    return s;
+  });
+
+  return base;
+}
+
+export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
+  return createApril2026Snapshot();
+}
+
+/**
+ * Paginated Query Builder matching ObjectBox best practices:
  * Uses lazy filter evaluation with .offset() and .limit() and indexed property sorting.
  */
 export class ObjectBoxQueryBuilder<T> {
@@ -868,12 +1132,11 @@ export class ObjectBoxLocalStore {
   }
 
   private persistAsync(snap: ObjectBoxDatabaseSnapshot): void {
-    // Run writes asynchronously off the critical UI frame (AGENTS.md §11)
     queueMicrotask(() => {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(snap));
       } catch {
-        // Ignore quota errors in restricted sandboxes
+        // Ignore quota errors in sandboxes
       }
     });
   }
@@ -906,6 +1169,11 @@ export class ObjectBoxLocalStore {
       ...partial,
     };
     this.notify();
+  }
+
+  toggleModificatif(enable?: boolean): void {
+    const nextVal = enable !== undefined ? enable : !this.snapshot.config.isModificatif;
+    this.updateConfig({ isModificatif: nextVal });
   }
 
   queryStaff(): ObjectBoxQueryBuilder<StaffEntity> {
@@ -957,6 +1225,67 @@ export class ObjectBoxLocalStore {
         [day]: code,
       },
     };
+    this.snapshot.staffBox = nextBox;
+    this.notify();
+  }
+
+  setMaternityLeave(
+    staffId: number,
+    startDay: number,
+    endDay: number,
+    datesText: string,
+    label = 'Congé de Maternité'
+  ): void {
+    const idx = this.snapshot.staffBox.findIndex((s) => s.id === staffId);
+    if (idx === -1) return;
+    const staff = this.snapshot.staffBox[idx];
+
+    const nextActivity = { ...staff.dailyActivity };
+    for (let d = startDay; d <= endDay; d++) {
+      nextActivity[d] = label;
+    }
+
+    const obsString = `CONGÉ de MATERNITÉ. ${datesText}`;
+
+    const updated: StaffEntity = {
+      ...staff,
+      obsPortrait: obsString,
+      maternityLeave: {
+        startDay,
+        endDay,
+        label,
+        datesText,
+      },
+      dailyActivity: nextActivity,
+    };
+
+    const nextBox = [...this.snapshot.staffBox];
+    nextBox[idx] = updated;
+    this.snapshot.staffBox = nextBox;
+    this.notify();
+  }
+
+  removeMaternityLeave(staffId: number): void {
+    const idx = this.snapshot.staffBox.findIndex((s) => s.id === staffId);
+    if (idx === -1) return;
+    const staff = this.snapshot.staffBox[idx];
+
+    const nextActivity = { ...staff.dailyActivity };
+    if (staff.maternityLeave) {
+      for (let d = staff.maternityLeave.startDay; d <= staff.maternityLeave.endDay; d++) {
+        nextActivity[d] = staff.horaireBlock === '08h-16h' ? 'N' : 'RE';
+      }
+    }
+
+    const updated: StaffEntity = {
+      ...staff,
+      obsPortrait: '',
+      maternityLeave: undefined,
+      dailyActivity: nextActivity,
+    };
+
+    const nextBox = [...this.snapshot.staffBox];
+    nextBox[idx] = updated;
     this.snapshot.staffBox = nextBox;
     this.notify();
   }
@@ -1020,37 +1349,35 @@ export class ObjectBoxLocalStore {
   }
 
   applyContinuousGuardRotation(
-    rotationOrder: string[] = DEFAULT_GUARD_ROTATION_ORDER,
+    rotationOrder: string[] = ['A', 'B', 'C', 'D'],
     cumulativeOffsetDays = 0,
-    daysInMonth = 31,
-    includeBouazizOverride = true,
+    daysInMonth = 30,
+    includeBouazizOverride = false,
     periodRange?: { startDay: number; endDay: number } | null
   ): void {
     const nextStaff = this.snapshot.staffBox.map((staff) => {
       if (staff.category !== 'paramedical_guard' || !staff.teamGroup) {
         return staff;
       }
-      const isBouaziz = staff.fullName.toLowerCase().includes('bouaziz');
-      const newActivity = buildContinuousGuard16hActivity(
-        staff.teamGroup,
-        rotationOrder,
-        cumulativeOffsetDays,
-        daysInMonth,
-        isBouaziz && includeBouazizOverride
-      );
 
-      if (periodRange) {
-        // Only update cells within the chosen period range [startDay, endDay]
-        const mergedActivity = { ...staff.dailyActivity };
-        for (let d = periodRange.startDay; d <= periodRange.endDay; d++) {
-          if (newActivity[d]) {
-            mergedActivity[d] = newActivity[d];
-          }
+      // If staff has active maternity leave, preserve maternity leave days
+      const matSpan = getStaffMaternitySpan(staff, this.snapshot.config.daysColumns);
+
+      const teamIdx = rotationOrder.indexOf(staff.teamGroup);
+      const newActivity = { ...staff.dailyActivity };
+
+      const start = periodRange ? periodRange.startDay : 1;
+      const end = periodRange ? periodRange.endDay : daysInMonth;
+
+      for (let d = start; d <= end; d++) {
+        if (matSpan && d >= matSpan.startDay && d <= matSpan.endDay) {
+          newActivity[d] = matSpan.label || 'Congé de Maternité';
+          continue;
         }
-        return {
-          ...staff,
-          dailyActivity: mergedActivity,
-        };
+        if (teamIdx !== -1) {
+          const isGuard = (d - 1 + cumulativeOffsetDays - teamIdx) % rotationOrder.length === 0;
+          newActivity[d] = isGuard ? 'G' : 'RE';
+        }
       }
 
       return {
@@ -1069,7 +1396,17 @@ export class ObjectBoxLocalStore {
   }
 
   resetToOriginalPdfs(): void {
-    this.snapshot = createInitialSeedSnapshot();
+    this.snapshot = createApril2026Snapshot();
+    this.notify();
+  }
+
+  loadAprilPreset(): void {
+    this.snapshot = createApril2026Snapshot();
+    this.notify();
+  }
+
+  loadJanuaryPreset(): void {
+    this.snapshot = createJanuary2026Snapshot();
     this.notify();
   }
 
