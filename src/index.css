@@ -52,6 +52,24 @@
 }
 
 @media print {
+  @page {
+    margin: 0;
+  }
+
+  body[data-orientation="portrait"] {
+    @page {
+      size: 210mm 297mm;
+      margin: 0;
+    }
+  }
+
+  body[data-orientation="landscape"] {
+    @page {
+      size: 297mm 210mm;
+      margin: 0;
+    }
+  }
+
   body {
     background: #ffffff !important;
     margin: 0 !important;

@@ -251,7 +251,7 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
               </td>
 
               {/* Grade */}
-              <td className="border border-[#CCCCCC] bg-white text-black px-1 whitespace-nowrap">
+              <td className="border border-[#CCCCCC] bg-white text-black px-1 leading-[1.1] text-[11px] align-middle">
                 <EditableText
                   value={staff.gradeLandscape}
                   onChange={(v) => onUpdateStaffField(staff.id, 'gradeLandscape', v)}

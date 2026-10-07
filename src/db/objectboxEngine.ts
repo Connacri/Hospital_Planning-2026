@@ -79,7 +79,7 @@ export interface ObjectBoxDatabaseSnapshot {
   staffBox: StaffEntity[];
 }
 
-const STORAGE_KEY = 'eh_ain_el_turck_objectbox_store_v1';
+const STORAGE_KEY = 'eh_ain_el_turck_objectbox_store_v2';
 
 const FRENCH_DOW_OCT_2026: string[] = [
   'JEU', 'VEN', 'SAM', 'DIM', 'LUN', 'MAR', 'MER'
@@ -215,7 +215,7 @@ export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Medjadi Mohsine',
       category: 'medical',
       rolePortrait: 'Médecin Chef Rhumatologue',
-      gradeLandscape: 'Médecin Chef',
+      gradeLandscape: 'Médecin Chef\nRhumatologue',
       obsPortrait: '08h-16h',
       horaireBlock: '08h-16h',
       teamGroup: '',
@@ -235,7 +235,7 @@ export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Ouadah Souad',
       category: 'medical',
       rolePortrait: 'Médecin Principal en Rhumatologie',
-      gradeLandscape: 'Médecin Principal',
+      gradeLandscape: 'Médecin Principal\nen Rhumatologie',
       obsPortrait: '08h-16h',
       horaireBlock: '08h-16h',
       teamGroup: '',
@@ -255,7 +255,7 @@ export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Tlemsani Naziha',
       category: 'medical',
       rolePortrait: 'Médecin Généraliste Principal',
-      gradeLandscape: 'Médecin',
+      gradeLandscape: 'Médecin\nGénéraliste',
       obsPortrait: '08h-16h',
       horaireBlock: '08h-16h',
       teamGroup: '',
@@ -275,7 +275,7 @@ export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Boumazouzi Hind',
       category: 'medical',
       rolePortrait: 'Médecin Généraliste Principal',
-      gradeLandscape: 'Médecin',
+      gradeLandscape: 'Médecin\nGénéraliste',
       obsPortrait: '08h-16h',
       horaireBlock: '08h-16h',
       teamGroup: '',
@@ -295,7 +295,7 @@ export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Benrahal Yasmina',
       category: 'medical',
       rolePortrait: 'Médecin Généraliste',
-      gradeLandscape: 'Médecin',
+      gradeLandscape: 'Médecin\nGénéraliste',
       obsPortrait: '08h-16h',
       horaireBlock: '08h-16h',
       teamGroup: '',
@@ -309,7 +309,7 @@ export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Chouchelamane Soumia',
       category: 'medical',
       rolePortrait: 'Médecin Généraliste',
-      gradeLandscape: 'Médecin',
+      gradeLandscape: 'Médecin\nGénéraliste',
       obsPortrait: '08h-16h',
       horaireBlock: '08h-16h',
       teamGroup: '',
@@ -325,7 +325,7 @@ export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Kerarma Djelloul',
       category: 'paramedical_day',
       rolePortrait: 'I.SSP Surveillant Médical',
-      gradeLandscape: 'I.SSP Surveillant',
+      gradeLandscape: 'I.SSP Surveillant\nMédical',
       obsPortrait: '',
       horaireBlock: '08h-16h',
       teamGroup: '',
@@ -395,7 +395,7 @@ export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Naamoun Sarra',
       category: 'paramedical_day',
       rolePortrait: 'Chargée de pharmacie',
-      gradeLandscape: 'Chargée de',
+      gradeLandscape: 'Chargée de\npharmacie',
       obsPortrait: '',
       horaireBlock: '08h-16h',
       teamGroup: '',
@@ -437,7 +437,7 @@ export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Djaziri Cherifa',
       category: 'paramedical_day',
       rolePortrait: 'Chargé de pharmacie',
-      gradeLandscape: 'Chargé de',
+      gradeLandscape: 'Chargé de\npharmacie',
       obsPortrait: '',
       horaireBlock: '08h-16h',
       teamGroup: '',
