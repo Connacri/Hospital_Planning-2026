@@ -31,6 +31,16 @@ import {
   FileSpreadsheet,
   Building2,
   AlertTriangle,
+  Lock,
+  Unlock,
+  Edit3,
+  Eye,
+  ChevronUp,
+  ChevronDown,
+  ArrowUp,
+  SlidersHorizontal,
+  Tag,
+  Repeat,
 } from 'lucide-react';
 import {
   objectBoxStore,
@@ -38,12 +48,18 @@ import {
   StaffEntity,
   StaffCategory,
   DoctorWeeklySchedule,
+  LeaveTypeItem,
+  DEFAULT_LEAVE_TYPES,
+  DEFAULT_GUARD_ROTATION_ORDER,
   buildStandard08h16hActivity,
   buildGuard16hActivity,
   buildHygiene12hActivity,
 } from './db/objectboxEngine';
 import { PortraitPdfSheets } from './components/PortraitPdfSheets';
 import { LandscapePdfSheets } from './components/LandscapePdfSheets';
+import { QuickActionsFloatingMenu } from './components/QuickActionsFloatingMenu';
+import { GuardRotationModal } from './components/GuardRotationModal';
+import { LeaveTypesModal } from './components/LeaveTypesModal';
 import { translations, SupportedLocale } from './i18n/translations';
 
 type ActiveTab = 'documents' | 'staff' | 'objectbox' | 'flutter' | 'privacy';
@@ -86,6 +102,25 @@ export default function App() {
   const [activePaintCode, setActivePaintCode] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(100);
 
+  const handleFitWidth = () => {
+    // If landscape: 75% fits all 31 days comfortably on screens >= 850px without horizontal scroll
+    if (orientation === 'landscape') {
+      setZoomLevel((current) => (current === 75 ? 100 : 75));
+    } else {
+      setZoomLevel((current) => (current === 90 ? 100 : 90));
+    }
+  };
+
+  // Read-Only vs Edit Mode (protects against accidental schedule modifications)
+  const [isReadOnly, setIsReadOnly] = useState<boolean>(true);
+  const [isQuickActionsOpen, setIsQuickActionsOpen] = useState<boolean>(true);
+
+  const toggleReadOnly = (newValue?: boolean) => {
+    const next = newValue !== undefined ? newValue : !isReadOnly;
+    setIsReadOnly(next);
+    showToast(next ? t.toastReadOnlyActive : t.toastEditActive);
+  };
+
   // Staff Manager View State
   const [staffSearch, setStaffSearch] = useState('');
   const [selectedStaffCategory, setSelectedStaffCategory] = useState<string>('all');
@@ -104,6 +139,46 @@ export default function App() {
   const [queryOffset, setQueryOffset] = useState<number>(0);
   const [queryLimit, setQueryLimit] = useState<number>(10);
   const [queryOrderField, setQueryOrderField] = useState<'name' | 'id' | 'portraitOrder'>('id');
+
+  // Modals for Guard Rotation & Leave Types Management
+  const [isGuardRotationModalOpen, setIsGuardRotationModalOpen] = useState(false);
+  const [isLeaveTypesModalOpen, setIsLeaveTypesModalOpen] = useState(false);
+
+  const handleApplyGuardRotation = (
+    rotationOrder: string[],
+    cumulativeOffsetDays: number,
+    daysInMonth: number,
+    includeBouazizOverride: boolean,
+    periodRange?: { startDay: number; endDay: number } | null
+  ) => {
+    objectBoxStore.applyContinuousGuardRotation(
+      rotationOrder,
+      cumulativeOffsetDays,
+      daysInMonth,
+      includeBouazizOverride,
+      periodRange
+    );
+    showToast(
+      periodRange
+        ? `Rotation appliquée pour la période du jour ${periodRange.startDay} au ${periodRange.endDay} !`
+        : 'Rotation continue et perpétuelle des équipes de garde appliquée !'
+    );
+  };
+
+  const handleAddLeaveType = (item: Omit<LeaveTypeItem, 'id'>) => {
+    objectBoxStore.addLeaveType(item);
+    showToast(`Type de congé « ${item.code} » ajouté !`);
+  };
+
+  const handleUpdateLeaveType = (id: string, updates: Partial<LeaveTypeItem>) => {
+    objectBoxStore.updateLeaveType(id, updates);
+    showToast('Type de congé mis à jour !');
+  };
+
+  const handleDeleteLeaveType = (id: string) => {
+    objectBoxStore.deleteLeaveType(id);
+    showToast('Type de congé supprimé !');
+  };
 
   // Reset Confirmation Modal
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -839,6 +914,36 @@ class HospitalPdfGenerator {
                   )}
                 </div>
 
+                {/* Mode Selector (Lecture Seule vs Édition) */}
+                <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => toggleReadOnly(true)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${
+                      isReadOnly
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                    title="Activer la protection en lecture seule"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>{t.modeReadOnly}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleReadOnly(false)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${
+                      !isReadOnly
+                        ? 'bg-amber-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                    title="Activer l'édition directe des textes et cellules"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>{t.modeEdit}</span>
+                  </button>
+                </div>
+
                 {/* Zoom Controller */}
                 <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs text-slate-300">
                   <button
@@ -866,47 +971,65 @@ class HospitalPdfGenerator {
                   >
                     100%
                   </button>
+                  <button
+                    type="button"
+                    onClick={handleFitWidth}
+                    title="Ajuster l'affichage pour voir les 31 jours complets d'Octobre 2026 sans coupure"
+                    className="flex items-center gap-1 px-2 py-0.5 rounded bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800 text-[10px] font-bold transition-colors"
+                  >
+                    <Maximize2 className="w-3 h-3" />
+                    <span>Ajuster (31j)</span>
+                  </button>
                 </div>
               </div>
 
               {/* Landscape Paint Brush Mode */}
               {orientation === 'landscape' && (
                 <div className="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-slate-400 flex items-center gap-1.5">
-                      <PaintBucket className="w-3.5 h-3.5 text-amber-400" />
-                      <span>{t.paintModeLabel}</span>
-                    </span>
+                  {isReadOnly ? (
+                    <div className="flex items-center gap-2 text-emerald-400/90 font-medium py-1">
+                      <Lock className="w-4 h-4 text-emerald-400" />
+                      <span>
+                        Pinceau désactivé en mode Lecture seule. Activez le mode Édition pour peindre les roulements.
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-slate-400 flex items-center gap-1.5">
+                        <PaintBucket className="w-3.5 h-3.5 text-amber-400" />
+                        <span>{t.paintModeLabel}</span>
+                      </span>
 
-                    <button
-                      type="button"
-                      onClick={() => setActivePaintCode(null)}
-                      className={`px-2.5 py-1 rounded border transition-colors ${
-                        activePaintCode === null
-                          ? 'bg-amber-500 text-slate-950 font-bold border-amber-400 shadow-sm'
-                          : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
-                      }`}
-                    >
-                      {t.paintBrushOff}
-                    </button>
-
-                    {['N', 'RE', 'Jour', 'Nuit', 'C', 'CM', 'M', 'F'].map((code) => (
                       <button
-                        key={code}
                         type="button"
-                        onClick={() => setActivePaintCode(code)}
-                        className={`px-2.5 py-1 rounded font-bold transition-transform active:scale-95 ${
-                          activePaintCode === code
-                            ? 'bg-sky-500 text-white ring-2 ring-sky-300 shadow'
-                            : 'bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700'
+                        onClick={() => setActivePaintCode(null)}
+                        className={`px-2.5 py-1 rounded border transition-colors ${
+                          activePaintCode === null
+                            ? 'bg-amber-500 text-slate-950 font-bold border-amber-400 shadow-sm'
+                            : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
                         }`}
                       >
-                        {code}
+                        {t.paintBrushOff}
                       </button>
-                    ))}
-                  </div>
 
-                  {activePaintCode && (
+                      {['N', 'RE', 'Jour', 'Nuit', 'C', 'CM', 'M', 'F'].map((code) => (
+                        <button
+                          key={code}
+                          type="button"
+                          onClick={() => setActivePaintCode(code)}
+                          className={`px-2.5 py-1 rounded font-bold transition-transform active:scale-95 ${
+                            activePaintCode === code
+                              ? 'bg-sky-500 text-white ring-2 ring-sky-300 shadow'
+                              : 'bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700'
+                          }`}
+                        >
+                          {code}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {!isReadOnly && activePaintCode && (
                     <div className="text-[11px] text-amber-300 font-medium bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800">
                       Pinceau actif : Glissez ou cliquez sur n'importe quel jour (1..31)
                     </div>
@@ -914,10 +1037,32 @@ class HospitalPdfGenerator {
                 </div>
               )}
 
-              {/* Informative Hint Banner */}
-              <div className="text-[12px] text-slate-400 flex items-center gap-2 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-800/80">
-                <Info className="w-4 h-4 text-sky-400 shrink-0" />
-                <span>{t.editModeHint}</span>
+              {/* Informative Hint Banner with Mode Status */}
+              <div
+                className={`text-[12px] flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-lg border transition-colors ${
+                  isReadOnly
+                    ? 'bg-emerald-950/40 border-emerald-800/80 text-emerald-300'
+                    : 'bg-amber-950/40 border-amber-800/80 text-amber-300'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {isReadOnly ? (
+                    <Lock className="w-4 h-4 text-emerald-400 shrink-0" />
+                  ) : (
+                    <Edit3 className="w-4 h-4 text-amber-400 shrink-0" />
+                  )}
+                  <span className="font-medium">
+                    {isReadOnly ? t.modeReadOnlyDesc : t.modeEditDesc}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => toggleReadOnly()}
+                  className="underline hover:text-white font-semibold text-[11px] shrink-0"
+                >
+                  {isReadOnly ? 'Basculer en mode Édition' : 'Verrouiller en Lecture seule'}
+                </button>
               </div>
             </div>
 
@@ -934,26 +1079,49 @@ class HospitalPdfGenerator {
                   activeSubPage={portraitSubPage}
                   config={config}
                   staffList={staffList}
+                  readOnly={isReadOnly}
                   onUpdateConfig={handleUpdateConfig}
                   onUpdateStaffField={handleUpdateStaffField}
                   onUpdateDoctorWeekly={handleUpdateDoctorWeekly}
                   onAddStaff={handleAddStaff}
                   onDeleteStaff={handleDeleteStaff}
+                  onOpenGuardRotationModal={() => setIsGuardRotationModalOpen(true)}
+                  onOpenLeaveTypesModal={() => setIsLeaveTypesModalOpen(true)}
                 />
               ) : (
                 <LandscapePdfSheets
                   activeSubPage={landscapeSubPage}
                   config={config}
                   staffList={staffList}
-                  activePaintCode={activePaintCode}
+                  readOnly={isReadOnly}
+                  activePaintCode={isReadOnly ? null : activePaintCode}
                   onUpdateConfig={handleUpdateConfig}
                   onUpdateStaffField={handleUpdateStaffField}
                   onUpdateStaffDayCell={handleUpdateStaffDayCell}
                   onAddStaff={handleAddStaff}
                   onDeleteStaff={handleDeleteStaff}
+                  onOpenGuardRotationModal={() => setIsGuardRotationModalOpen(true)}
+                  onOpenLeaveTypesModal={() => setIsLeaveTypesModalOpen(true)}
                 />
               )}
             </div>
+
+            {/* Floating Quick Actions Menu */}
+            <QuickActionsFloatingMenu
+              isReadOnly={isReadOnly}
+              onToggleReadOnly={toggleReadOnly}
+              orientation={orientation}
+              onChangeOrientation={setOrientation}
+              zoomLevel={zoomLevel}
+              onChangeZoom={setZoomLevel}
+              onResetZoom={() => setZoomLevel(100)}
+              onFitWidth={handleFitWidth}
+              onPrint={() => window.print()}
+              onOpenGuardRotationModal={() => setIsGuardRotationModalOpen(true)}
+              onOpenLeaveTypesModal={() => setIsLeaveTypesModalOpen(true)}
+              locale={locale}
+              t={t}
+            />
           </div>
         )}
 
@@ -975,14 +1143,36 @@ class HospitalPdfGenerator {
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setIsAddStaffModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold shadow transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>{t.addStaffMember}</span>
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsGuardRotationModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-sky-300 border border-slate-700 rounded-lg text-xs font-semibold shadow transition-colors"
+                    title="Gérer la rotation des équipes (Période ou Perpétuelle)"
+                  >
+                    <Repeat className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Rotation des gardes</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsLeaveTypesModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-amber-300 border border-slate-700 rounded-lg text-xs font-semibold shadow transition-colors"
+                    title="Ajouter, modifier ou supprimer des types de congés"
+                  >
+                    <Tag className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Types de congés</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsAddStaffModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold shadow transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>{t.addStaffMember}</span>
+                  </button>
+                </div>
               </div>
 
               {/* Filter Pills & Search */}
@@ -1662,6 +1852,25 @@ class HospitalPdfGenerator {
           </div>
         </div>
       )}
+
+      {/* MODAL: GUARD ROTATION (PERIOD OR PERPETUAL CONTINUOUS) */}
+      <GuardRotationModal
+        isOpen={isGuardRotationModalOpen}
+        onClose={() => setIsGuardRotationModalOpen(false)}
+        currentRotationOrder={config.guardRotationOrder || DEFAULT_GUARD_ROTATION_ORDER}
+        currentMonthOffsetDays={config.guardMonthOffsetDays || 0}
+        onApplyRotation={handleApplyGuardRotation}
+      />
+
+      {/* MODAL: LEAVE TYPES MANAGEMENT (ADD, EDIT, DELETE) */}
+      <LeaveTypesModal
+        isOpen={isLeaveTypesModalOpen}
+        onClose={() => setIsLeaveTypesModalOpen(false)}
+        leaveTypes={config.leaveTypes || DEFAULT_LEAVE_TYPES}
+        onAddLeaveType={handleAddLeaveType}
+        onUpdateLeaveType={handleUpdateLeaveType}
+        onDeleteLeaveType={handleDeleteLeaveType}
+      />
 
       {/* FOOTER */}
       <footer className="no-print bg-slate-950 border-t border-slate-900 py-4 mt-auto">

@@ -35,20 +35,24 @@
 /* Exact A4 Paper Dimensions & Print Fidelity */
 .a4-portrait-sheet {
   width: 210mm;
-  min-height: 297mm;
+  height: 297mm;
+  max-height: 297mm;
   background: #ffffff;
   color: #000000;
   box-sizing: border-box;
   position: relative;
+  overflow: hidden;
 }
 
 .a4-landscape-sheet {
   width: 297mm;
-  min-height: 210mm;
+  height: 210mm;
+  max-height: 210mm;
   background: #ffffff;
   color: #000000;
   box-sizing: border-box;
   position: relative;
+  overflow: hidden;
 }
 
 @media print {
@@ -87,13 +91,32 @@
     transform: none !important;
   }
 
-  .a4-portrait-sheet,
-  .a4-landscape-sheet {
+  .a4-portrait-sheet {
+    width: 210mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
     box-shadow: none !important;
     margin: 0 !important;
     border: none !important;
     page-break-after: always;
     break-after: page;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: hidden !important;
+  }
+
+  .a4-landscape-sheet {
+    width: 297mm !important;
+    height: 210mm !important;
+    max-height: 210mm !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    border: none !important;
+    page-break-after: always;
+    break-after: page;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: hidden !important;
   }
 
   .a4-portrait-sheet:last-child,

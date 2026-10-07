@@ -85,6 +85,13 @@ export interface TranslationDictionary {
   themeLight: string;
   themeDark: string;
   versionLabel: string;
+  quickActionsTitle: string;
+  modeEdit: string;
+  modeReadOnly: string;
+  modeReadOnlyDesc: string;
+  modeEditDesc: string;
+  toastReadOnlyActive: string;
+  toastEditActive: string;
 }
 
 export const translations: Record<SupportedLocale, TranslationDictionary> = {
@@ -172,7 +179,14 @@ export const translations: Record<SupportedLocale, TranslationDictionary> = {
     localDataDeletedNotice: "Les données locales ont été effacées et réinitialisées.",
     themeLight: "Clair",
     themeDark: "Sombre",
-    versionLabel: "v1.0.0"
+    versionLabel: "v1.0.0",
+    quickActionsTitle: "Actions Rapides",
+    modeEdit: "Mode Édition",
+    modeReadOnly: "Lecture seule",
+    modeReadOnlyDesc: "Plannings protégés contre les modifications accidentelles",
+    modeEditDesc: "Modification directe des textes et cellules autorisée",
+    toastReadOnlyActive: "Mode Lecture seule activé — Plannings verrouillés",
+    toastEditActive: "Mode Édition activé — Vous pouvez modifier les tableaux"
   },
   en: {
     appTitle: "E.H. Aïn El Türck",
@@ -258,7 +272,14 @@ export const translations: Record<SupportedLocale, TranslationDictionary> = {
     localDataDeletedNotice: "All local ObjectBox data has been wiped and reset.",
     themeLight: "Light",
     themeDark: "Dark",
-    versionLabel: "v1.0.0"
+    versionLabel: "v1.0.0",
+    quickActionsTitle: "Quick Actions",
+    modeEdit: "Edit Mode",
+    modeReadOnly: "Read-Only",
+    modeReadOnlyDesc: "Schedules protected from accidental changes",
+    modeEditDesc: "Direct text and cell editing enabled",
+    toastReadOnlyActive: "Read-Only mode enabled — Schedules locked",
+    toastEditActive: "Edit mode enabled — You can modify tables"
   },
   ar: {
     appTitle: "المؤسسة الاستشفائية عين الترك",
@@ -344,6 +365,13 @@ export const translations: Record<SupportedLocale, TranslationDictionary> = {
     localDataDeletedNotice: "تم مسح جميع البيانات المحلية وإعادة ضبطها.",
     themeLight: "فاتح",
     themeDark: "داكن",
-    versionLabel: "v1.0.0"
+    versionLabel: "v1.0.0",
+    quickActionsTitle: "إجراءات سريعة",
+    modeEdit: "وضع التعديل",
+    modeReadOnly: "قراءة فقط",
+    modeReadOnlyDesc: "الجداول محمية من أي تعديل عرضي",
+    modeEditDesc: "تعديل مباشر للنصوص والخلايا متاح",
+    toastReadOnlyActive: "تم تفعيل وضع القراءة فقط — الجداول مقفلة",
+    toastEditActive: "تم تفعيل وضع التعديل — يمكنك تعديل الجداول"
   }
 };

@@ -8,6 +8,7 @@ interface EditableTextProps {
   placeholder?: string;
   ariaLabel?: string;
   darkSurface?: boolean;
+  readOnly?: boolean;
 }
 
 export const EditableText: React.FC<EditableTextProps> = ({
@@ -18,6 +19,7 @@ export const EditableText: React.FC<EditableTextProps> = ({
   placeholder = '...',
   ariaLabel,
   darkSurface = false,
+  readOnly = false,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -50,6 +52,23 @@ export const EditableText: React.FC<EditableTextProps> = ({
       commit();
     }
   };
+
+  if (readOnly) {
+    return (
+      <span className={`inline-block select-text ${className}`}>
+        {value ? (
+          value.split('\n').map((line, i, arr) => (
+            <React.Fragment key={i}>
+              {line}
+              {i < arr.length - 1 && <br />}
+            </React.Fragment>
+          ))
+        ) : (
+          <span className="no-print text-[10px] italic opacity-30">{placeholder}</span>
+        )}
+      </span>
+    );
+  }
 
   if (isEditing) {
     if (multiline) {

@@ -1,0 +1,383 @@
+import React, { useState } from 'react';
+import {
+  X,
+  Plus,
+  Trash2,
+  Edit2,
+  Check,
+  Calendar,
+  Sparkles,
+  Tag,
+  AlertCircle,
+  HelpCircle,
+} from 'lucide-react';
+import { LeaveTypeItem, DEFAULT_LEAVE_TYPES } from '../db/objectboxEngine';
+
+interface LeaveTypesModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  leaveTypes: LeaveTypeItem[];
+  onAddLeaveType: (item: Omit<LeaveTypeItem, 'id'>) => void;
+  onUpdateLeaveType: (id: string, updates: Partial<LeaveTypeItem>) => void;
+  onDeleteLeaveType: (id: string) => void;
+}
+
+const PRESET_LEAVES: Array<{ code: string; label: string; color: string }> = [
+  { code: 'CSS', label: 'Congé Sans Solde', color: '#ea580c' },
+  { code: 'CE', label: 'Congé Exceptionnel', color: '#0284c7' },
+  { code: 'AT', label: 'Accident de Travail', color: '#dc2626' },
+  { code: 'RC', label: 'Récupération Compensatrice', color: '#16a34a' },
+  { code: 'ST', label: 'Stage / Formation', color: '#7c3aed' },
+  { code: 'CS', label: 'Congé Spécial', color: '#db2777' },
+  { code: 'CA', label: 'Congé Annuel (Supplémentaire)', color: '#ca8a04' },
+];
+
+const COLOR_OPTIONS = [
+  '#0284c7', // Sky
+  '#4338ca', // Indigo
+  '#059669', // Emerald
+  '#d97706', // Amber
+  '#e11d48', // Rose
+  '#9333ea', // Purple
+  '#475569', // Slate
+  '#0d9488', // Teal
+  '#ea580c', // Orange
+  '#dc2626', // Red
+];
+
+export const LeaveTypesModal: React.FC<LeaveTypesModalProps> = ({
+  isOpen,
+  onClose,
+  leaveTypes,
+  onAddLeaveType,
+  onUpdateLeaveType,
+  onDeleteLeaveType,
+}) => {
+  const [newCode, setNewCode] = useState('');
+  const [newLabel, setNewLabel] = useState('');
+  const [newColor, setNewColor] = useState(COLOR_OPTIONS[0]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editCode, setEditCode] = useState('');
+  const [editLabel, setEditLabel] = useState('');
+  const [editColor, setEditColor] = useState('');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  if (!isOpen) return null;
+
+  const handleStartEdit = (item: LeaveTypeItem) => {
+    setEditingId(item.id);
+    setEditCode(item.code);
+    setEditLabel(item.label);
+    setEditColor(item.color || COLOR_OPTIONS[0]);
+  };
+
+  const handleSaveEdit = (id: string) => {
+    if (!editCode.trim() || !editLabel.trim()) {
+      return;
+    }
+    onUpdateLeaveType(id, {
+      code: editCode.trim(),
+      label: editLabel.trim(),
+      color: editColor,
+    });
+    setEditingId(null);
+  };
+
+  const handleAddSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCode.trim()) {
+      setErrorMsg('Veuillez renseigner un code ou abréviation (ex: CSS, AT, RC).');
+      return;
+    }
+    if (!newLabel.trim()) {
+      setErrorMsg('Veuillez renseigner un libellé (ex: Congé Sans Solde).');
+      return;
+    }
+
+    const codeUpper = newCode.trim();
+    if (leaveTypes.some((lt) => lt.code.toLowerCase() === codeUpper.toLowerCase())) {
+      setErrorMsg(`Le code "${codeUpper}" existe déjà.`);
+      return;
+    }
+
+    onAddLeaveType({
+      code: codeUpper,
+      label: newLabel.trim(),
+      color: newColor,
+      isSystem: false,
+    });
+
+    setNewCode('');
+    setNewLabel('');
+    setErrorMsg(null);
+  };
+
+  const handleAddPreset = (preset: { code: string; label: string; color: string }) => {
+    if (leaveTypes.some((lt) => lt.code.toLowerCase() === preset.code.toLowerCase())) {
+      setErrorMsg(`Le type "${preset.code}" est déjà présent dans la liste.`);
+      return;
+    }
+    onAddLeaveType({
+      code: preset.code,
+      label: preset.label,
+      color: preset.color,
+      isSystem: false,
+    });
+    setErrorMsg(null);
+  };
+
+  return (
+    <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="bg-slate-950 border border-slate-800 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-6">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
+              <Tag className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <span>Gestion des Types de Congés & Statuts</span>
+                <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                  {leaveTypes.length} types
+                </span>
+              </h2>
+              <p className="text-xs text-slate-400">
+                Ajoutez, modifiez ou supprimez des congés. Mis à jour automatiquement dans la légende et les tableaux.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+          {errorMsg && (
+            <div className="p-3 bg-red-950/60 border border-red-800 rounded-xl flex items-center gap-2 text-xs text-red-200">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {/* Quick Presets Section */}
+          <div>
+            <div className="text-xs font-semibold text-slate-300 mb-2 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>Raccourcis : Ajouter un type de congé hospitalier courant en 1 clic</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {PRESET_LEAVES.map((preset) => {
+                const alreadyExists = leaveTypes.some(
+                  (lt) => lt.code.toLowerCase() === preset.code.toLowerCase()
+                );
+                return (
+                  <button
+                    key={preset.code}
+                    type="button"
+                    disabled={alreadyExists}
+                    onClick={() => handleAddPreset(preset)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition-colors ${
+                      alreadyExists
+                        ? 'opacity-40 cursor-not-allowed bg-slate-900 border-slate-800 text-slate-500'
+                        : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-200 hover:text-white'
+                    }`}
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: preset.color }}
+                    />
+                    <span className="font-bold">{preset.code}</span>
+                    <span className="text-[11px] text-slate-400">({preset.label})</span>
+                    {!alreadyExists && <Plus className="w-3 h-3 text-sky-400 ml-0.5" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Add Leave Form */}
+          <form
+            onSubmit={handleAddSubmit}
+            className="p-4 bg-slate-900/60 border border-slate-800/80 rounded-xl space-y-3"
+          >
+            <div className="text-xs font-semibold text-white flex items-center gap-1.5">
+              <Plus className="w-4 h-4 text-emerald-400" />
+              <span>Créer un nouveau type de congé ou statut personnalisé</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+              <div className="sm:col-span-3">
+                <label className="block text-[11px] text-slate-400 font-medium mb-1">
+                  Code / Symbole *
+                </label>
+                <input
+                  type="text"
+                  value={newCode}
+                  onChange={(e) => setNewCode(e.target.value.toUpperCase())}
+                  placeholder="ex: CSS, AT, RC"
+                  maxLength={6}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white uppercase font-bold focus:outline-none focus:border-sky-500 font-mono"
+                />
+              </div>
+
+              <div className="sm:col-span-6">
+                <label className="block text-[11px] text-slate-400 font-medium mb-1">
+                  Libellé complet *
+                </label>
+                <input
+                  type="text"
+                  value={newLabel}
+                  onChange={(e) => setNewLabel(e.target.value)}
+                  placeholder="ex: Congé Sans Solde, Accident de Travail"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-sky-500"
+                />
+              </div>
+
+              <div className="sm:col-span-3">
+                <label className="block text-[11px] text-slate-400 font-medium mb-1">
+                  Couleur
+                </label>
+                <div className="flex items-center gap-1.5 pt-0.5">
+                  <input
+                    type="color"
+                    value={newColor}
+                    onChange={(e) => setNewColor(e.target.value)}
+                    className="w-8 h-8 rounded border border-slate-700 bg-transparent cursor-pointer p-0.5"
+                  />
+                  <button
+                    type="submit"
+                    className="flex-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs shadow transition-colors flex items-center justify-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Ajouter</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+
+          {/* Current Leaves Table */}
+          <div className="space-y-2">
+            <div className="text-xs font-semibold text-slate-300 flex items-center justify-between">
+              <span>Types de congés actuels dans le document ({leaveTypes.length})</span>
+              <span className="text-[11px] text-slate-500">
+                Légende et pinceau synchronisés en direct
+              </span>
+            </div>
+
+            <div className="border border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-800/80 bg-slate-900/30">
+              {leaveTypes.map((item) => {
+                const isEditing = editingId === item.id;
+                return (
+                  <div
+                    key={item.id}
+                    className="p-3 flex items-center justify-between gap-3 hover:bg-slate-900/50 transition-colors"
+                  >
+                    {isEditing ? (
+                      <div className="flex flex-1 items-center gap-2">
+                        <input
+                          type="text"
+                          value={editCode}
+                          onChange={(e) => setEditCode(e.target.value)}
+                          className="w-20 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs font-bold font-mono text-white"
+                        />
+                        <input
+                          type="text"
+                          value={editLabel}
+                          onChange={(e) => setEditLabel(e.target.value)}
+                          className="flex-1 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white"
+                        />
+                        <input
+                          type="color"
+                          value={editColor}
+                          onChange={(e) => setEditColor(e.target.value)}
+                          className="w-7 h-7 rounded border border-slate-700 bg-transparent cursor-pointer"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSaveEdit(item.id)}
+                          className="p-1.5 bg-emerald-600 text-white rounded hover:bg-emerald-500 transition-colors"
+                          title="Sauvegarder"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(null)}
+                          className="p-1.5 bg-slate-800 text-slate-300 rounded hover:bg-slate-700 transition-colors"
+                          title="Annuler"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="w-3 h-3 rounded-full shrink-0"
+                            style={{ backgroundColor: item.color || '#0284c7' }}
+                          />
+                          <span className="font-mono font-bold text-sm text-amber-300 min-w-[50px]">
+                            {item.code}
+                          </span>
+                          <span className="text-xs text-slate-200 font-medium">
+                            {item.label}
+                          </span>
+                          {item.isSystem && (
+                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                              Système
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(item)}
+                            className="p-1.5 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors"
+                            title="Modifier ce type de congé"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => onDeleteLeaveType(item.id)}
+                            className="p-1.5 text-red-400 hover:text-red-300 rounded hover:bg-red-950/40 transition-colors"
+                            title="Supprimer ce type de congé"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-3.5 bg-slate-900 border-t border-slate-800 flex items-center justify-between text-xs">
+          <div className="text-slate-400 flex items-center gap-1.5">
+            <HelpCircle className="w-3.5 h-3.5 text-sky-400" />
+            <span>Tous les types ajoutés sont disponibles dans le pinceau 31 jours.</span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-lg font-semibold transition-colors shadow-sm"
+          >
+            Fermer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

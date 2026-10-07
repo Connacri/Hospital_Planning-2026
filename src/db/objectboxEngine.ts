@@ -35,6 +35,15 @@ export interface StaffEntity {
   dailyActivity: Record<number, string>; // Days 1..31 -> "N" | "RE" | "Jour" | "Nuit" | "C" | "CM" | "M" | "F"
 }
 
+export interface LeaveTypeItem {
+  id: string;
+  code: string;
+  label: string;
+  description?: string;
+  color?: string;
+  isSystem?: boolean;
+}
+
 export interface HospitalDocumentConfig {
   id: number; // @Id() singleton = 1
   republicHeader: string;
@@ -66,10 +75,14 @@ export interface HospitalDocumentConfig {
   cityDatePortrait: string;
   cityDateLandscape: string;
   legendItems: string[];
+  leaveTypes?: LeaveTypeItem[];
   nbNotice: string;
   signaturesPortrait: [string, string, string, string];
   signaturesLandscape: [string, string, string, string];
   daysColumns: DayColumnMeta[];
+  guardRotationOrder?: string[];
+  guardMonthName?: string;
+  guardMonthOffsetDays?: number;
 }
 
 export interface ObjectBoxDatabaseSnapshot {
@@ -108,34 +121,81 @@ export function buildStandard08h16hActivity(): Record<number, string> {
 }
 
 /**
- * 5-day Guard Team Rotation (16h) for Teams A, B, C, D, E:
- * Cycle of 5 states: ['Jour', 'Nuit', 'RE', 'RE', 'RE']
- * - Team A starts at index 0 on Day 1: Jour, Nuit, RE, RE, RE
- * - Team B starts at index 3 on Day 1: RE, RE, Jour, Nuit, RE
- * - Team C starts at index 1 on Day 1: Nuit, RE, RE, RE, Jour
- * - Team D starts at index 4 on Day 1: RE, Jour, Nuit, RE, RE
- * - Team E starts at index 2 on Day 1: RE, RE, RE, Jour, Nuit
+ * Ordre officiel de rotation des équipes de garde (16h) prenant le poste de « Jour » :
+ * - Jour 1 : Équipe A
+ * - Jour 2 : Équipe D
+ * - Jour 3 : Équipe B
+ * - Jour 4 : Équipe E
+ * - Jour 5 : Équipe C
+ * Puis la boucle continue indéfiniment : A ➔ D ➔ B ➔ E ➔ C ➔ A ➔ D ...
  */
-export function buildGuard16hActivity(team: string, specialBouazizOverride = false): Record<number, string> {
-  const cycle = ['Jour', 'Nuit', 'RE', 'RE', 'RE'];
-  const startOffsetMap: Record<string, number> = {
-    A: 0,
-    B: 3,
-    C: 1,
-    D: 4,
-    E: 2,
-  };
-  const offset = startOffsetMap[team] ?? 0;
-  const map: Record<number, string> = {};
-  for (let d = 1; d <= 31; d++) {
-    map[d] = cycle[(d - 1 + offset) % 5];
+export const DEFAULT_GUARD_ROTATION_ORDER = ['A', 'D', 'B', 'E', 'C'];
+
+export interface GuardMonthInfo {
+  name: string;
+  daysCount: number;
+  cumulativeOffsetDays: number;
+}
+
+export const GUARD_MONTHS_PRESETS: GuardMonthInfo[] = [
+  { name: 'Octobre 2026', daysCount: 31, cumulativeOffsetDays: 0 },
+  { name: 'Novembre 2026', daysCount: 30, cumulativeOffsetDays: 31 },
+  { name: 'Décembre 2026', daysCount: 31, cumulativeOffsetDays: 61 },
+  { name: 'Janvier 2027', daysCount: 31, cumulativeOffsetDays: 92 },
+  { name: 'Février 2027', daysCount: 28, cumulativeOffsetDays: 123 },
+  { name: 'Mars 2027', daysCount: 31, cumulativeOffsetDays: 151 },
+];
+
+/**
+ * Calcul de la rotation continue des équipes de garde (16h) :
+ * - Garde continue sans rupture dans les mois suivants
+ * - Ne modifie pas l'ordre des agents ni des équipes dans la liste du personnel
+ * - L'utilisateur peut modifier l'ordre de passage (rotationOrder) à tout moment
+ */
+export function buildContinuousGuard16hActivity(
+  team: string,
+  rotationOrder: string[] = DEFAULT_GUARD_ROTATION_ORDER,
+  cumulativeOffsetDays = 0,
+  daysInMonth = 31,
+  specialBouazizOverride = false
+): Record<number, string> {
+  const teamIndex = rotationOrder.indexOf(team);
+  if (teamIndex === -1) {
+    return buildGuard16hActivity(team, specialBouazizOverride);
   }
-  // Exact fidelity to PDF 2 Page 3: Bouaziz Nacer has RE on days 9 and 10
-  if (specialBouazizOverride) {
+
+  const cycle = ['Jour', 'Nuit', 'RE', 'RE', 'RE'];
+  const map: Record<number, string> = {};
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    // Index continu de jour : (d - 1 + cumulativeOffsetDays)
+    const absoluteDay = d - 1 + cumulativeOffsetDays;
+    // Quand absoluteDay % 5 === teamIndex, l'équipe est de Jour (phase 0), le lendemain Nuit (phase 1), puis 3x RE
+    const phase = ((absoluteDay - teamIndex) % 5 + 5) % 5;
+    map[d] = cycle[phase];
+  }
+
+  // Fidélité exacte au tableau officiel d'octobre 2026 : Bouaziz Nacer a RE les 9 et 10 oct
+  if (specialBouazizOverride && cumulativeOffsetDays === 0) {
     map[9] = 'RE';
     map[10] = 'RE';
   }
+
   return map;
+}
+
+/**
+ * 5-day Guard Team Rotation (16h) for Teams A, B, C, D, E (Mois de base Octobre 2026):
+ * Cycle of 5 states: ['Jour', 'Nuit', 'RE', 'RE', 'RE']
+ */
+export function buildGuard16hActivity(team: string, specialBouazizOverride = false): Record<number, string> {
+  return buildContinuousGuard16hActivity(
+    team,
+    DEFAULT_GUARD_ROTATION_ORDER,
+    0,
+    31,
+    specialBouazizOverride
+  );
 }
 
 /**
@@ -154,6 +214,24 @@ export function buildHygiene12hActivity(startWithRE: boolean): Record<number, st
     }
   }
   return map;
+}
+
+export const DEFAULT_LEAVE_TYPES: LeaveTypeItem[] = [
+  { id: 'jour', code: 'Jour', label: 'Garde de Jour (16h)', isSystem: true, color: '#0284c7' },
+  { id: 'nuit', code: 'Nuit', label: 'Garde de Nuit (16h)', isSystem: true, color: '#4338ca' },
+  { id: 're', code: 'RE', label: 'Récupération', isSystem: true, color: '#059669' },
+  { id: 'c', code: 'C', label: 'Congé', isSystem: false, color: '#d97706' },
+  { id: 'cm', code: 'CM', label: 'Congé Maladie', isSystem: false, color: '#e11d48' },
+  { id: 'm', code: 'M', label: 'Maternité', isSystem: false, color: '#9333ea' },
+  { id: 'n', code: 'N', label: 'Normal', isSystem: true, color: '#475569' },
+  { id: 'f', code: 'F', label: 'Jour Férié', isSystem: false, color: '#0d9488' },
+];
+
+export function buildLegendFromLeaveTypes(leaveTypes: LeaveTypeItem[]): string[] {
+  return leaveTypes.map((item) => {
+    if (item.code === 'Jour' || item.code === 'Nuit') return item.code;
+    return `${item.code} : ${item.label}`;
+  });
 }
 
 export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
@@ -184,16 +262,11 @@ export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
     pdf2TeamColHeader: 'Équipe',
     cityDatePortrait: 'fait à Aïn el Türck le : 26/09/2026',
     cityDateLandscape: 'Fait à Aïn el Türck le : 26/09/2026',
-    legendItems: [
-      'Jour',
-      'Nuit',
-      'RE : Récupération',
-      'C : Congé',
-      'CM : Congé Maladie',
-      'M : Maternité',
-      'N : Normal',
-      'F : Jour Férié',
-    ],
+    legendItems: buildLegendFromLeaveTypes(DEFAULT_LEAVE_TYPES),
+    leaveTypes: [...DEFAULT_LEAVE_TYPES],
+    guardRotationOrder: [...DEFAULT_GUARD_ROTATION_ORDER],
+    guardMonthName: 'Octobre 2026',
+    guardMonthOffsetDays: 0,
     nbNotice: "N.B : Toutes modifications de programme ne doivent se faire qu'après accord de la direction",
     signaturesPortrait: ['Le Médecin chef', 'Le Surveillant Médical', 'DAPM', 'Le Directeur Général'],
     signaturesLandscape: ['Le Médecin Chef', 'Le Surveillant Médical', 'DAPM', 'Le Directeur Général'],
@@ -905,6 +978,93 @@ export class ObjectBoxLocalStore {
 
   removeStaff(id: number): void {
     this.snapshot.staffBox = this.snapshot.staffBox.filter((s) => s.id !== id);
+    this.notify();
+  }
+
+  addLeaveType(item: Omit<LeaveTypeItem, 'id'>): void {
+    const existing = this.snapshot.config.leaveTypes ?? [...DEFAULT_LEAVE_TYPES];
+    const newId = item.code.toLowerCase().replace(/[^a-z0-9]/g, '') || `leave_${Date.now()}`;
+    const newItem: LeaveTypeItem = {
+      ...item,
+      id: newId,
+    };
+    const nextList = [...existing, newItem];
+    this.snapshot.config = {
+      ...this.snapshot.config,
+      leaveTypes: nextList,
+      legendItems: buildLegendFromLeaveTypes(nextList),
+    };
+    this.notify();
+  }
+
+  updateLeaveType(id: string, updates: Partial<LeaveTypeItem>): void {
+    const existing = this.snapshot.config.leaveTypes ?? [...DEFAULT_LEAVE_TYPES];
+    const nextList = existing.map((lt) => (lt.id === id ? { ...lt, ...updates } : lt));
+    this.snapshot.config = {
+      ...this.snapshot.config,
+      leaveTypes: nextList,
+      legendItems: buildLegendFromLeaveTypes(nextList),
+    };
+    this.notify();
+  }
+
+  deleteLeaveType(id: string): void {
+    const existing = this.snapshot.config.leaveTypes ?? [...DEFAULT_LEAVE_TYPES];
+    const nextList = existing.filter((lt) => lt.id !== id);
+    this.snapshot.config = {
+      ...this.snapshot.config,
+      leaveTypes: nextList,
+      legendItems: buildLegendFromLeaveTypes(nextList),
+    };
+    this.notify();
+  }
+
+  applyContinuousGuardRotation(
+    rotationOrder: string[] = DEFAULT_GUARD_ROTATION_ORDER,
+    cumulativeOffsetDays = 0,
+    daysInMonth = 31,
+    includeBouazizOverride = true,
+    periodRange?: { startDay: number; endDay: number } | null
+  ): void {
+    const nextStaff = this.snapshot.staffBox.map((staff) => {
+      if (staff.category !== 'paramedical_guard' || !staff.teamGroup) {
+        return staff;
+      }
+      const isBouaziz = staff.fullName.toLowerCase().includes('bouaziz');
+      const newActivity = buildContinuousGuard16hActivity(
+        staff.teamGroup,
+        rotationOrder,
+        cumulativeOffsetDays,
+        daysInMonth,
+        isBouaziz && includeBouazizOverride
+      );
+
+      if (periodRange) {
+        // Only update cells within the chosen period range [startDay, endDay]
+        const mergedActivity = { ...staff.dailyActivity };
+        for (let d = periodRange.startDay; d <= periodRange.endDay; d++) {
+          if (newActivity[d]) {
+            mergedActivity[d] = newActivity[d];
+          }
+        }
+        return {
+          ...staff,
+          dailyActivity: mergedActivity,
+        };
+      }
+
+      return {
+        ...staff,
+        dailyActivity: newActivity,
+      };
+    });
+
+    this.snapshot.config = {
+      ...this.snapshot.config,
+      guardRotationOrder: rotationOrder,
+      guardMonthOffsetDays: cumulativeOffsetDays,
+    };
+    this.snapshot.staffBox = nextStaff;
     this.notify();
   }
 
