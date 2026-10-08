@@ -162,7 +162,7 @@ export default function App() {
       @media print {
         @page {
           margin: 0 !important;
-          size: auto;
+          size: A4 ${orientation} !important;
         }
         .a4-portrait-sheet,
         .a4-landscape-sheet {
@@ -174,7 +174,7 @@ export default function App() {
         }
       }
     `;
-  }, [printMarginMm]);
+  }, [printMarginMm, orientation]);
 
   const applyManualZoom = (z: number | ((prev: number) => number)) => {
     setAutoFitWidth(false);
@@ -253,11 +253,10 @@ export default function App() {
         filename,
         onProgress: (current, total) => setExportProgress({ current, total }),
       });
-      showToast("Fichier PDF tÃ©lÃ©chargÃ© avec succÃ¨s !");
+      showToast("Fichier PDF téléchargé avec succès !");
     } catch (err) {
       console.error(err);
-      showToast("Erreur lors de la capture directe, ouverture de la boÃ®te d'impression.");
-      window.print();
+      showToast("Erreur lors de la génération du fichier PDF. Réessayez.");
     } finally {
       setIsExportingPdf(false);
     }
@@ -1012,6 +1011,22 @@ class HospitalPdfGenerator {
                 <span className="hidden md:inline">{t.printCurrentView}</span>
               </button>
 
+              {/* Direct PDF Export Button (no print dialog) */}
+              <button
+                type="button"
+                onClick={handleDirectPdfDownload}
+                disabled={isExportingPdf}
+                title={t.exportPdfOnly}
+                className="inline-flex items-center justify-center gap-1.5 p-2 sm:px-3 sm:py-1.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-60 disabled:cursor-wait text-white rounded-lg text-xs font-semibold shadow transition-colors shrink-0"
+              >
+                <Download className="w-4 h-4 shrink-0" />
+                <span className="hidden md:inline">
+                  {isExportingPdf
+                    ? `${exportProgress.current}/${exportProgress.total}…`
+                    : t.exportPdfOnly}
+                </span>
+              </button>
+
               {/* Restore Seed */}
               <button
                 type="button"
@@ -1531,16 +1546,17 @@ class HospitalPdfGenerator {
             {/* Document Sheets Render Stage */}
             <div
               ref={stageRef}
-              className="w-full overflow-x-auto overflow-y-visible py-4 sm:py-6 px-1 sm:px-4 flex justify-start lg:justify-center"
+              className="pdf-print-stage w-full overflow-x-auto overflow-y-visible py-4 sm:py-6 px-1 sm:px-4 flex justify-start lg:justify-center"
             >
               <div
-                className="shrink-0 transition-all duration-150 mx-auto"
+                className="pdf-print-zoom shrink-0 transition-all duration-150 mx-auto"
                 style={{
                   width: `${(orientation === 'portrait' ? 210 : 297) * (zoomLevel / 100)}mm`,
                   minWidth: `${(orientation === 'portrait' ? 210 : 297) * (zoomLevel / 100)}mm`,
                 }}
               >
                 <div
+                  className="pdf-print-zoom"
                   style={{
                     transform: `scale(${zoomLevel / 100})`,
                     transformOrigin: 'top left',
@@ -1644,6 +1660,7 @@ class HospitalPdfGenerator {
               onFitWidth={handleFitWidth}
               onFitPageComplete={handleFitPageComplete}
               onPrint={() => window.print()}
+              onDirectPdfDownload={handleDirectPdfDownload}
               onOpenGuardRotationModal={() => setIsGuardRotationModalOpen(true)}
               onOpenLeaveTypesModal={() => setIsLeaveTypesModalOpen(true)}
               onOpenHolidayModal={() => setIsHolidayModalOpen(true)}

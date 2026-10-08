@@ -87,6 +87,27 @@
     size: auto;
   }
 
+  html, body {
+    max-width: none !important;
+    overflow: visible !important;
+  }
+
+  /* Neutralise le zoom d'écran et les contraintes de largeur pour un rendu A4 exact */
+  .pdf-print-stage {
+    display: block !important;
+    width: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .pdf-print-zoom {
+    transform: none !important;
+    width: auto !important;
+    min-width: 0 !important;
+    margin: 0 auto !important;
+  }
+
   body {
     background: #ffffff !important;
     margin: 0 !important;

@@ -27,6 +27,7 @@ export interface TranslationDictionary {
   paintModeLabel: string;
   paintBrushOff: string;
   printCurrentView: string;
+  exportPdfOnly: string;
   resetDefaultData: string;
   resetConfirmTitle: string;
   resetConfirmDesc: string;
@@ -123,6 +124,7 @@ export const translations: Record<SupportedLocale, TranslationDictionary> = {
     paintModeLabel: "Pinceau rapide (31 jours) :",
     paintBrushOff: "Édition texte libre",
     printCurrentView: "Imprimer / Exporter PDF",
+    exportPdfOnly: "Exporter PDF",
     resetDefaultData: "Restaurer les PDF originaux",
     resetConfirmTitle: "Restaurer les données initiales d'Octobre 2026 ?",
     resetConfirmDesc: "Toutes vos modifications locales dans ObjectBox seront remplacées par les tableaux exacts des 2 PDF originaux.",
@@ -217,6 +219,7 @@ export const translations: Record<SupportedLocale, TranslationDictionary> = {
     paintModeLabel: "Quick Paint (31 days):",
     paintBrushOff: "Free text edit",
     printCurrentView: "Print / Export PDF",
+    exportPdfOnly: "Export PDF",
     resetDefaultData: "Restore Original PDFs",
     resetConfirmTitle: "Restore October 2026 Original PDF Data?",
     resetConfirmDesc: "All local customizations in ObjectBox will be replaced with the exact tables from the 2 original PDFs.",
@@ -311,6 +314,7 @@ export const translations: Record<SupportedLocale, TranslationDictionary> = {
     paintModeLabel: "فرشاة التعديل السريع (31 يوماً):",
     paintBrushOff: "تعديل نصي حر",
     printCurrentView: "طباعة / تصدير PDF",
+    exportPdfOnly: "تصدير PDF",
     resetDefaultData: "استعادة جداول PDF الأصلية",
     resetConfirmTitle: "هل تريد استعادة البيانات الأصلية لشهر أكتوبر 2026؟",
     resetConfirmDesc: "سيتم استبدال جميع التعديلات المحلية بالجداول المطابقة تماماً لملفي PDF الأصليين.",
