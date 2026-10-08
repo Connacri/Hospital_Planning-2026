@@ -636,19 +636,20 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
             </div>
 
             {/* Medical Staff List Table */}
-            <table className="w-full border-collapse border border-[#7F7F7F] text-center">
+            <table className="w-full border-collapse border border-[#7F7F7F] text-center table-fixed">
               <thead>
                 <tr className="bg-[#D9D9D9] text-black text-[14px] font-medium h-[36px]">
                   {config.pdf1Page2Columns.map((col, idx) => (
                     <th
                       key={idx}
-                      className={`border border-[#7F7F7F] px-2 py-1 font-medium ${
-                        idx === 0 ? 'w-[25%]' : idx === 1 ? 'w-[25%]' : 'w-[50%]'
+                      className={`border border-[#7F7F7F] px-2 py-1 font-medium whitespace-nowrap overflow-hidden text-ellipsis ${
+                        idx === 0 ? 'w-[30%]' : idx === 1 ? 'w-[46%]' : 'w-[24%]'
                       }`}
                     >
                       <EditableText
                         value={col}
                         readOnly={readOnly}
+                        className="whitespace-nowrap"
                         onChange={(v) => {
                           const next = [...config.pdf1Page2Columns] as [string, string, string];
                           next[idx] = v;
@@ -663,12 +664,13 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                 {doctors.map((doc) => (
                   <tr
                     key={doc.id}
-                    className="group bg-[#F9F9F9] hover:bg-[#F0F0F0] text-black h-[36px] text-[14px] font-medium transition-colors"
+                    className="group bg-[#F9F9F9] hover:bg-[#F0F0F0] text-black h-[36px] text-[13.5px] font-medium transition-colors"
                   >
-                    <td className="border border-[#7F7F7F] px-2 py-1 relative">
+                    <td className="border border-[#7F7F7F] px-2 py-1 relative whitespace-nowrap overflow-hidden text-ellipsis align-middle">
                       <EditableText
                         value={doc.fullName}
                         readOnly={readOnly}
+                        className="whitespace-nowrap"
                         onChange={(v) => onUpdateStaffField(doc.id, 'fullName', v)}
                       />
                       {!readOnly && (
@@ -682,17 +684,19 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                         </button>
                       )}
                     </td>
-                    <td className="border border-[#7F7F7F] px-2 py-1">
+                    <td className="border border-[#7F7F7F] px-2 py-1 whitespace-nowrap overflow-hidden text-ellipsis align-middle">
                       <EditableText
                         value={doc.rolePortrait}
                         readOnly={readOnly}
+                        className="whitespace-nowrap"
                         onChange={(v) => onUpdateStaffField(doc.id, 'rolePortrait', v)}
                       />
                     </td>
-                    <td className="border border-[#7F7F7F] px-2 py-1">
+                    <td className="border border-[#7F7F7F] px-2 py-1 whitespace-nowrap overflow-hidden text-ellipsis align-middle">
                       <EditableText
                         value={doc.obsPortrait}
                         readOnly={readOnly}
+                        className="whitespace-nowrap"
                         onChange={(v) => onUpdateStaffField(doc.id, 'obsPortrait', v)}
                       />
                     </td>
@@ -918,7 +922,6 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                     <td className="border-r border-black border-y-0 px-1.5 py-[1px] text-center font-medium relative group/obs">
                       <EditableText
                         value={staff.obsPortrait}
-                        placeholder="OBS / Congé..."
                         readOnly={readOnly}
                         onChange={(v) => onUpdateStaffField(staff.id, 'obsPortrait', v)}
                       />
@@ -985,7 +988,6 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                           {isFirst16hRow && config.pdf1Page3Obs16h ? (
                             <EditableText
                               value={config.pdf1Page3Obs16h}
-                              placeholder="OBS..."
                               readOnly={readOnly}
                               onChange={(v) => onUpdateConfig({ pdf1Page3Obs16h: v })}
                             />
@@ -1034,7 +1036,6 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                           <td className="border-r border-black border-y-0 px-1.5 py-[1px] text-center font-medium relative group/obs">
                             <EditableText
                               value={member.obsPortrait}
-                              placeholder="OBS / Congé..."
                               readOnly={readOnly}
                               onChange={(v) => onUpdateStaffField(member.id, 'obsPortrait', v)}
                             />
@@ -1106,7 +1107,6 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                     <td className={`border-r border-black ${idx === hygieneStaff.length - 1 ? 'border-b-[1.5px] border-b-black' : 'border-y-0'} px-1.5 py-[1px] text-center font-medium relative group/obs`}>
                       <EditableText
                         value={staff.obsPortrait}
-                        placeholder="OBS / Congé..."
                         readOnly={readOnly}
                         onChange={(v) => onUpdateStaffField(staff.id, 'obsPortrait', v)}
                       />

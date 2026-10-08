@@ -16,7 +16,7 @@ export const EditableText: React.FC<EditableTextProps> = ({
   onChange,
   className = '',
   multiline = false,
-  placeholder = '...',
+  placeholder = '',
   ariaLabel,
   darkSurface = false,
   readOnly = false,
@@ -79,9 +79,9 @@ export const EditableText: React.FC<EditableTextProps> = ({
               {i < arr.length - 1 && <br />}
             </React.Fragment>
           ))
-        ) : (
+        ) : placeholder ? (
           <span className="no-print text-[10px] italic opacity-30">{placeholder}</span>
-        )}
+        ) : null}
       </span>
     );
   }
@@ -153,9 +153,9 @@ export const EditableText: React.FC<EditableTextProps> = ({
             {i < arr.length - 1 && <br />}
           </React.Fragment>
         ))
-      ) : (
+      ) : placeholder ? (
         <span className="no-print text-[10px] italic opacity-50">{placeholder}</span>
-      )}
+      ) : null}
     </span>
   );
 };

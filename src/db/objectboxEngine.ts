@@ -400,7 +400,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
         dimanche: 'Service Biothérapie',
         lundi: 'DMO',
         mardi: 'Visite Générale',
-        mercredi: 'Consultation E.P.S.P Ben\nSmir',
+        mercredi: 'Consultation E.P.S.P\nBen Smir',
         jeudi: 'Journée Pédagogique',
       },
       dailyActivity: buildAprilNormal(),
@@ -437,7 +437,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
       portraitOrder: 3,
       landscapeOrder: 3,
       weeklySchedule: {
-        dimanche: 'Consultation E.P.S.P Ben\nSmir',
+        dimanche: 'Consultation E.P.S.P\nBen Smir',
         lundi: 'Journée Pédagogique',
         mardi: 'Visite Générale',
         mercredi: 'Service',
@@ -463,7 +463,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
       weeklySchedule: {
         dimanche: 'Service',
         lundi: 'Service',
-        mardi: 'Consultation E.P.S.P Ben\nSmir',
+        mardi: 'Consultation E.P.S.P\nBen Smir',
         mercredi: 'Service',
         jeudi: 'Service',
       },
@@ -489,7 +489,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
         lundi: 'Service',
         mardi: 'Visite Générale',
         mercredi: 'Service',
-        jeudi: 'Consultation E.P.S.P Ben\nSmir',
+        jeudi: 'Consultation E.P.S.P\nBen Smir',
       },
       dailyActivity: (() => {
         const act = buildAprilNormal();
@@ -1120,6 +1120,19 @@ export class ObjectBoxLocalStore {
       if (raw) {
         const parsed = JSON.parse(raw) as ObjectBoxDatabaseSnapshot;
         if (parsed && parsed.config && Array.isArray(parsed.staffBox)) {
+          // Normalize Ben Smir in weekly schedules
+          parsed.staffBox.forEach((staff) => {
+            if (staff.weeklySchedule) {
+              const days = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi'] as const;
+              days.forEach((d) => {
+                if (typeof staff.weeklySchedule[d] === 'string') {
+                  staff.weeklySchedule[d] = staff.weeklySchedule[d]
+                    .replace(/Ben\s*\n\s*Smir/gi, 'Ben Smir')
+                    .replace(/Consultation\s+E\.P\.S\.P\s+Ben\s+Smir/gi, 'Consultation E.P.S.P\nBen Smir');
+                }
+              });
+            }
+          });
           return parsed;
         }
       }
