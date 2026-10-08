@@ -94,7 +94,7 @@ jobs:
       - name: Initialize Android Native Project (Capacitor)
         run: |
           npx @capacitor/cli telemetry off || true
-          npm install @capacitor/core @capacitor/cli @capacitor/android --save || true
+          npm install @capacitor/core @capacitor/cli @capacitor/android --save --legacy-peer-deps || true
           if [ ! -f "capacitor.config.json" ]; then
             cat << 'EOF' > capacitor.config.json
           {
@@ -170,7 +170,9 @@ jobs:
           node-version: 20
 
       - name: Install Dependencies
-        run: npm install --legacy-peer-deps
+        run: |
+          npm install --legacy-peer-deps
+          npm install --no-save --legacy-peer-deps @rolldown/binding-win32-x64-msvc@1.2.13 || true
 
       - name: Build Web Application
         run: npm run build
