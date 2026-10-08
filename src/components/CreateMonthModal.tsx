@@ -12,6 +12,7 @@ import {
   FRENCH_MONTH_NAMES,
   GUARD_TEAM_THEMES,
   DEFAULT_GUARD_ROTATION_ORDER,
+  getTeamBadgeClass,
 } from '../db/objectboxEngine';
 
 interface CreateMonthModalProps {
@@ -261,7 +262,7 @@ export const CreateMonthModal: React.FC<CreateMonthModalProps> = ({
                 <div className="flex items-center gap-1.5 mt-1">
                   <span
                     className={`inline-flex items-center justify-center w-5 h-5 rounded text-[11px] font-bold ${
-                      GUARD_TEAM_THEMES[preview.teamJour]?.badgeClass || 'bg-slate-700 text-white'
+                      getTeamBadgeClass(preview.teamJour)
                     }`}
                   >
                     {preview.teamJour}
@@ -275,7 +276,7 @@ export const CreateMonthModal: React.FC<CreateMonthModalProps> = ({
                 <div className="flex items-center gap-1.5 mt-1">
                   <span
                     className={`inline-flex items-center justify-center w-5 h-5 rounded text-[11px] font-bold ${
-                      GUARD_TEAM_THEMES[preview.teamNuit]?.badgeClass || 'bg-slate-700 text-white'
+                      getTeamBadgeClass(preview.teamNuit)
                     }`}
                   >
                     {preview.teamNuit}

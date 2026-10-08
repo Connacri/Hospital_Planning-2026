@@ -1043,7 +1043,7 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
   ];
 
   return {
-    version: 6,
+    version: 7,
     updatedAt: new Date().toISOString(),
     config,
     staffBox,
@@ -1106,6 +1106,13 @@ export class ObjectBoxLocalStore {
       if (raw) {
         const parsed = JSON.parse(raw) as ObjectBoxDatabaseSnapshot;
         if (parsed && parsed.config && Array.isArray(parsed.staffBox)) {
+          // If stored version is older than 7, refresh to October 2026 official PDF baseline
+          if (!parsed.version || parsed.version < 7) {
+            const seed = createOctober2026Snapshot();
+            this.persistAsync(seed);
+            return seed;
+          }
+
           // Normalize Ben Smir in weekly schedules
           parsed.staffBox.forEach((staff) => {
             if (staff.weeklySchedule) {
@@ -1117,6 +1124,14 @@ export class ObjectBoxLocalStore {
                     .replace(/Consultation\s+E\.P\.S\.P\s+Ben\s+Smir/gi, 'Consultation E.P.S.P\nBen Smir');
                 }
               });
+            }
+            // If currently October 2026, ensure maternity leave is removed for Bakhouche Sarra per official PDF
+            if (
+              staff.fullName.toLowerCase().includes('bakhouche') &&
+              (parsed.config?.guardMonthName?.includes('Octobre') || !parsed.config?.guardMonthName)
+            ) {
+              delete staff.maternityLeave;
+              staff.obsPortrait = '';
             }
           });
           return parsed;

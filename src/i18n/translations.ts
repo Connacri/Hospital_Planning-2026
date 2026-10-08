@@ -6,6 +6,7 @@ export interface TranslationDictionary {
   navDocuments: string;
   navStaffManager: string;
   navObjectBoxStudio: string;
+  navSupabaseSync: string;
   navFlutterExport: string;
   navLegalPrivacy: string;
   orientationPortrait: string;
@@ -101,6 +102,7 @@ export const translations: Record<SupportedLocale, TranslationDictionary> = {
     navDocuments: "Tableaux & PDF (A4)",
     navStaffManager: "Personnel & Équipes",
     navObjectBoxStudio: "Base ObjectBox",
+    navSupabaseSync: "Remote DB (Supabase)",
     navFlutterExport: "Architecture Flutter",
     navLegalPrivacy: "Confidentialité & Données",
     orientationPortrait: "Portrait (210 × 297 mm)",
@@ -194,6 +196,7 @@ export const translations: Record<SupportedLocale, TranslationDictionary> = {
     navDocuments: "Tables & PDFs (A4)",
     navStaffManager: "Staff & Teams",
     navObjectBoxStudio: "ObjectBox Store",
+    navSupabaseSync: "Remote DB (Supabase)",
     navFlutterExport: "Flutter Architecture",
     navLegalPrivacy: "Privacy & Data",
     orientationPortrait: "Portrait (210 × 297 mm)",
@@ -287,6 +290,7 @@ export const translations: Record<SupportedLocale, TranslationDictionary> = {
     navDocuments: "الجداول و PDF (A4)",
     navStaffManager: "الموظفون والفرق",
     navObjectBoxStudio: "قاعدة ObjectBox",
+    navSupabaseSync: "قاعدة بيانات Supabase",
     navFlutterExport: "هندسة Flutter",
     navLegalPrivacy: "الخصوصية والبيانات",
     orientationPortrait: "عمودي (210 × 297 مم)",

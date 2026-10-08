@@ -27,6 +27,7 @@ import {
   Download,
   Stamp,
   Calendar,
+  Cloud,
 } from 'lucide-react';
 import { TranslationDictionary, SupportedLocale } from '../i18n/translations';
 
@@ -49,6 +50,8 @@ interface QuickActionsFloatingMenuProps {
   onToggleModificatif?: () => void;
   onOpenModificatifModal?: () => void;
   onLoadOctoberPreset?: () => void;
+  onLoadAprilPreset?: () => void;
+  onLoadJanuaryPreset?: () => void;
   onOpenCreateMonthModal?: () => void;
   onDirectPdfDownload?: () => void;
   onOpenGuardStats?: () => void;
@@ -56,6 +59,7 @@ interface QuickActionsFloatingMenuProps {
   onOpenStaffShare?: () => void;
   onOpenDocumentValidation?: () => void;
   onOpenMonthlyArchive?: () => void;
+  onOpenSupabaseSync?: () => void;
   locale: SupportedLocale;
   t: TranslationDictionary;
 }
@@ -79,6 +83,8 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
   onToggleModificatif,
   onOpenModificatifModal,
   onLoadOctoberPreset,
+  onLoadAprilPreset,
+  onLoadJanuaryPreset,
   onOpenCreateMonthModal,
   onDirectPdfDownload,
   onOpenGuardStats,
@@ -86,6 +92,7 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
   onOpenStaffShare,
   onOpenDocumentValidation,
   onOpenMonthlyArchive,
+  onOpenSupabaseSync,
   locale,
   t,
 }) => {
@@ -470,11 +477,22 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
                     <span>Archives &amp; Duplication Mois Suivant</span>
                   </button>
                 )}
+                {onOpenSupabaseSync && (
+                  <button
+                    type="button"
+                    onClick={onOpenSupabaseSync}
+                    className="col-span-2 flex items-center justify-center gap-1.5 px-2 py-1.5 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700 text-emerald-200 rounded-lg text-[10.5px] font-semibold transition-colors"
+                    title="Ouvrir la passerelle Remote DB et synchronisation Supabase"
+                  >
+                    <Cloud className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Remote DB &amp; Supabase Cloud Sync</span>
+                  </button>
+                )}
               </div>
             </div>
 
             {/* MONTH / PDF PRESETS */}
-            {(onLoadOctoberPreset || onOpenCreateMonthModal) && (
+            {(onLoadOctoberPreset || onLoadAprilPreset || onLoadJanuaryPreset || onOpenCreateMonthModal) && (
               <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
                 <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider flex items-center justify-between">
                   <span>Mois &amp; Continuité</span>
@@ -501,6 +519,28 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
                     >
                       <span className="truncate">🗓️ Mois Suivant...</span>
                       <span className="text-[9px] bg-sky-500/30 text-sky-300 px-1 py-0.2 rounded font-mono shrink-0 ml-1">+1</span>
+                    </button>
+                  )}
+                  {onLoadAprilPreset && (
+                    <button
+                      type="button"
+                      onClick={onLoadAprilPreset}
+                      className="px-2 py-1.5 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700 text-emerald-200 rounded-lg text-[10.5px] font-medium text-left truncate transition-colors flex items-center justify-between"
+                      title="Charger le modèle d'Avril 2026"
+                    >
+                      <span className="truncate">🌸 Avril 2026</span>
+                      <span className="text-[9px] bg-emerald-500/30 text-emerald-300 px-1 py-0.2 rounded font-mono shrink-0 ml-1">30j</span>
+                    </button>
+                  )}
+                  {onLoadJanuaryPreset && (
+                    <button
+                      type="button"
+                      onClick={onLoadJanuaryPreset}
+                      className="px-2 py-1.5 bg-amber-950/80 hover:bg-amber-900 border border-amber-700 text-amber-200 rounded-lg text-[10.5px] font-medium text-left truncate transition-colors flex items-center justify-between"
+                      title="Charger Janvier 2026 avec mention (Modificatif)"
+                    >
+                      <span className="truncate">❄️ Janvier (Modif)</span>
+                      <span className="text-[9px] bg-amber-500/30 text-amber-300 px-1 py-0.2 rounded font-mono shrink-0 ml-1">31j</span>
                     </button>
                   )}
                 </div>

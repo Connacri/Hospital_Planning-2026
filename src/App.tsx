@@ -48,6 +48,7 @@ import {
   Stamp,
   CheckCircle2,
   Globe,
+  Cloud,
 } from 'lucide-react';
 import {
   objectBoxStore,
@@ -86,10 +87,11 @@ import { RegulatoryAlertsModal } from './components/RegulatoryAlertsModal';
 import { StaffShareModal } from './components/StaffShareModal';
 import { DocumentValidationModal, ValidationStatus } from './components/DocumentValidationModal';
 import { MonthlyArchiveModal, MonthlyArchiveRecord } from './components/MonthlyArchiveModal';
+import { SupabaseSyncPanel } from './components/SupabaseSyncPanel';
 import { exportDirectPdf } from './utils/pdfExportHelper';
 import { translations, SupportedLocale } from './i18n/translations';
 
-type ActiveTab = 'documents' | 'staff' | 'objectbox' | 'flutter' | 'privacy';
+type ActiveTab = 'documents' | 'staff' | 'objectbox' | 'supabase' | 'flutter' | 'privacy';
 
 export default function App() {
   const [locale, setLocale] = useState<SupportedLocale>('fr');
@@ -331,6 +333,29 @@ export default function App() {
   const handleLoadOctober2026 = () => {
     objectBoxStore.loadOctoberPreset();
     showToast("Plannings officiels d'Octobre 2026 (Service Rhumatologie) rechargés avec succès !");
+  };
+
+  const handleLoadApril2026 = () => {
+    objectBoxStore.createNewMonth(2026, 3);
+    const bakhouche = objectBoxStore.getSnapshot().staffBox.find((s) =>
+      s.fullName.toLowerCase().includes('bakhouche')
+    );
+    if (bakhouche) {
+      objectBoxStore.setMaternityLeave(
+        bakhouche.id,
+        1,
+        26,
+        '25/11/2025 au 26/04/2026',
+        'Congé de Maternité'
+      );
+    }
+    showToast("Planning d'Avril 2026 chargé (avec congé maternité historique Bakhouche Sarra jusqu'au 26/04/2026).");
+  };
+
+  const handleLoadJanuary2026 = () => {
+    objectBoxStore.createNewMonth(2026, 0);
+    objectBoxStore.setAllTablesModificatif(true);
+    showToast('Planning de Janvier 2026 (Modificatif) chargé avec succès !');
   };
 
   const handleOpenMaternityModal = (staff?: StaffEntity) => {
@@ -875,6 +900,19 @@ class HospitalPdfGenerator {
 
               <button
                 type="button"
+                onClick={() => setActiveTab('supabase')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors ${
+                  activeTab === 'supabase'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <Cloud className="w-4 h-4 text-emerald-400" />
+                <span>{t.navSupabaseSync}</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setActiveTab('flutter')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors ${
                   activeTab === 'flutter'
@@ -960,11 +998,11 @@ class HospitalPdfGenerator {
         </div>
 
         {/* Mobile Navigation Bar */}
-        <nav className="md:hidden grid grid-cols-5 bg-slate-950 border-t border-slate-800 px-1 py-1 text-xs w-full max-w-full">
+        <nav className="md:hidden flex items-center justify-between overflow-x-auto bg-slate-950 border-t border-slate-800 px-1 py-1 text-xs w-full max-w-full">
           <button
             type="button"
             onClick={() => setActiveTab('documents')}
-            className={`p-1 flex flex-col items-center justify-center min-w-0 truncate ${
+            className={`p-1 flex flex-col items-center justify-center min-w-[50px] shrink-0 truncate ${
               activeTab === 'documents' ? 'text-sky-400 font-bold' : 'text-slate-400'
             }`}
           >
@@ -974,7 +1012,7 @@ class HospitalPdfGenerator {
           <button
             type="button"
             onClick={() => setActiveTab('staff')}
-            className={`p-1 flex flex-col items-center justify-center min-w-0 truncate ${
+            className={`p-1 flex flex-col items-center justify-center min-w-[50px] shrink-0 truncate ${
               activeTab === 'staff' ? 'text-sky-400 font-bold' : 'text-slate-400'
             }`}
           >
@@ -984,7 +1022,7 @@ class HospitalPdfGenerator {
           <button
             type="button"
             onClick={() => setActiveTab('objectbox')}
-            className={`p-1 flex flex-col items-center justify-center min-w-0 truncate ${
+            className={`p-1 flex flex-col items-center justify-center min-w-[50px] shrink-0 truncate ${
               activeTab === 'objectbox' ? 'text-sky-400 font-bold' : 'text-slate-400'
             }`}
           >
@@ -993,8 +1031,18 @@ class HospitalPdfGenerator {
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab('supabase')}
+            className={`p-1 flex flex-col items-center justify-center min-w-[50px] shrink-0 truncate ${
+              activeTab === 'supabase' ? 'text-emerald-400 font-bold' : 'text-slate-400'
+            }`}
+          >
+            <Cloud className="w-4 h-4 shrink-0 text-emerald-400" />
+            <span className="text-[9px] mt-0.5 truncate max-w-full">Supabase</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab('flutter')}
-            className={`p-1 flex flex-col items-center justify-center min-w-0 truncate ${
+            className={`p-1 flex flex-col items-center justify-center min-w-[50px] shrink-0 truncate ${
               activeTab === 'flutter' ? 'text-sky-400 font-bold' : 'text-slate-400'
             }`}
           >
@@ -1004,7 +1052,7 @@ class HospitalPdfGenerator {
           <button
             type="button"
             onClick={() => setActiveTab('privacy')}
-            className={`p-1 flex flex-col items-center justify-center min-w-0 truncate ${
+            className={`p-1 flex flex-col items-center justify-center min-w-[50px] shrink-0 truncate ${
               activeTab === 'privacy' ? 'text-sky-400 font-bold' : 'text-slate-400'
             }`}
           >
@@ -1528,6 +1576,7 @@ class HospitalPdfGenerator {
               onLoadOctoberPreset={handleLoadOctober2026}
               onLoadAprilPreset={handleLoadApril2026}
               onLoadJanuaryPreset={handleLoadJanuary2026}
+              onOpenSupabaseSync={() => setActiveTab('supabase')}
               locale={locale}
               t={t}
             />
@@ -1797,7 +1846,7 @@ class HospitalPdfGenerator {
         {activeTab === 'objectbox' && (
           <div className="space-y-6">
             {/* ObjectBox Status & Statistics */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-slate-950 p-5 rounded-xl border border-slate-800 flex items-center gap-4">
                 <div className="p-3 rounded-lg bg-sky-950 border border-sky-800 text-sky-400">
                   <Database className="w-6 h-6" />
@@ -1859,6 +1908,25 @@ class HospitalPdfGenerator {
                       onChange={handleImportJsonFile}
                       className="hidden"
                     />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-950 p-5 rounded-xl border border-emerald-800/60 flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-emerald-950 border border-emerald-700 text-emerald-400">
+                  <Cloud className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="text-xs text-slate-400 font-medium">Remote Cloud Sync</div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('supabase')}
+                    className="mt-1.5 flex items-center gap-1.5 px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-bold transition-colors shadow-sm"
+                  >
+                    <span>Ouvrir Supabase →</span>
+                  </button>
+                  <div className="text-[10.5px] text-emerald-400/80 font-mono mt-1">
+                    PostgreSQL / Cloud DB
                   </div>
                 </div>
               </div>
@@ -1964,6 +2032,13 @@ class HospitalPdfGenerator {
               </div>
             </div>
           </div>
+        )}
+
+        {/* ====================================================================
+            TAB: REMOTE DB & SUPABASE PASSAGEWAY
+           ==================================================================== */}
+        {activeTab === 'supabase' && (
+          <SupabaseSyncPanel onShowToast={showToast} />
         )}
 
         {/* ====================================================================
