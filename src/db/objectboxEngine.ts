@@ -10,6 +10,7 @@ export interface DayColumnMeta {
   day: number; // 1..31
   dow: string; // JEU, VEN, SAM, DIM, LUN, MAR, MER
   isBlackColumn: boolean; // True for VEN & SAM in PDF 2
+  isHoliday?: boolean; // Jour férié (marqué via le modal Jours Fériés)
 }
 
 export interface DoctorWeeklySchedule {

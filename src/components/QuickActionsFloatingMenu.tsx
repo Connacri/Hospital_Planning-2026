@@ -27,6 +27,7 @@ import {
   Download,
   Stamp,
   Calendar,
+  CalendarOff,
   Cloud,
 } from 'lucide-react';
 import { TranslationDictionary, SupportedLocale } from '../i18n/translations';
@@ -45,6 +46,7 @@ interface QuickActionsFloatingMenuProps {
   onResetDefaults?: () => void;
   onOpenGuardRotationModal?: () => void;
   onOpenLeaveTypesModal?: () => void;
+  onOpenHolidayModal?: () => void;
   onOpenMaternityModal?: () => void;
   isModificatif?: boolean;
   onToggleModificatif?: () => void;
@@ -78,6 +80,7 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
   onResetDefaults,
   onOpenGuardRotationModal,
   onOpenLeaveTypesModal,
+  onOpenHolidayModal,
   onOpenMaternityModal,
   isModificatif = false,
   onToggleModificatif,
@@ -402,6 +405,17 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
                     </button>
                   )}
                 </div>
+                {onOpenHolidayModal && (
+                  <button
+                    type="button"
+                    onClick={onOpenHolidayModal}
+                    className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-red-950/60 hover:bg-red-900 border border-red-800/80 text-red-200 text-[11px] font-semibold transition-colors"
+                    title="Ajouter un ou plusieurs jours fériés dans le planning du mois"
+                  >
+                    <CalendarOff className="w-3.5 h-3.5 text-red-400" />
+                    <span>Jours Fériés</span>
+                  </button>
+                )}
                 {onOpenModificatifModal && (
                   <button
                     type="button"
