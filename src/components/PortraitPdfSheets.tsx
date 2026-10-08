@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Plus, Trash2, Tag, Repeat, Check, HeartHandshake } from 'lucide-react';
 import {
   HospitalDocumentConfig,
@@ -51,7 +51,7 @@ const LeavePickerButton: React.FC<{
           e.stopPropagation();
           setOpen((v) => !v);
         }}
-        title="Choisir un type de congé ou observation"
+        title="Choisir un type de congÃ© ou observation"
         className="opacity-0 group-hover/obs:opacity-100 p-0.5 text-slate-500 hover:text-black hover:bg-slate-200 rounded transition-opacity"
       >
         <Tag className="w-2.5 h-2.5 text-amber-700" />
@@ -71,8 +71,8 @@ const LeavePickerButton: React.FC<{
             className="absolute right-0 top-full mt-1 w-64 bg-slate-950 text-white border border-slate-700 rounded-lg shadow-2xl p-1.5 z-40 text-left text-[11px] font-sans divide-y divide-slate-800"
           >
             <div className="px-2 py-1 text-[10px] text-slate-400 font-semibold uppercase tracking-wider flex items-center justify-between">
-              <span>Types de Congés & OBS</span>
-              <span className="text-[9px] text-amber-400 font-normal">Clic = insérer</span>
+              <span>Types de CongÃ©s & OBS</span>
+              <span className="text-[9px] text-amber-400 font-normal">Clic = insÃ©rer</span>
             </div>
 
             {/* Quick official maternity option */}
@@ -80,14 +80,14 @@ const LeavePickerButton: React.FC<{
               <button
                 type="button"
                 onClick={() => {
-                  onSelect('CONGÉ de MATERNITÉ. 25/11/2025 au 26/04/2026');
+                  onSelect('CONGÃ‰ de MATERNITÃ‰. 25/11/2025 au 26/04/2026');
                   setOpen(false);
                 }}
                 className="w-full text-left px-2 py-1.5 rounded bg-rose-950/70 hover:bg-rose-900 border border-rose-800/80 text-rose-200 text-[10.5px] font-medium transition-colors flex items-center gap-1.5"
-                title="Insérer la mention exacte du PDF pour Bakhouche Sarra"
+                title="InsÃ©rer la mention exacte du PDF pour Bakhouche Sarra"
               >
                 <HeartHandshake className="w-3 h-3 text-rose-400 shrink-0" />
-                <span className="truncate">CONGÉ de MATERNITÉ. 25/11/2025 au 26/04/2026</span>
+                <span className="truncate">CONGÃ‰ de MATERNITÃ‰. 25/11/2025 au 26/04/2026</span>
               </button>
             </div>
 
@@ -100,11 +100,11 @@ const LeavePickerButton: React.FC<{
                   <button
                     type="button"
                     onClick={() => {
-                      onSelect(lt.code === 'C' ? 'Congé (C)' : `${lt.code} : ${lt.label}`);
+                      onSelect(lt.code === 'C' ? 'CongÃ© (C)' : `${lt.code} : ${lt.label}`);
                       setOpen(false);
                     }}
                     className="flex items-center gap-1.5 text-left flex-1 min-w-0"
-                    title={`Insérer complet : ${lt.code} : ${lt.label}`}
+                    title={`InsÃ©rer complet : ${lt.code} : ${lt.label}`}
                   >
                     <span
                       className="font-bold font-mono px-1 py-0.2 rounded text-[10.5px]"
@@ -126,7 +126,7 @@ const LeavePickerButton: React.FC<{
                       onSelect(lt.code);
                       setOpen(false);
                     }}
-                    title={`Insérer uniquement le code "${lt.code}"`}
+                    title={`InsÃ©rer uniquement le code "${lt.code}"`}
                     className="px-1 text-[9px] font-mono text-slate-400 hover:text-amber-300 hover:bg-slate-700 rounded transition-colors"
                   >
                     code
@@ -136,16 +136,16 @@ const LeavePickerButton: React.FC<{
             </div>
             <div className="pt-1 space-y-0.5">
               <div className="px-2 py-0.5 text-[9px] text-slate-500 uppercase font-semibold">
-                Observations fréquentes
+                Observations frÃ©quentes
               </div>
               <div className="grid grid-cols-2 gap-1 px-1">
                 {[
-                  'En congé',
-                  'Remplaçant',
+                  'En congÃ©',
+                  'RemplaÃ§ant',
                   '08h-16h',
                   'Garde',
-                  'Surveillant Médical',
-                  'Chargée de DMO',
+                  'Surveillant MÃ©dical',
+                  'ChargÃ©e de DMO',
                   'Effacer',
                 ].map((opt) => (
                   <button
@@ -177,7 +177,7 @@ const LeavePickerButton: React.FC<{
                   className="w-full flex items-center justify-center gap-1.5 px-2 py-1 rounded bg-rose-950/60 hover:bg-rose-900 border border-rose-800/80 text-rose-200 text-[10px] font-bold transition-colors"
                 >
                   <HeartHandshake className="w-3 h-3 text-rose-400" />
-                  <span>Gérer Congé Maternité (Fusion)</span>
+                  <span>GÃ©rer CongÃ© MaternitÃ© (Fusion)</span>
                 </button>
               )}
               {onOpenLeaveTypesModal && (
@@ -190,7 +190,7 @@ const LeavePickerButton: React.FC<{
                   className="w-full flex items-center justify-center gap-1.5 px-2 py-1 rounded bg-amber-950/60 hover:bg-amber-900 border border-amber-800/80 text-amber-200 text-[10px] font-bold transition-colors"
                 >
                   <Tag className="w-3 h-3 text-amber-400" />
-                  <span>Gérer / Ajouter des congés</span>
+                  <span>GÃ©rer / Ajouter des congÃ©s</span>
                 </button>
               )}
             </div>
@@ -361,10 +361,10 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
 
   const handleAddDoctor = () => {
     onAddStaff({
-      fullName: 'Nouveau Médecin',
+      fullName: 'Nouveau MÃ©decin',
       category: 'medical',
-      rolePortrait: 'Médecin Généraliste',
-      gradeLandscape: 'Médecin',
+      rolePortrait: 'MÃ©decin GÃ©nÃ©raliste',
+      gradeLandscape: 'MÃ©decin',
       obsPortrait: '08h-16h',
       horaireBlock: '08h-16h',
       teamGroup: '',
@@ -427,10 +427,10 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
 
   const handleAddHygieneMember = () => {
     onAddStaff({
-      fullName: "Nouvel Agent d'Hygiène",
+      fullName: "Nouvel Agent d'HygiÃ¨ne",
       category: 'hygiene',
-      rolePortrait: "Agent d'hygiène",
-      gradeLandscape: "Agent d'hygiène",
+      rolePortrait: "Agent d'hygiÃ¨ne",
+      gradeLandscape: "Agent d'hygiÃ¨ne",
       obsPortrait: '',
       horaireBlock: '12h',
       teamGroup: '',
@@ -470,14 +470,14 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
   return (
     <div className="flex flex-col items-center gap-8 print-only-container">
       {/* =====================================================================
-          PDF 1 — PAGE 1: Planning des Médecins « Mois d'Octobre 2026 »
+          PDF 1 â€” PAGE 1: Planning des MÃ©decins Â« Mois d'Octobre 2026 Â»
          ===================================================================== */}
       {(activeSubPage === 'all' || activeSubPage === 'p1') &&
         doctorChunksP1.map((chunk, chunkIdx) => (
           <section
             key={`doc-p1-${chunkIdx}`}
             id={`doc-sheet-p1-${chunkIdx}`}
-            aria-label={`PDF 1 Page 1 - Planning des Médecins ${
+            aria-label={`PDF 1 Page 1 - Planning des MÃ©decins ${
               chunkIdx > 0 ? `(Suite ${chunkIdx + 1})` : ''
             }`}
             className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
@@ -512,7 +512,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                   )}
                   {chunkIdx > 0 && (
                     <span className="text-xs font-semibold text-slate-700 font-sans ml-1 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
-                      Suite {chunkIdx + 1}/{doctorChunksP1.length} — Médecins {chunkIdx * 7 + 1} à{' '}
+                      Suite {chunkIdx + 1}/{doctorChunksP1.length} â€” MÃ©decins {chunkIdx * 7 + 1} Ã {' '}
                       {Math.min((chunkIdx + 1) * 7, doctors.length)}
                     </span>
                   )}
@@ -527,7 +527,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                           ? 'bg-amber-100 text-amber-900 border-amber-400 hover:bg-amber-200'
                           : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'
                       }`}
-                      title="Activer ou désactiver (Modificatif) sur ce tableau"
+                      title="Activer ou dÃ©sactiver (Modificatif) sur ce tableau"
                     >
                       <span className={`w-1.5 h-1.5 rounded-full ${isTableModificatif(config, 'pdf1Page1') ? 'bg-amber-600' : 'bg-slate-400'}`} />
                       <span>Modificatif : {isTableModificatif(config, 'pdf1Page1') ? 'Oui' : 'Non'}</span>
@@ -631,16 +631,16 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-sans font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded transition-colors"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Ajouter un médecin</span>
+                    <span>Ajouter un mÃ©decin</span>
                   </button>
                 </div>
               )}
 
-              {/* Observation Box — Exact PDF reproduction */}
+              {/* Observation Box â€” Exact PDF reproduction */}
               <div className="mt-4 border border-black rounded-[4px] px-3.5 py-1.5 text-[14px] font-medium text-black bg-white flex items-center justify-between">
                 <div className="flex-1">
                   <EditableText
-                    value={config.pdf1Page1Obs || 'OBS : Journée de RCP tous les Mardis à 11 h'}
+                    value={config.pdf1Page1Obs || 'OBS : JournÃ©e de RCP tous les Mardis Ã  11 h'}
                     readOnly={readOnly}
                     onChange={(v) => onUpdateConfig({ pdf1Page1Obs: v })}
                   />
@@ -660,14 +660,14 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
         ))}
 
       {/* =====================================================================
-          PDF 1 — PAGE 2: La liste du personnel médical du mois d'Octobre 2026
+          PDF 1 â€” PAGE 2: La liste du personnel mÃ©dical du mois d'Octobre 2026
          ===================================================================== */}
       {(activeSubPage === 'all' || activeSubPage === 'p2') &&
         doctorChunksP2.map((chunk, chunkIdx) => (
           <section
             key={`doc-p2-${chunkIdx}`}
             id={`doc-sheet-p2-${chunkIdx}`}
-            aria-label={`PDF 1 Page 2 - Liste du personnel médical ${
+            aria-label={`PDF 1 Page 2 - Liste du personnel mÃ©dical ${
               chunkIdx > 0 ? `(Suite ${chunkIdx + 1})` : ''
             }`}
             className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
@@ -702,7 +702,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                   )}
                   {chunkIdx > 0 && (
                     <span className="text-xs font-semibold text-slate-700 font-sans ml-1 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
-                      Suite {chunkIdx + 1}/{doctorChunksP2.length} — Médecins {chunkIdx * 12 + 1} à{' '}
+                      Suite {chunkIdx + 1}/{doctorChunksP2.length} â€” MÃ©decins {chunkIdx * 12 + 1} Ã {' '}
                       {Math.min((chunkIdx + 1) * 12, doctors.length)}
                     </span>
                   )}
@@ -717,7 +717,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                           ? 'bg-amber-100 text-amber-900 border-amber-400 hover:bg-amber-200'
                           : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'
                       }`}
-                      title="Activer ou désactiver (Modificatif) sur ce tableau"
+                      title="Activer ou dÃ©sactiver (Modificatif) sur ce tableau"
                     >
                       <span className={`w-1.5 h-1.5 rounded-full ${isTableModificatif(config, 'pdf1Page2') ? 'bg-amber-600' : 'bg-slate-400'}`} />
                       <span>Modificatif : {isTableModificatif(config, 'pdf1Page2') ? 'Oui' : 'Non'}</span>
@@ -741,7 +741,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                       <th
                         key={idx}
                         className={`border border-[#7F7F7F] px-2 py-1 font-medium whitespace-nowrap overflow-hidden text-ellipsis ${
-                          idx === 0 ? 'w-[33%]' : idx === 1 ? 'w-[45%]' : 'w-[22%]'
+                          idx === 0 ? 'w-[30%]' : idx === 1 ? 'w-[48%]' : 'w-[22%]'
                         }`}
                       >
                         <EditableText
@@ -815,7 +815,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-sans font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded transition-colors"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Ajouter un médecin</span>
+                    <span>Ajouter un mÃ©decin</span>
                   </button>
                 </div>
               )}
@@ -833,12 +833,12 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
         ))}
 
       {/* =====================================================================
-          PDF 1 — PAGE 3: Planning du Personnel Paramédical du Mois
+          PDF 1 â€” PAGE 3: Planning du Personnel ParamÃ©dical du Mois
          ===================================================================== */}
       {(activeSubPage === 'all' || activeSubPage === 'p3') && (
         <section
           id="doc-sheet-p3"
-          aria-label="PDF 1 Page 3 - Planning du Personnel Paramédical"
+          aria-label="PDF 1 Page 3 - Planning du Personnel ParamÃ©dical"
           className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
         >
           <div>
@@ -868,7 +868,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                         ? 'bg-amber-100 text-amber-900 border-amber-400 hover:bg-amber-200'
                         : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'
                     }`}
-                    title="Activer ou désactiver (Modificatif) sur ce tableau"
+                    title="Activer ou dÃ©sactiver (Modificatif) sur ce tableau"
                   >
                     <span className={`w-1.5 h-1.5 rounded-full ${isTableModificatif(config, 'pdf1Page3') ? 'bg-amber-600' : 'bg-slate-400'}`} />
                     <span>Modificatif : {isTableModificatif(config, 'pdf1Page3') ? 'Oui' : 'Non'}</span>
@@ -886,29 +886,29 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                       const bakhouche = staffList.find((s) => s.fullName.toLowerCase().includes('bakhouche'));
                       onOpenMaternityModal(bakhouche || undefined);
                     }}
-                    title="Gérer le congé de maternité (cellule fusionnée et OBS)"
+                    title="GÃ©rer le congÃ© de maternitÃ© (cellule fusionnÃ©e et OBS)"
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-sans font-medium bg-rose-50 hover:bg-rose-100 text-rose-900 border border-rose-300 shadow-xs transition-colors"
                   >
                     <HeartHandshake className="w-3 h-3 text-rose-700" />
-                    <span>Congé Maternité (Fusion)</span>
+                    <span>CongÃ© MaternitÃ© (Fusion)</span>
                   </button>
                 )}
                 {onOpenLeaveTypesModal && (
                   <button
                     type="button"
                     onClick={onOpenLeaveTypesModal}
-                    title="Gérer, ajouter, modifier ou supprimer des types de congés"
+                    title="GÃ©rer, ajouter, modifier ou supprimer des types de congÃ©s"
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-sans font-medium bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 shadow-xs transition-colors"
                   >
                     <Tag className="w-3 h-3 text-amber-700" />
-                    <span>Gérer types congés / OBS</span>
+                    <span>GÃ©rer types congÃ©s / OBS</span>
                   </button>
                 )}
                 {onOpenGuardRotationModal && (
                   <button
                     type="button"
                     onClick={onOpenGuardRotationModal}
-                    title="Gérer la rotation des équipes (période ou perpétuelle)"
+                    title="GÃ©rer la rotation des Ã©quipes (pÃ©riode ou perpÃ©tuelle)"
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-sans font-medium bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-300 shadow-xs transition-colors"
                   >
                     <Repeat className="w-3 h-3 text-sky-700" />
@@ -919,9 +919,9 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
             )}
 
             {/* Paramedical Complete Table (08h-16h, 16h Groupes A-E, 12h) */}
-            <table className="w-full border-collapse border-[1.5px] border-black text-black text-[13.5px] table-fixed">
+            <table className="w-full border-collapse border border-black text-black text-[13.5px] table-fixed">
               <thead>
-                <tr className="h-[26px] text-center font-medium border-b-[1.5px] border-black">
+                <tr className="h-[26px] text-center font-medium border-b border-black">
                   <th className="border border-black w-[10%] px-1 whitespace-nowrap">
                     <EditableText
                       value={config.pdf1Page3Columns[0]}
@@ -939,7 +939,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                       }}
                     />
                   </th>
-                  <th className="border border-black w-[27%] px-2 whitespace-nowrap">
+                  <th className="border border-black w-[24%] px-2 whitespace-nowrap">
                     <EditableText
                       value={config.pdf1Page3Columns[1]}
                       readOnly={readOnly}
@@ -956,7 +956,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                       }}
                     />
                   </th>
-                  <th className="border border-black w-[27%] px-2 whitespace-nowrap">
+                  <th className="border border-black w-[30%] px-2 whitespace-nowrap">
                     <EditableText
                       value={config.pdf1Page3Columns[2]}
                       readOnly={readOnly}
@@ -1019,7 +1019,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                         )}
                       </td>
                     )}
-                    <td className="border-r border-black px-1.5 py-[1px] font-medium relative whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
+                    <td className="border border-black px-1.5 py-[1px] font-medium relative whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
                       <EditableText
                         value={staff.fullName}
                         readOnly={readOnly}
@@ -1037,7 +1037,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                         </button>
                       )}
                     </td>
-                    <td className="border-r border-black px-1.5 py-[1px] font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
+                    <td className="border border-black px-1.5 py-[1px] font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
                       <EditableText
                         value={staff.rolePortrait}
                         readOnly={readOnly}
@@ -1045,7 +1045,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                         onChange={(v) => onUpdateStaffField(staff.id, 'rolePortrait', v)}
                       />
                     </td>
-                    <td className="border-r border-black border-y-0 px-1.5 py-[1px] text-center font-medium relative group/obs">
+                    <td className="border border-black px-1.5 py-[1px] text-center font-medium relative group/obs">
                       <EditableText
                         value={staff.obsPortrait}
                         readOnly={readOnly}
@@ -1088,7 +1088,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                               <button
                                 type="button"
                                 onClick={onOpenGuardRotationModal}
-                                title="Gérer la rotation des équipes de garde (période ou perpétuelle)"
+                                title="GÃ©rer la rotation des Ã©quipes de garde (pÃ©riode ou perpÃ©tuelle)"
                                 className="no-print block mx-auto mt-1 p-0.5 text-sky-800 hover:text-black hover:bg-sky-100 rounded"
                               >
                                 <Repeat className="w-3 h-3" />
@@ -1096,7 +1096,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                             )}
                           </td>
                         )}
-                        <td className="bg-black text-white text-center font-medium py-[1px] px-1.5 border-r border-black relative">
+                        <td className="bg-black text-white text-center font-medium py-[1px] px-1.5 border border-black relative">
                           <span>Groupe {groupLetter}</span>
                           {!readOnly && (
                             <button
@@ -1109,8 +1109,8 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                             </button>
                           )}
                         </td>
-                        <td className="border-r border-black px-1.5 py-[1px]"></td>
-                        <td className="border-r border-black border-y-0 px-1.5 py-[1px] text-center font-medium text-[11px] text-neutral-500">
+                        <td className="border border-black px-1.5 py-[1px]"></td>
+                        <td className="border border-black px-1.5 py-[1px] text-center font-medium text-[11px] text-neutral-500">
                           {isFirst16hRow && config.pdf1Page3Obs16h ? (
                             <EditableText
                               value={config.pdf1Page3Obs16h}
@@ -1135,7 +1135,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                             isVeryLast16hRow ? 'border-b border-black' : ''
                           }`}
                         >
-                          <td className="border-r border-black px-1.5 py-[1px] font-medium relative whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
+                          <td className="border border-black px-1.5 py-[1px] font-medium relative whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
                             <EditableText
                               value={member.fullName}
                               readOnly={readOnly}
@@ -1153,7 +1153,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                               </button>
                             )}
                           </td>
-                          <td className="border-r border-black px-1.5 py-[1px] font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
+                          <td className="border border-black px-1.5 py-[1px] font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
                             <EditableText
                               value={member.rolePortrait}
                               readOnly={readOnly}
@@ -1161,7 +1161,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                               onChange={(v) => onUpdateStaffField(member.id, 'rolePortrait', v)}
                             />
                           </td>
-                          <td className="border-r border-black border-y-0 px-1.5 py-[1px] text-center font-medium relative group/obs">
+                          <td className="border border-black px-1.5 py-[1px] text-center font-medium relative group/obs">
                             <EditableText
                               value={member.obsPortrait}
                               readOnly={readOnly}
@@ -1184,7 +1184,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                   return rows;
                 })()}
 
-                {/* ---------------- BLOCK 3: 12h (Agents d'hygiène) ---------------- */}
+                {/* ---------------- BLOCK 3: 12h (Agents d'hygiÃ¨ne) ---------------- */}
                 {hygieneStaff.map((staff, idx) => (
                   <tr
                     key={staff.id}
@@ -1208,7 +1208,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                         )}
                       </td>
                     )}
-                    <td className="border-r border-black px-1.5 py-[1px] font-medium relative whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
+                    <td className="border border-black px-1.5 py-[1px] font-medium relative whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
                       <EditableText
                         value={staff.fullName}
                         readOnly={readOnly}
@@ -1226,7 +1226,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                         </button>
                       )}
                     </td>
-                    <td className="border-r border-black px-1.5 py-[1px] font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
+                    <td className="border border-black px-1.5 py-[1px] font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
                       <EditableText
                         value={staff.rolePortrait}
                         readOnly={readOnly}
@@ -1234,7 +1234,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                         onChange={(v) => onUpdateStaffField(staff.id, 'rolePortrait', v)}
                       />
                     </td>
-                    <td className={`border-r border-black ${idx === hygieneStaff.length - 1 ? 'border-b-[1.5px] border-b-black' : 'border-y-0'} px-1.5 py-[1px] text-center font-medium relative group/obs`}>
+                    <td className="border border-black px-1.5 py-[1px] text-center font-medium relative group/obs">
                       <EditableText
                         value={staff.obsPortrait}
                         readOnly={readOnly}
@@ -1254,7 +1254,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
               </tbody>
             </table>
 
-            {/* Note N.B. placée directement avec et sous le tableau comme les autres tableaux */}
+            {/* Note N.B. placÃ©e directement avec et sous le tableau comme les autres tableaux */}
             {config.nbNotice && (
               <div className="mt-2 text-[11.5px] font-medium text-left leading-normal text-black">
                 <EditableText

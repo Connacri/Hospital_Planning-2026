@@ -241,7 +241,7 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
       <table className="w-full border-collapse border border-[#B5B5B5] text-center font-pdf">
         <thead>
           <tr className={`${compactRows ? 'h-[24px]' : 'h-[32px]'} text-[11.5px] leading-[1.1]`}>
-            <th className={`border border-[#B5B5B5] bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black font-medium ${showTeamColumn ? 'w-[15%]' : 'w-[16.5%]'} px-1 whitespace-nowrap`}>
+            <th className={`border border-[#B5B5B5] bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black font-medium ${showTeamColumn ? 'w-[12.5%]' : 'w-[14%]'} px-1 whitespace-nowrap`}>
               <EditableText
                 value={config.pdf2NameColHeader}
                 readOnly={readOnly}
@@ -249,7 +249,7 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
                 onChange={(v) => onUpdateConfig({ pdf2NameColHeader: v })}
               />
             </th>
-            <th className={`border border-[#B5B5B5] bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black font-medium ${showTeamColumn ? 'w-[11.5%]' : 'w-[12.5%]'} px-1 whitespace-nowrap`}>
+            <th className={`border border-[#B5B5B5] bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black font-medium ${showTeamColumn ? 'w-[14.5%]' : 'w-[15.5%]'} px-1 whitespace-nowrap`}>
               <EditableText
                 value={config.pdf2GradeColHeader}
                 readOnly={readOnly}
@@ -273,19 +273,25 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
                 className={`group/th border border-[#B5B5B5] font-medium px-0.5 relative ${
                   col.isBlackColumn
                     ? 'bg-black text-white border-black'
-                    : 'bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black'
+                    : col.isHoliday
+                      ? 'bg-red-200 text-red-950 border-red-400'
+                      : 'bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black'
                 }`}
               >
                 <div className="tabular-nums text-[11.5px] font-semibold leading-none">
                   {col.day}
                 </div>
                 <div className="text-[10.5px] leading-none mt-0.5">
-                  <EditableText
-                    value={col.dow}
-                    darkSurface={col.isBlackColumn}
-                    readOnly={readOnly}
-                    onChange={(v) => updateDayDowLabel(col.day, v)}
-                  />
+                  {col.isHoliday ? (
+                    <span className="font-bold text-red-800 tracking-tight">FÉRIÉ</span>
+                  ) : (
+                    <EditableText
+                      value={col.dow}
+                      darkSurface={col.isBlackColumn}
+                      readOnly={readOnly}
+                      onChange={(v) => updateDayDowLabel(col.day, v)}
+                    />
+                  )}
                 </div>
                 {!readOnly && (
                   <button
@@ -403,16 +409,18 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
                   // Standard Day Cell
                   const cellVal = staff.dailyActivity[col.day] ?? 'N';
                   const isBlack = col.isBlackColumn;
+                  const isHoliday = !!col.isHoliday && !isBlack;
+                  const dayCellBg = isBlack
+                    ? 'bg-black text-white border-[#222222]'
+                    : isHoliday
+                      ? 'bg-red-50 text-red-950 border-red-300'
+                      : 'bg-white text-black border-[#CCCCCC]';
 
                   if (readOnly) {
                     cells.push(
                       <td
                         key={col.day}
-                        className={`border px-0.5 select-none ${
-                          isBlack
-                            ? 'bg-black text-white border-[#222222]'
-                            : 'bg-white text-black border-[#CCCCCC]'
-                        }`}
+                        className={`border px-0.5 select-none ${dayCellBg}`}
                       >
                         <span>{cellVal}</span>
                       </td>
@@ -430,11 +438,13 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
                             onUpdateStaffDayCell(staff.id, col.day, activePaintCode);
                           }
                         }}
-                        title={`Peindre "${activePaintCode}" (Jour ${col.day})`}
-                        className={`border cursor-crosshair px-0.5 transition-transform active:scale-95 ${
+                        title={`Peindre "${activePaintCode}" (Jour ${col.day}${isHoliday ? ' — Férié' : ''})`}
+                        className={`border cursor-crosshair px-0.5 transition-transform active:scale-95 ${dayCellBg} ${
                           isBlack
-                            ? 'bg-black text-white border-[#333333] hover:bg-neutral-800'
-                            : 'bg-white text-black border-[#CCCCCC] hover:bg-amber-100'
+                            ? 'hover:bg-neutral-800'
+                            : isHoliday
+                              ? 'hover:bg-red-100'
+                              : 'hover:bg-amber-100'
                         }`}
                       >
                         <span>{cellVal}</span>
@@ -444,11 +454,7 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
                     cells.push(
                       <td
                         key={col.day}
-                        className={`border px-0.5 ${
-                          isBlack
-                            ? 'bg-black text-white border-[#222222]'
-                            : 'bg-white text-black border-[#CCCCCC]'
-                        }`}
+                        className={`border px-0.5 ${dayCellBg}`}
                       >
                         <EditableText
                           value={cellVal}
