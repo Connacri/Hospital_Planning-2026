@@ -11,12 +11,17 @@ import {
   LeaveTypeItem,
 } from '../db/objectboxEngine';
 import { EditableText } from './EditableText';
+import { OfficialHospitalStamp, OfficialHospitalQrCode } from './OfficialStampAndQr';
+import { ValidationStatus } from './DocumentValidationModal';
 
 interface PortraitPdfSheetsProps {
   activeSubPage: 'all' | 'p1' | 'p2' | 'p3';
   config: HospitalDocumentConfig;
   staffList: StaffEntity[];
   readOnly?: boolean;
+  validationStatus?: ValidationStatus;
+  showOfficialStamp?: boolean;
+  showQrCode?: boolean;
   onUpdateConfig: (partial: Partial<HospitalDocumentConfig>) => void;
   onUpdateStaffField: <K extends keyof StaffEntity>(id: number, field: K, value: StaffEntity[K]) => void;
   onUpdateDoctorWeekly: (id: number, dayKey: keyof DoctorWeeklySchedule, value: string) => void;
@@ -239,7 +244,19 @@ const OfficialPortraitFooter: React.FC<{
   readOnly?: boolean;
   compact?: boolean;
   showNb?: boolean;
-}> = ({ config, onUpdateConfig, readOnly = false, compact = false, showNb = false }) => {
+  showOfficialStamp?: boolean;
+  showQrCode?: boolean;
+  validationStatus?: ValidationStatus;
+}> = ({
+  config,
+  onUpdateConfig,
+  readOnly = false,
+  compact = false,
+  showNb = false,
+  showOfficialStamp = false,
+  showQrCode = false,
+  validationStatus = 'draft',
+}) => {
   const sigs = config.signaturesPortrait;
   const updateSig = (idx: 0 | 1 | 2 | 3, val: string) => {
     const next: [string, string, string, string] = [...sigs] as [string, string, string, string];
@@ -248,7 +265,7 @@ const OfficialPortraitFooter: React.FC<{
   };
 
   return (
-    <div className={`font-pdf text-black mt-auto ${compact ? 'pt-1.5' : 'pt-3'}`}>
+    <div className={`font-pdf text-black mt-auto ${compact ? 'pt-1' : 'pt-2'}`}>
       {/* N.B Notice placed directly under the table if enabled */}
       {showNb && config.nbNotice && (
         <div className="mb-1 text-[11.5px] font-medium text-left">
@@ -260,14 +277,27 @@ const OfficialPortraitFooter: React.FC<{
         </div>
       )}
 
-      <div className={`text-right text-[12.5px] font-medium pr-2 ${compact ? 'mb-1.5' : 'mb-3'}`}>
-        <EditableText
-          value={config.cityDatePortrait}
-          readOnly={readOnly}
-          onChange={(v) => onUpdateConfig({ cityDatePortrait: v })}
-        />
+      {/* Date row with QR Code */}
+      <div className={`flex items-end justify-between ${compact ? 'mb-1' : 'mb-2'}`}>
+        <div>
+          {showQrCode && (
+            <OfficialHospitalQrCode
+              status={validationStatus}
+              monthName={config.guardMonthName || "Mois d'Octobre 2026"}
+            />
+          )}
+        </div>
+        <div className="text-right text-[12.5px] font-medium pr-2">
+          <EditableText
+            value={config.cityDatePortrait}
+            readOnly={readOnly}
+            onChange={(v) => onUpdateConfig({ cityDatePortrait: v })}
+          />
+        </div>
       </div>
-      <div className={`grid grid-cols-4 text-center text-[12.5px] font-medium ${compact ? 'pb-1' : 'pb-2'}`}>
+
+      {/* Signatures Row */}
+      <div className={`grid grid-cols-4 text-center text-[12.5px] font-medium ${compact ? 'pb-0.5' : 'pb-1'}`}>
         <div>
           <EditableText value={sigs[0]} readOnly={readOnly} onChange={(v) => updateSig(0, v)} />
         </div>
@@ -277,8 +307,13 @@ const OfficialPortraitFooter: React.FC<{
         <div>
           <EditableText value={sigs[2]} readOnly={readOnly} onChange={(v) => updateSig(2, v)} />
         </div>
-        <div>
+        <div className="relative flex flex-col items-center">
           <EditableText value={sigs[3]} readOnly={readOnly} onChange={(v) => updateSig(3, v)} />
+          {showOfficialStamp && (
+            <div className="absolute top-2 right-1 z-10 pointer-events-none">
+              <OfficialHospitalStamp />
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -290,6 +325,9 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
   config,
   staffList,
   readOnly = false,
+  validationStatus = 'draft',
+  showOfficialStamp = false,
+  showQrCode = false,
   onUpdateConfig,
   onUpdateStaffField,
   onUpdateDoctorWeekly,
@@ -552,7 +590,14 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
             </div>
           </div>
 
-          <OfficialPortraitFooter config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} />
+          <OfficialPortraitFooter
+            config={config}
+            onUpdateConfig={onUpdateConfig}
+            readOnly={readOnly}
+            showOfficialStamp={showOfficialStamp}
+            showQrCode={showQrCode}
+            validationStatus={validationStatus}
+          />
         </section>
       )}
 
@@ -670,7 +715,14 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
             )}
           </div>
 
-          <OfficialPortraitFooter config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} />
+          <OfficialPortraitFooter
+            config={config}
+            onUpdateConfig={onUpdateConfig}
+            readOnly={readOnly}
+            showOfficialStamp={showOfficialStamp}
+            showQrCode={showQrCode}
+            validationStatus={validationStatus}
+          />
         </section>
       )}
 
@@ -1090,6 +1142,9 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
             readOnly={readOnly}
             compact={true}
             showNb={false}
+            showOfficialStamp={showOfficialStamp}
+            showQrCode={showQrCode}
+            validationStatus={validationStatus}
           />
         </section>
       )}

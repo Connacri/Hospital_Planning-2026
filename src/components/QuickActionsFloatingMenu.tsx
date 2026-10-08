@@ -19,6 +19,12 @@ import {
   Repeat,
   Tag,
   HeartHandshake,
+  BarChart3,
+  AlertTriangle,
+  Share2,
+  Archive,
+  Download,
+  Stamp,
 } from 'lucide-react';
 import { TranslationDictionary, SupportedLocale } from '../i18n/translations';
 
@@ -41,6 +47,12 @@ interface QuickActionsFloatingMenuProps {
   onToggleModificatif?: () => void;
   onLoadAprilPreset?: () => void;
   onLoadJanuaryPreset?: () => void;
+  onDirectPdfDownload?: () => void;
+  onOpenGuardStats?: () => void;
+  onOpenRegulatoryAlerts?: () => void;
+  onOpenStaffShare?: () => void;
+  onOpenDocumentValidation?: () => void;
+  onOpenMonthlyArchive?: () => void;
   locale: SupportedLocale;
   t: TranslationDictionary;
 }
@@ -64,6 +76,12 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
   onToggleModificatif,
   onLoadAprilPreset,
   onLoadJanuaryPreset,
+  onDirectPdfDownload,
+  onOpenGuardStats,
+  onOpenRegulatoryAlerts,
+  onOpenStaffShare,
+  onOpenDocumentValidation,
+  onOpenMonthlyArchive,
   locale,
   t,
 }) => {
@@ -352,6 +370,70 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
               </div>
             </div>
 
+            {/* ADVANCED HOSPITAL MANAGEMENT & AUDIT TOOLS */}
+            <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
+              <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider flex items-center justify-between">
+                <span>Gestion &amp; Contrôle Avancés</span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {onOpenGuardStats && (
+                  <button
+                    type="button"
+                    onClick={onOpenGuardStats}
+                    className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded-lg text-[10.5px] font-semibold transition-colors truncate"
+                    title="Compteur et statistiques d'équité des gardes"
+                  >
+                    <BarChart3 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>Compteur Gardes</span>
+                  </button>
+                )}
+                {onOpenRegulatoryAlerts && (
+                  <button
+                    type="button"
+                    onClick={onOpenRegulatoryAlerts}
+                    className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded-lg text-[10.5px] font-semibold transition-colors truncate"
+                    title="Vérifier les anomalies et règles réglementaires de repos"
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                    <span>Contrôle &amp; Alertes</span>
+                  </button>
+                )}
+                {onOpenStaffShare && (
+                  <button
+                    type="button"
+                    onClick={onOpenStaffShare}
+                    className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded-lg text-[10.5px] font-semibold transition-colors truncate"
+                    title="Envoyer la fiche individuelle par WhatsApp ou Email"
+                  >
+                    <Share2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>WhatsApp / Fiche</span>
+                  </button>
+                )}
+                {onOpenDocumentValidation && (
+                  <button
+                    type="button"
+                    onClick={onOpenDocumentValidation}
+                    className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded-lg text-[10.5px] font-semibold transition-colors truncate"
+                    title="Validation officielle, cachet et code QR de certification"
+                  >
+                    <Stamp className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                    <span>Cachet &amp; QR Code</span>
+                  </button>
+                )}
+                {onOpenMonthlyArchive && (
+                  <button
+                    type="button"
+                    onClick={onOpenMonthlyArchive}
+                    className="col-span-2 flex items-center justify-center gap-1.5 px-2 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded-lg text-[10.5px] font-semibold transition-colors"
+                    title="Archives mensuelles et duplication vers le mois suivant"
+                  >
+                    <Archive className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Archives &amp; Duplication Mois Suivant</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* MONTH / PDF PRESETS */}
             {(onLoadAprilPreset || onLoadJanuaryPreset) && (
               <div className="pt-2 border-t border-slate-800/80 space-y-1">
@@ -432,15 +514,29 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
                 )}
               </div>
 
-              <button
-                type="button"
-                onClick={onPrint}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-lg font-semibold transition-colors shadow-sm"
-                title="Imprimer ou enregistrer en PDF (A4)"
-              >
-                <Printer className="w-3.5 h-3.5 text-sky-400" />
-                <span>Imprimer</span>
-              </button>
+              <div className="flex items-center gap-1.5">
+                {onDirectPdfDownload && (
+                  <button
+                    type="button"
+                    onClick={onDirectPdfDownload}
+                    className="flex items-center gap-1 px-2.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-semibold transition-colors shadow-sm"
+                    title="Télécharger le fichier PDF directement"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>PDF Direct</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={onPrint}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-lg font-semibold transition-colors shadow-sm"
+                  title="Imprimer ou enregistrer en PDF (A4)"
+                >
+                  <Printer className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Imprimer</span>
+                </button>
+              </div>
 
               <button
                 type="button"

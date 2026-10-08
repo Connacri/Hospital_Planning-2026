@@ -9,6 +9,8 @@ import {
   getStaffMaternitySpan,
 } from '../db/objectboxEngine';
 import { EditableText } from './EditableText';
+import { OfficialHospitalStamp, OfficialHospitalQrCode } from './OfficialStampAndQr';
+import { ValidationStatus } from './DocumentValidationModal';
 
 interface LandscapePdfSheetsProps {
   activeSubPage: 'all' | 'p1' | 'p2' | 'p3' | 'p4' | 'p5';
@@ -16,6 +18,9 @@ interface LandscapePdfSheetsProps {
   staffList: StaffEntity[];
   activePaintCode: string | null;
   readOnly?: boolean;
+  validationStatus?: ValidationStatus;
+  showOfficialStamp?: boolean;
+  showQrCode?: boolean;
   onUpdateConfig: (partial: Partial<HospitalDocumentConfig>) => void;
   onUpdateStaffField: <K extends keyof StaffEntity>(id: number, field: K, value: StaffEntity[K]) => void;
   onUpdateStaffDayCell: (id: number, day: number, code: string) => void;
@@ -72,8 +77,21 @@ const OfficialLandscapeLegendAndFooter: React.FC<{
   showNb?: boolean;
   showSignatures?: boolean;
   readOnly?: boolean;
+  showOfficialStamp?: boolean;
+  showQrCode?: boolean;
+  validationStatus?: ValidationStatus;
   onOpenLeaveTypesModal?: () => void;
-}> = ({ config, onUpdateConfig, showNb = true, showSignatures = true, readOnly = false, onOpenLeaveTypesModal }) => {
+}> = ({
+  config,
+  onUpdateConfig,
+  showNb = true,
+  showSignatures = true,
+  readOnly = false,
+  showOfficialStamp = false,
+  showQrCode = false,
+  validationStatus = 'draft',
+  onOpenLeaveTypesModal,
+}) => {
   const sigs = config.signaturesLandscape;
   const updateSig = (idx: 0 | 1 | 2 | 3, val: string) => {
     const next: [string, string, string, string] = [...sigs] as [string, string, string, string];
@@ -89,9 +107,17 @@ const OfficialLandscapeLegendAndFooter: React.FC<{
 
   return (
     <div className="font-pdf text-black mt-2">
-      {/* Legend Row + Fait à Aïn el Türck */}
+      {/* Legend Row + QR Code + Fait à Aïn el Türck */}
       <div className="flex items-center justify-between text-[13.5px] font-medium">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          {showQrCode && (
+            <div className="mr-2">
+              <OfficialHospitalQrCode
+                status={validationStatus}
+                monthName={config.guardMonthName || "Mois d'Octobre 2026"}
+              />
+            </div>
+          )}
           {config.legendItems.map((item, idx) => (
             <EditableText
               key={idx}
@@ -144,8 +170,13 @@ const OfficialLandscapeLegendAndFooter: React.FC<{
           <div>
             <EditableText value={sigs[2]} readOnly={readOnly} onChange={(v) => updateSig(2, v)} />
           </div>
-          <div>
+          <div className="relative flex flex-col items-center">
             <EditableText value={sigs[3]} readOnly={readOnly} onChange={(v) => updateSig(3, v)} />
+            {showOfficialStamp && (
+              <div className="absolute top-2 right-1 z-10 pointer-events-none">
+                <OfficialHospitalStamp />
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -440,6 +471,9 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
   staffList,
   activePaintCode,
   readOnly = false,
+  validationStatus = 'draft',
+  showOfficialStamp = false,
+  showQrCode = false,
   onUpdateConfig,
   onUpdateStaffField,
   onUpdateStaffDayCell,
@@ -547,6 +581,9 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
               showNb
               showSignatures
               readOnly={readOnly}
+              showOfficialStamp={showOfficialStamp}
+              showQrCode={showQrCode}
+              validationStatus={validationStatus}
               onOpenLeaveTypesModal={onOpenLeaveTypesModal}
             />
           </div>
@@ -625,6 +662,9 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
               showNb
               showSignatures
               readOnly={readOnly}
+              showOfficialStamp={showOfficialStamp}
+              showQrCode={showQrCode}
+              validationStatus={validationStatus}
               onOpenLeaveTypesModal={onOpenLeaveTypesModal}
             />
           </div>
@@ -737,6 +777,9 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
               showNb={true}
               showSignatures
               readOnly={readOnly}
+              showOfficialStamp={showOfficialStamp}
+              showQrCode={showQrCode}
+              validationStatus={validationStatus}
               onOpenLeaveTypesModal={onOpenLeaveTypesModal}
             />
           </div>
@@ -815,6 +858,9 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
               showNb
               showSignatures
               readOnly={readOnly}
+              showOfficialStamp={showOfficialStamp}
+              showQrCode={showQrCode}
+              validationStatus={validationStatus}
               onOpenLeaveTypesModal={onOpenLeaveTypesModal}
             />
           </div>

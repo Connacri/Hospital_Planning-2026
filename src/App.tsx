@@ -42,6 +42,11 @@ import {
   Tag,
   Repeat,
   HeartHandshake,
+  BarChart3,
+  Share2,
+  Archive,
+  Stamp,
+  CheckCircle2,
 } from 'lucide-react';
 import {
   objectBoxStore,
@@ -62,6 +67,12 @@ import { QuickActionsFloatingMenu } from './components/QuickActionsFloatingMenu'
 import { GuardRotationModal } from './components/GuardRotationModal';
 import { LeaveTypesModal } from './components/LeaveTypesModal';
 import { MaternityModal } from './components/MaternityModal';
+import { GuardStatsModal } from './components/GuardStatsModal';
+import { RegulatoryAlertsModal } from './components/RegulatoryAlertsModal';
+import { StaffShareModal } from './components/StaffShareModal';
+import { DocumentValidationModal, ValidationStatus } from './components/DocumentValidationModal';
+import { MonthlyArchiveModal, MonthlyArchiveRecord } from './components/MonthlyArchiveModal';
+import { exportDirectPdf } from './utils/pdfExportHelper';
 import { translations, SupportedLocale } from './i18n/translations';
 
 type ActiveTab = 'documents' | 'staff' | 'objectbox' | 'flutter' | 'privacy';
@@ -104,6 +115,18 @@ export default function App() {
   const [activePaintCode, setActivePaintCode] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(62);
   const [printMarginMm, setPrintMarginMm] = useState<number>(12.7);
+
+  // Nouvelles fonctionnalités avancées
+  const [isGuardStatsModalOpen, setIsGuardStatsModalOpen] = useState(false);
+  const [isRegulatoryAlertsModalOpen, setIsRegulatoryAlertsModalOpen] = useState(false);
+  const [isStaffShareModalOpen, setIsStaffShareModalOpen] = useState(false);
+  const [isDocumentValidationModalOpen, setIsDocumentValidationModalOpen] = useState(false);
+  const [isMonthlyArchiveModalOpen, setIsMonthlyArchiveModalOpen] = useState(false);
+  const [validationStatus, setValidationStatus] = useState<ValidationStatus>('approved_service');
+  const [showOfficialStamp, setShowOfficialStamp] = useState(true);
+  const [showQrCode, setShowQrCode] = useState(true);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [exportProgress, setExportProgress] = useState({ current: 0, total: 0 });
 
   // Synchronise les marges d'impression physiques strictes (1.27cm des 4 côtés) pour l'export PDF
   useEffect(() => {
@@ -186,6 +209,56 @@ export default function App() {
     const next = newValue !== undefined ? newValue : !isReadOnly;
     setIsReadOnly(next);
     showToast(next ? t.toastReadOnlyActive : t.toastEditActive);
+  };
+
+  const handleDirectPdfDownload = async () => {
+    setIsExportingPdf(true);
+    setExportProgress({ current: 1, total: 1 });
+    showToast("Génération du document PDF direct en cours...");
+    try {
+      const monthSlug = (config.guardMonthName || 'Planning_2026').replace(/\s+/g, '_');
+      const filename = `EH_Ain_El_Turck_${orientation.toUpperCase()}_${monthSlug}.pdf`;
+      await exportDirectPdf({
+        orientation,
+        filename,
+        onProgress: (current, total) => setExportProgress({ current, total }),
+      });
+      showToast("Fichier PDF téléchargé avec succès !");
+    } catch (err) {
+      console.error(err);
+      showToast("Erreur lors de la capture directe, ouverture de la boîte d'impression.");
+      window.print();
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const handleDuplicateNextMonth = (nextMonthName: string) => {
+    const nextOffset = ((config.guardMonthOffsetDays || 0) + 1) % 5;
+    const partial: Partial<HospitalDocumentConfig> = {
+      guardMonthName: nextMonthName,
+      guardMonthOffsetDays: nextOffset,
+      pdf1Page1Title: `Planning des Médecins « ${nextMonthName} »`,
+      pdf1Page2Title: `La liste du personnel médical du ${nextMonthName}`,
+      pdf1Page3Title: `Planning du Personnel Paramédical du ${nextMonthName}`,
+      pdf2Page1Title: `TABLEAU D'ACTIVITÉ DU ${nextMonthName.toUpperCase()} — 08h à 16h`,
+      pdf2Page2Title: `TABLEAU D'ACTIVITÉ DU ${nextMonthName.toUpperCase()} — 08h à 16h`,
+      pdf2Page3Title: `TABLEAU D'ACTIVITÉ DU ${nextMonthName.toUpperCase()} — 16h / 24h`,
+      pdf2Page5Title: `TABLEAU D'ACTIVITÉ DU ${nextMonthName.toUpperCase()} — Agents d'hygiène 12h`,
+      isModificatif: false,
+    };
+    handleUpdateConfig(partial);
+    handleApplyGuardRotation(config.guardRotationOrder || DEFAULT_GUARD_ROTATION_ORDER, nextOffset);
+    showToast(`Planning dupliqué et mis à jour pour ${nextMonthName} !`);
+  };
+
+  const handleLoadArchive = (archive: MonthlyArchiveRecord) => {
+    handleUpdateConfig(archive.config);
+    archive.staffList.forEach((s) => {
+      objectBoxStore.saveStaff(s);
+    });
+    setSnapshot(objectBoxStore.getSnapshot());
+    showToast(`Archive "${archive.name}" restaurée avec succès !`);
   };
 
   // Staff Manager View State
