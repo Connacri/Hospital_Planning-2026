@@ -67,7 +67,12 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
   locale,
   t,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768;
+    }
+    return true;
+  });
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -76,7 +81,7 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
   return (
     <aside
       aria-label={t.quickActionsTitle}
-      className="no-print fixed bottom-5 right-5 z-40 max-w-sm select-none transition-all duration-300 font-sans"
+      className="no-print fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-40 max-w-[calc(100vw-24px)] sm:max-w-sm select-none transition-all duration-300 font-sans"
     >
       {/* COLLAPSED FLOATING PILL */}
       {!isExpanded && (

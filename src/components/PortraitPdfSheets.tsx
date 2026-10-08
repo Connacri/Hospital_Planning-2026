@@ -1071,9 +1071,26 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                 ))}
               </tbody>
             </table>
+
+            {/* Note N.B. placée directement avec et sous le tableau comme les autres tableaux */}
+            {config.nbNotice && (
+              <div className="mt-2 text-[11.5px] font-medium text-left leading-normal text-black">
+                <EditableText
+                  value={config.nbNotice}
+                  readOnly={readOnly}
+                  onChange={(v) => onUpdateConfig({ nbNotice: v })}
+                />
+              </div>
+            )}
           </div>
 
-          <OfficialPortraitFooter config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} compact={true} showNb={true} />
+          <OfficialPortraitFooter
+            config={config}
+            onUpdateConfig={onUpdateConfig}
+            readOnly={readOnly}
+            compact={true}
+            showNb={false}
+          />
         </section>
       )}
     </div>

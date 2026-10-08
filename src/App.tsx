@@ -102,10 +102,10 @@ export default function App() {
   const [portraitSubPage, setPortraitSubPage] = useState<'all' | 'p1' | 'p2' | 'p3'>('all');
   const [landscapeSubPage, setLandscapeSubPage] = useState<'all' | 'p1' | 'p2' | 'p3' | 'p4' | 'p5'>('all');
   const [activePaintCode, setActivePaintCode] = useState<string | null>(null);
-  const [zoomLevel, setZoomLevel] = useState<number>(75);
-  const [printMarginMm, setPrintMarginMm] = useState<number>(8);
+  const [zoomLevel, setZoomLevel] = useState<number>(62);
+  const [printMarginMm, setPrintMarginMm] = useState<number>(12.7);
 
-  // Synchronise les marges d'impression physiques pour l'export PDF
+  // Synchronise les marges d'impression physiques strictes (1.27cm des 4 côtés) pour l'export PDF
   useEffect(() => {
     let styleEl = document.getElementById('print-margins-style') as HTMLStyleElement | null;
     if (!styleEl) {
@@ -113,20 +113,32 @@ export default function App() {
       styleEl.id = 'print-margins-style';
       document.head.appendChild(styleEl);
     }
-    styleEl.textContent = `@media print { @page { margin: ${printMarginMm}mm ${Math.max(5, printMarginMm - 1)}mm !important; size: auto; } }`;
+    styleEl.textContent = `@media print { @page { margin: ${printMarginMm}mm !important; size: auto; } }`;
   }, [printMarginMm]);
 
   // Affiche la page A4 verticale complètement de haut en bas sans coupure
   const handleFitPageComplete = () => {
     if (typeof window !== 'undefined') {
-      const availH = window.innerHeight - 230;
+      const availH = Math.max(320, window.innerHeight - 200);
       const target = orientation === 'portrait' ? 1122.5 : 794;
-      const calculated = Math.min(100, Math.max(45, Math.round((availH / target) * 100)));
+      const calculated = Math.min(100, Math.max(35, Math.round((availH / target) * 100)));
       setZoomLevel(calculated);
     } else {
-      setZoomLevel(orientation === 'portrait' ? 68 : 75);
+      setZoomLevel(orientation === 'portrait' ? 62 : 75);
     }
   };
+
+  // Ajustement automatique à l'ouverture pour afficher le A4 vertical complètement
+  useEffect(() => {
+    handleFitPageComplete();
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        handleFitPageComplete();
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [orientation]);
 
   const handleFitWidth = () => {
     if (orientation === 'landscape') {
@@ -140,11 +152,11 @@ export default function App() {
     setOrientation(nextO);
     if (nextO === 'portrait') {
       // Pour le A4 vertical, afficher complètement
-      if (typeof window !== 'undefined' && window.innerHeight < 950) {
-        const availH = window.innerHeight - 230;
-        setZoomLevel(Math.min(100, Math.max(45, Math.round((availH / 1122.5) * 100))));
+      if (typeof window !== 'undefined') {
+        const availH = Math.max(320, window.innerHeight - 200);
+        setZoomLevel(Math.min(100, Math.max(35, Math.round((availH / 1122.5) * 100))));
       } else {
-        setZoomLevel(70);
+        setZoomLevel(62);
       }
     } else {
       setZoomLevel(75);
@@ -1125,12 +1137,12 @@ class HospitalPdfGenerator {
                     value={printMarginMm}
                     onChange={(e) => setPrintMarginMm(Number(e.target.value))}
                     className="bg-slate-950 text-white font-semibold text-xs border border-slate-700 rounded px-1.5 py-0.5 focus:outline-none focus:border-sky-500"
-                    title="Marges d'impression physiques pour l'export PDF (8mm officiel recommandé)"
+                    title="Marges d'impression physiques pour l'export PDF (1.27 cm / 12.7 mm strict A4 standard)"
                   >
-                    <option value={5}>Fines (5 mm)</option>
-                    <option value={8}>Standard (8 mm)</option>
+                    <option value={12.7}>Strictes A4 (1.27 cm / 12.7 mm)</option>
                     <option value={10}>Confort (10 mm)</option>
-                    <option value={12}>Larges (12 mm)</option>
+                    <option value={8}>Standard (8 mm)</option>
+                    <option value={5}>Fines (5 mm)</option>
                   </select>
                 </div>
               </div>
@@ -1801,23 +1813,24 @@ class HospitalPdfGenerator {
 
       {/* MODAL: ADD STAFF MEMBER */}
       {isAddStaffModalOpen && (
-        <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="bg-slate-950 border border-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
+        <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto font-sans">
+          <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 sm:p-6 max-w-md w-full max-h-[92vh] flex flex-col shadow-2xl space-y-4 my-auto overflow-hidden">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800 shrink-0">
+              <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
                 <Plus className="w-4 h-4 text-sky-400" />
                 <span>{t.addStaffMember}</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setIsAddStaffModalOpen(false)}
-                className="text-slate-400 hover:text-white"
+                aria-label="Fermer"
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 min-h-[36px] min-w-[36px] flex items-center justify-center"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateStaffSubmit} className="space-y-3 text-xs">
+            <form onSubmit={handleCreateStaffSubmit} className="space-y-3.5 text-xs overflow-y-auto flex-1 pr-1">
               <div>
                 <label className="block text-slate-300 font-medium mb-1">
                   {t.staffFullName} *
@@ -1828,7 +1841,7 @@ class HospitalPdfGenerator {
                   value={newStaffName}
                   onChange={(e) => setNewStaffName(e.target.value)}
                   placeholder="Ex. Dr. Benali Omar ou Mansour Samia"
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500 min-h-[38px] text-xs sm:text-sm"
                 />
               </div>
 
@@ -1860,7 +1873,7 @@ class HospitalPdfGenerator {
                       setNewStaffGrade('ATS');
                     }
                   }}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500 min-h-[38px] text-xs sm:text-sm"
                 >
                   <option value="medical">Personnel Médical (08h-16h)</option>
                   <option value="paramedical_day">Paramédical Jour (08h-16h)</option>
@@ -1869,7 +1882,7 @@ class HospitalPdfGenerator {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-300 font-medium mb-1">
                     {t.staffFunctionTitle}
@@ -1879,7 +1892,7 @@ class HospitalPdfGenerator {
                     value={newStaffRole}
                     onChange={(e) => setNewStaffRole(e.target.value)}
                     placeholder="Fonction complète"
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500 min-h-[38px]"
                   />
                 </div>
                 <div>
@@ -1891,12 +1904,12 @@ class HospitalPdfGenerator {
                     value={newStaffGrade}
                     onChange={(e) => setNewStaffGrade(e.target.value)}
                     placeholder="Grade court"
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500 min-h-[38px]"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-300 font-medium mb-1">
                     {t.staffScheduleBlock}
@@ -1904,7 +1917,7 @@ class HospitalPdfGenerator {
                   <select
                     value={newStaffHoraire}
                     onChange={(e) => setNewStaffHoraire(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500 min-h-[38px]"
                   >
                     <option value="08h-16h">08h-16h</option>
                     <option value="16h">16h</option>
@@ -1920,7 +1933,7 @@ class HospitalPdfGenerator {
                     <select
                       value={newStaffTeam}
                       onChange={(e) => setNewStaffTeam(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500"
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500 min-h-[38px]"
                     >
                       <option value="A">Groupe A</option>
                       <option value="B">Groupe B</option>
@@ -1932,17 +1945,17 @@ class HospitalPdfGenerator {
                 )}
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-3 border-t border-slate-800 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsAddStaffModalOpen(false)}
-                  className="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800"
+                  className="px-3.5 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 min-h-[38px] flex items-center justify-center"
                 >
                   {t.cancelBtn}
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-semibold shadow"
+                  className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-semibold shadow min-h-[38px] flex items-center justify-center"
                 >
                   {t.confirmBtn}
                 </button>
@@ -1954,27 +1967,27 @@ class HospitalPdfGenerator {
 
       {/* MODAL: CONFIRM RESET TO DEFAULT SEED */}
       {showResetConfirm && (
-        <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="bg-slate-950 border border-slate-800 rounded-xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-amber-400 flex items-center gap-2">
-              <RotateCcw className="w-5 h-5" />
+        <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto font-sans">
+          <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 sm:p-6 max-w-md w-full shadow-2xl space-y-4 my-auto">
+            <h3 className="text-sm sm:text-base font-bold text-amber-400 flex items-center gap-2">
+              <RotateCcw className="w-5 h-5 shrink-0" />
               <span>{t.resetConfirmTitle}</span>
             </h3>
             <p className="text-xs text-slate-300 leading-relaxed">
               {t.resetConfirmDesc}
             </p>
-            <div className="flex items-center justify-end gap-2 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setShowResetConfirm(false)}
-                className="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 text-xs"
+                className="px-3.5 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 text-xs min-h-[38px] flex items-center justify-center"
               >
                 {t.cancelBtn}
               </button>
               <button
                 type="button"
                 onClick={handleResetDefaults}
-                className="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs shadow"
+                className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs shadow min-h-[38px] flex items-center justify-center"
               >
                 {t.confirmBtn}
               </button>
@@ -1985,27 +1998,27 @@ class HospitalPdfGenerator {
 
       {/* MODAL: CONFIRM WIPE STORAGE */}
       {showWipeConfirm && (
-        <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="bg-slate-950 border border-red-900 rounded-xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-red-400 flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5" />
+        <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto font-sans">
+          <div className="bg-slate-950 border border-red-900 rounded-xl p-4 sm:p-6 max-w-md w-full shadow-2xl space-y-4 my-auto">
+            <h3 className="text-sm sm:text-base font-bold text-red-400 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 shrink-0" />
               <span>{t.deleteAccountTitle}</span>
             </h3>
             <p className="text-xs text-slate-300 leading-relaxed">
               Êtes-vous sûr de vouloir effacer le stockage local ObjectBox et réinitialiser tous les plannings ?
             </p>
-            <div className="flex items-center justify-end gap-2 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setShowWipeConfirm(false)}
-                className="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 text-xs"
+                className="px-3.5 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 text-xs min-h-[38px] flex items-center justify-center"
               >
                 {t.cancelBtn}
               </button>
               <button
                 type="button"
                 onClick={handleWipeData}
-                className="px-4 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow"
+                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow min-h-[38px] flex items-center justify-center"
               >
                 {t.deleteLocalDataNow}
               </button>

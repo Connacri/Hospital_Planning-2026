@@ -121,41 +121,42 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
   }, {});
 
   return (
-    <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-slate-950 border border-slate-800 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-6">
+    <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto font-sans">
+      <div className="bg-slate-950 border border-slate-800 rounded-2xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-sky-500/10 text-sky-400 rounded-xl border border-sky-500/20">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-800 bg-slate-900/50 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="p-2 bg-sky-500/10 text-sky-400 rounded-xl border border-sky-500/20 shrink-0">
               <Clock className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2 flex-wrap">
                 <span>Rotation des Équipes de Garde (16h)</span>
-                <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-sky-950 text-sky-300 border border-sky-800">
+                <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-sky-950 text-sky-300 border border-sky-800">
                   Paramédical Garde
                 </span>
               </h2>
-              <p className="text-xs text-slate-400">
-                Réordonnez les équipes pour une période spécifique ou de manière perpétuelle et continue.
+              <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
+                Réordonnez les équipes pour une période spécifique ou en cycle perpétuel continu.
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+            aria-label="Fermer"
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors shrink-0 min-h-[36px] min-w-[36px] flex items-center justify-center"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto text-xs">
+        <div className="p-4 sm:p-6 space-y-5 sm:space-y-6 flex-1 overflow-y-auto text-xs">
           {/* Information Notice */}
           <div className="p-3 bg-sky-950/40 border border-sky-800/80 rounded-xl flex items-start gap-2.5 text-sky-200">
             <Info className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <span className="font-semibold block">Gestion de l'ordre de garde :</span>
+              <span className="font-semibold block text-xs">Gestion de l'ordre de garde :</span>
               <p className="text-slate-300 leading-relaxed text-[11px]">
                 Dans les tableaux officiels, les agents restent groupés par équipe (A, B, C, D, E) sans déplacement des effectifs.
                 Cette boîte de dialogue permet de changer l'ordre de passage pour les gardes de <strong>Matin (Jour)</strong> et <strong>Nuit</strong> soit pour une <strong>période spécifique</strong>, soit de façon <strong>continue et perpétuelle</strong>.
@@ -165,12 +166,12 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
 
           {/* APPLICATION SCOPE SELECTOR */}
           <div>
-            <div className="text-slate-300 font-semibold mb-2 flex items-center gap-1.5">
+            <div className="text-slate-300 font-semibold mb-2 flex items-center gap-1.5 text-xs">
               <Repeat className="w-3.5 h-3.5 text-sky-400" />
               <span>Portée de l'application :</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setSelectedScope('perpetual')}
@@ -181,7 +182,7 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
                 }`}
               >
                 <div className="font-bold text-xs flex items-center justify-between text-white">
-                  <span>♾️ Continuel & Perpétuel</span>
+                  <span>Continuel & Perpétuel</span>
                   {selectedScope === 'perpetual' && <Check className="w-3.5 h-3.5 text-sky-400" />}
                 </div>
                 <div className="text-[11px] text-slate-400 mt-1 leading-relaxed">
@@ -199,7 +200,7 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
                 }`}
               >
                 <div className="font-bold text-xs flex items-center justify-between text-white">
-                  <span>📅 Juste pour une Période</span>
+                  <span>Juste pour une Période</span>
                   {selectedScope === 'period' && <Check className="w-3.5 h-3.5 text-amber-400" />}
                 </div>
                 <div className="text-[11px] text-slate-400 mt-1 leading-relaxed">
@@ -211,13 +212,13 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
 
           {/* PERIOD RANGE SELECTOR (Visible when scope is period) */}
           {selectedScope === 'period' && (
-            <div className="p-4 bg-amber-950/30 border border-amber-800/80 rounded-xl space-y-3 animate-in fade-in duration-150">
+            <div className="p-3.5 sm:p-4 bg-amber-950/30 border border-amber-800/80 rounded-xl space-y-3 animate-in fade-in duration-150">
               <div className="text-amber-300 font-semibold text-xs flex items-center gap-1.5">
                 <Calendar className="w-4 h-4 text-amber-400" />
                 <span>Définir la période d'application (Jours 1 à 31) :</span>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-[11px] text-slate-400 font-medium mb-1">
                     Jour de début :
@@ -225,7 +226,7 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
                   <select
                     value={periodStartDay}
                     onChange={(e) => setPeriodStartDay(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-white font-bold text-xs focus:outline-none focus:border-amber-500 font-mono"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white font-bold text-xs focus:outline-none focus:border-amber-500 font-mono min-h-[38px]"
                   >
                     {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
                       <option key={d} value={d}>
@@ -242,7 +243,7 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
                   <select
                     value={periodEndDay}
                     onChange={(e) => setPeriodEndDay(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-white font-bold text-xs focus:outline-none focus:border-amber-500 font-mono"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white font-bold text-xs focus:outline-none focus:border-amber-500 font-mono min-h-[38px]"
                   >
                     {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
                       <option key={d} value={d}>
@@ -271,7 +272,7 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
                       setPeriodStartDay(p.s);
                       setPeriodEndDay(p.e);
                     }}
-                    className="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-[10px]"
+                    className="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-[10px] min-h-[28px]"
                   >
                     {p.label}
                   </button>
@@ -282,7 +283,7 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
 
           {/* TEAM REORDERING CHAIN */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-slate-300 font-semibold">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-slate-300 font-semibold text-xs">
               <span className="flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                 <span>Ordre de passage des équipes (Matin / Jour ➔ Nuit) :</span>
@@ -290,34 +291,34 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
               <button
                 type="button"
                 onClick={handleResetDefault}
-                className="text-[11px] text-sky-400 hover:underline flex items-center gap-1"
+                className="text-[11px] text-sky-400 hover:underline flex items-center gap-1 self-start sm:self-auto min-h-[28px]"
               >
                 <RotateCcw className="w-3 h-3" />
                 <span>Réinitialiser (A ➔ D ➔ B ➔ E ➔ C)</span>
               </button>
             </div>
 
-            <div className="grid grid-cols-5 gap-2 pt-1">
+            <div className="grid grid-cols-5 gap-1.5 sm:gap-2 pt-1 overflow-x-auto">
               {order.map((team, idx) => (
                 <div
                   key={team}
-                  className="p-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-center flex flex-col items-center justify-between gap-1 shadow-sm"
+                  className="p-2 sm:p-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-center flex flex-col items-center justify-between gap-1 shadow-sm min-w-[56px]"
                 >
                   <span className="text-[10px] text-slate-400 font-mono">
                     #{idx + 1}
                   </span>
-                  <div className="w-9 h-9 rounded-lg bg-sky-600/20 text-sky-300 font-bold text-base flex items-center justify-center border border-sky-500/30">
+                  <div className="w-8 sm:w-9 h-8 sm:h-9 rounded-lg bg-sky-600/20 text-sky-300 font-bold text-sm sm:text-base flex items-center justify-center border border-sky-500/30">
                     {team}
                   </div>
-                  <div className="text-[10px] text-slate-300 font-semibold">
-                    Groupe {team}
+                  <div className="text-[9.5px] sm:text-[10px] text-slate-300 font-semibold truncate">
+                    Grp {team}
                   </div>
-                  <div className="flex items-center gap-1 mt-1">
+                  <div className="flex items-center gap-0.5 sm:gap-1 mt-1">
                     <button
                       type="button"
                       disabled={idx === 0}
                       onClick={() => moveTeam(idx, 'left')}
-                      className={`p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 ${
+                      className={`p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 min-h-[28px] min-w-[24px] flex items-center justify-center ${
                         idx === 0 ? 'opacity-20 cursor-not-allowed' : ''
                       }`}
                       title="Déplacer vers la gauche"
@@ -328,7 +329,7 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
                       type="button"
                       disabled={idx === order.length - 1}
                       onClick={() => moveTeam(idx, 'right')}
-                      className={`p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 ${
+                      className={`p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 min-h-[28px] min-w-[24px] flex items-center justify-center ${
                         idx === order.length - 1 ? 'opacity-20 cursor-not-allowed' : ''
                       }`}
                       title="Déplacer vers la droite"
@@ -341,14 +342,14 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
             </div>
 
             {/* Quick starting team selection */}
-            <div className="pt-2 flex flex-wrap items-center gap-2 text-slate-400 text-[11px]">
+            <div className="pt-2 flex flex-wrap items-center gap-1.5 sm:gap-2 text-slate-400 text-[11px]">
               <span>Équipe prenant le Matin (Jour 1) :</span>
               {GUARD_TEAMS.map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => handleSetStartTeam(t)}
-                  className={`px-2 py-0.5 rounded font-bold transition-colors ${
+                  className={`px-2.5 py-1 rounded font-bold transition-colors min-h-[30px] ${
                     order[0] === t
                       ? 'bg-sky-600 text-white shadow'
                       : 'bg-slate-900 text-slate-300 hover:text-white border border-slate-800'
@@ -363,7 +364,7 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
           {/* MONTH CONTINUITY SELECTION (If perpetual) */}
           {selectedScope === 'perpetual' && (
             <div className="space-y-2 pt-2 border-t border-slate-800">
-              <div className="text-slate-300 font-semibold flex items-center gap-1.5">
+              <div className="text-slate-300 font-semibold flex items-center gap-1.5 text-xs">
                 <Calendar className="w-3.5 h-3.5 text-sky-400" />
                 <span>Mois de départ & continuité perpétuelle :</span>
               </div>
@@ -387,7 +388,7 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
                         {isSelected && <Check className="w-3.5 h-3.5 text-sky-400" />}
                       </div>
                       <div className="text-[10px] text-slate-400 mt-0.5">
-                        {m.daysCount} jours · Continuité +{m.cumulativeOffsetDays}j
+                        {m.daysCount} j · +{m.cumulativeOffsetDays}j
                       </div>
                     </button>
                   );
@@ -398,20 +399,20 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
 
           {/* SIMULATION PREVIEW */}
           <div className="space-y-2 pt-2 border-t border-slate-800">
-            <div className="flex items-center justify-between text-slate-300 font-semibold">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-slate-300 font-semibold text-xs">
               <span className="flex items-center gap-1.5">
                 <Sun className="w-3.5 h-3.5 text-amber-400" />
                 <span>Aperçu du roulement (Matin / Nuit / Récupération) :</span>
               </span>
               <span className="text-[10px] text-slate-500 font-normal">
                 {selectedScope === 'period'
-                  ? `Période du jour ${Math.min(periodStartDay, periodEndDay)} au ${Math.max(periodStartDay, periodEndDay)}`
+                  ? `Jours ${Math.min(periodStartDay, periodEndDay)} à ${Math.max(periodStartDay, periodEndDay)}`
                   : `${currentMonth.name} · Cycle 5 jours`}
               </span>
             </div>
 
-            <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/40">
-              <table className="w-full text-center text-xs border-collapse">
+            <div className="border border-slate-800 rounded-xl overflow-x-auto bg-slate-900/40">
+              <table className="w-full text-center text-xs border-collapse min-w-[340px]">
                 <thead>
                   <tr className="bg-slate-900 text-slate-400 border-b border-slate-800 h-7 text-[11px]">
                     <th className="px-3 text-left w-24">Équipe</th>
@@ -427,7 +428,7 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
                     const days = previewMap[teamLetter] || {};
                     return (
                       <tr key={teamLetter} className="h-8">
-                        <td className="px-3 text-left font-bold text-white">
+                        <td className="px-3 text-left font-bold text-white text-[11px]">
                           Groupe {teamLetter}
                         </td>
                         {previewDays.map((d) => {
@@ -437,7 +438,7 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
                           return (
                             <td key={d} className="px-1.5">
                               <span
-                                className={`inline-block px-1.5 py-0.5 rounded text-[10.5px] font-bold ${
+                                className={`inline-block px-1.5 py-0.5 rounded text-[10px] sm:text-[10.5px] font-bold ${
                                   isJour
                                     ? 'bg-sky-500 text-white'
                                     : isNuit
@@ -460,11 +461,11 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-slate-900 border-t border-slate-800 flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-slate-900 border-t border-slate-800 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-xl font-semibold transition-colors text-xs"
+            className="px-4 py-2.5 sm:py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-xl font-semibold transition-colors text-xs min-h-[40px] flex items-center justify-center"
           >
             Annuler
           </button>
@@ -472,7 +473,7 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
           <button
             type="button"
             onClick={handleApply}
-            className={`px-5 py-2 rounded-xl font-bold transition-colors shadow-lg flex items-center gap-2 text-xs ${
+            className={`px-5 py-2.5 sm:py-2 rounded-xl font-bold transition-colors shadow-lg flex items-center justify-center gap-2 text-xs min-h-[40px] ${
               selectedScope === 'period'
                 ? 'bg-amber-600 hover:bg-amber-500 text-white'
                 : 'bg-sky-600 hover:bg-sky-500 text-white'
