@@ -113,7 +113,22 @@ export default function App() {
       styleEl.id = 'print-margins-style';
       document.head.appendChild(styleEl);
     }
-    styleEl.textContent = `@media print { @page { margin: ${printMarginMm}mm !important; size: auto; } }`;
+    styleEl.textContent = `
+      @media print {
+        @page {
+          margin: 0 !important;
+          size: auto;
+        }
+        .a4-portrait-sheet,
+        .a4-landscape-sheet {
+          padding: ${printMarginMm}mm !important;
+          padding-left: ${printMarginMm}mm !important;
+          padding-right: ${printMarginMm}mm !important;
+          padding-top: ${printMarginMm}mm !important;
+          padding-bottom: ${printMarginMm}mm !important;
+        }
+      }
+    `;
   }, [printMarginMm]);
 
   // Affiche la page A4 verticale complètement de haut en bas sans coupure
@@ -1087,7 +1102,7 @@ class HospitalPdfGenerator {
                 <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs text-slate-300">
                   <button
                     type="button"
-                    onClick={() => setZoomLevel((z) => Math.max(50, z - 10))}
+                    onClick={() => setZoomLevel((z) => Math.max(30, z - 10))}
                     title="Zoom -"
                     className="p-1 hover:text-white rounded"
                   >
@@ -1096,7 +1111,7 @@ class HospitalPdfGenerator {
                   <span className="font-mono text-[11px] px-1.5">{zoomLevel}%</span>
                   <button
                     type="button"
-                    onClick={() => setZoomLevel((z) => Math.min(150, z + 10))}
+                    onClick={() => setZoomLevel((z) => Math.min(160, z + 10))}
                     title="Zoom +"
                     className="p-1 hover:text-white rounded"
                   >
@@ -1104,9 +1119,25 @@ class HospitalPdfGenerator {
                   </button>
                   <button
                     type="button"
+                    onClick={() => setZoomLevel(50)}
+                    title="Zoom 50%"
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${zoomLevel === 50 ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    50%
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setZoomLevel(75)}
+                    title="Zoom 75%"
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${zoomLevel === 75 ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    75%
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setZoomLevel(100)}
                     title="Reset 100%"
-                    className="p-1 hover:text-white rounded text-[10px] font-semibold"
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${zoomLevel === 100 ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
                   >
                     100%
                   </button>
@@ -1231,46 +1262,56 @@ class HospitalPdfGenerator {
             </div>
 
             {/* Document Sheets Render Stage */}
-            <div
-              className="flex justify-center transition-transform duration-200 overflow-x-auto p-2"
-              style={{
-                transform: zoomLevel !== 100 ? `scale(${zoomLevel / 100})` : undefined,
-                transformOrigin: 'top center',
-                marginBottom: zoomLevel < 100 ? `-${Math.round((100 - zoomLevel) * 11.2)}px` : undefined,
-              }}
-            >
-              {orientation === 'portrait' ? (
-                <PortraitPdfSheets
-                  activeSubPage={portraitSubPage}
-                  config={config}
-                  staffList={staffList}
-                  readOnly={isReadOnly}
-                  onUpdateConfig={handleUpdateConfig}
-                  onUpdateStaffField={handleUpdateStaffField}
-                  onUpdateDoctorWeekly={handleUpdateDoctorWeekly}
-                  onAddStaff={handleAddStaff}
-                  onDeleteStaff={handleDeleteStaff}
-                  onOpenGuardRotationModal={() => setIsGuardRotationModalOpen(true)}
-                  onOpenLeaveTypesModal={() => setIsLeaveTypesModalOpen(true)}
-                  onOpenMaternityModal={handleOpenMaternityModal}
-                />
-              ) : (
-                <LandscapePdfSheets
-                  activeSubPage={landscapeSubPage}
-                  config={config}
-                  staffList={staffList}
-                  readOnly={isReadOnly}
-                  activePaintCode={isReadOnly ? null : activePaintCode}
-                  onUpdateConfig={handleUpdateConfig}
-                  onUpdateStaffField={handleUpdateStaffField}
-                  onUpdateStaffDayCell={handleUpdateStaffDayCell}
-                  onAddStaff={handleAddStaff}
-                  onDeleteStaff={handleDeleteStaff}
-                  onOpenGuardRotationModal={() => setIsGuardRotationModalOpen(true)}
-                  onOpenLeaveTypesModal={() => setIsLeaveTypesModalOpen(true)}
-                  onOpenMaternityModal={handleOpenMaternityModal}
-                />
-              )}
+            <div className="w-full overflow-x-auto overflow-y-visible py-4 sm:py-6 px-1 sm:px-4 flex justify-start lg:justify-center">
+              <div
+                className="shrink-0 transition-all duration-150 mx-auto"
+                style={{
+                  width: `${(orientation === 'portrait' ? 210 : 297) * (zoomLevel / 100)}mm`,
+                  minWidth: `${(orientation === 'portrait' ? 210 : 297) * (zoomLevel / 100)}mm`,
+                }}
+              >
+                <div
+                  style={{
+                    transform: `scale(${zoomLevel / 100})`,
+                    transformOrigin: 'top left',
+                    width: `${orientation === 'portrait' ? 210 : 297}mm`,
+                    minWidth: `${orientation === 'portrait' ? 210 : 297}mm`,
+                  }}
+                >
+                  {orientation === 'portrait' ? (
+                    <PortraitPdfSheets
+                      activeSubPage={portraitSubPage}
+                      config={config}
+                      staffList={staffList}
+                      readOnly={isReadOnly}
+                      onUpdateConfig={handleUpdateConfig}
+                      onUpdateStaffField={handleUpdateStaffField}
+                      onUpdateDoctorWeekly={handleUpdateDoctorWeekly}
+                      onAddStaff={handleAddStaff}
+                      onDeleteStaff={handleDeleteStaff}
+                      onOpenGuardRotationModal={() => setIsGuardRotationModalOpen(true)}
+                      onOpenLeaveTypesModal={() => setIsLeaveTypesModalOpen(true)}
+                      onOpenMaternityModal={handleOpenMaternityModal}
+                    />
+                  ) : (
+                    <LandscapePdfSheets
+                      activeSubPage={landscapeSubPage}
+                      config={config}
+                      staffList={staffList}
+                      readOnly={isReadOnly}
+                      activePaintCode={isReadOnly ? null : activePaintCode}
+                      onUpdateConfig={handleUpdateConfig}
+                      onUpdateStaffField={handleUpdateStaffField}
+                      onUpdateStaffDayCell={handleUpdateStaffDayCell}
+                      onAddStaff={handleAddStaff}
+                      onDeleteStaff={handleDeleteStaff}
+                      onOpenGuardRotationModal={() => setIsGuardRotationModalOpen(true)}
+                      onOpenLeaveTypesModal={() => setIsLeaveTypesModalOpen(true)}
+                      onOpenMaternityModal={handleOpenMaternityModal}
+                    />
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Floating Quick Actions Menu */}

@@ -32,37 +32,53 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Exact Strict A4 Paper Dimensions (21cm x 29.7cm) & 1.27cm (12.7mm) Margins */
+/* Exact Strict A4 Paper Dimensions (21cm x 29.7cm) & 1.27cm (12.7mm) Margins on ALL 4 sides */
 .a4-portrait-sheet {
-  width: 210mm;
-  height: 297mm;
-  min-height: 297mm;
-  max-height: 297mm;
-  padding: 1.27cm;
-  background: #ffffff;
-  color: #000000;
-  box-sizing: border-box;
-  position: relative;
-  overflow: hidden;
+  width: 210mm !important;
+  min-width: 210mm !important;
+  max-width: 210mm !important;
+  height: 297mm !important;
+  min-height: 297mm !important;
+  max-height: 297mm !important;
+  padding: 1.27cm !important;
+  padding-left: 1.27cm !important;
+  padding-right: 1.27cm !important;
+  padding-top: 1.27cm !important;
+  padding-bottom: 1.27cm !important;
+  background: #ffffff !important;
+  color: #000000 !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+  overflow: hidden !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
 
 .a4-landscape-sheet {
-  width: 297mm;
-  height: 210mm;
-  min-height: 210mm;
-  max-height: 210mm;
-  padding: 1.27cm;
-  background: #ffffff;
-  color: #000000;
-  box-sizing: border-box;
-  position: relative;
-  overflow: hidden;
+  width: 297mm !important;
+  min-width: 297mm !important;
+  max-width: 297mm !important;
+  height: 210mm !important;
+  min-height: 210mm !important;
+  max-height: 210mm !important;
+  padding: 1.27cm !important;
+  padding-left: 1.27cm !important;
+  padding-right: 1.27cm !important;
+  padding-top: 1.27cm !important;
+  padding-bottom: 1.27cm !important;
+  background: #ffffff !important;
+  color: #000000 !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+  overflow: hidden !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
 
 @media print {
   @page {
-    /* Marges d'impression physiques strictes : 1.27cm des 4 côtés */
-    margin: 1.27cm;
+    /* Marge zéro à l'imprimante pour que le padding physique strict de 1.27cm définisse les marges */
+    margin: 0 !important;
     size: auto;
   }
 
@@ -87,15 +103,21 @@
   }
 
   .a4-portrait-sheet {
-    width: 100% !important;
-    max-width: 100% !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    min-height: 0 !important;
+    width: 210mm !important;
+    min-width: 210mm !important;
+    max-width: 210mm !important;
+    height: 297mm !important;
+    min-height: 297mm !important;
+    max-height: 297mm !important;
     box-shadow: none !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
     border: none !important;
-    padding: 0 !important; /* Le margin: 1.27cm de @page assure la marge exacte de 1.27cm */
+    /* Conserve la marge physique stricte de 1.27cm à gauche, droite, haut et bas */
+    padding: 1.27cm !important;
+    padding-left: 1.27cm !important;
+    padding-right: 1.27cm !important;
+    padding-top: 1.27cm !important;
+    padding-bottom: 1.27cm !important;
     page-break-after: always !important;
     break-after: page !important;
     page-break-inside: avoid !important;
@@ -105,15 +127,21 @@
   }
 
   .a4-landscape-sheet {
-    width: 100% !important;
-    max-width: 100% !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    min-height: 0 !important;
+    width: 297mm !important;
+    min-width: 297mm !important;
+    max-width: 297mm !important;
+    height: 210mm !important;
+    min-height: 210mm !important;
+    max-height: 210mm !important;
     box-shadow: none !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
     border: none !important;
-    padding: 0 !important; /* Le margin: 1.27cm de @page assure la marge exacte de 1.27cm */
+    /* Conserve la marge physique stricte de 1.27cm à gauche, droite, haut et bas */
+    padding: 1.27cm !important;
+    padding-left: 1.27cm !important;
+    padding-right: 1.27cm !important;
+    padding-top: 1.27cm !important;
+    padding-bottom: 1.27cm !important;
     page-break-after: always !important;
     break-after: page !important;
     page-break-inside: avoid !important;
