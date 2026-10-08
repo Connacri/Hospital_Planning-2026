@@ -123,28 +123,31 @@ jobs:
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 || secrets.SIGNING_KEYSTORE_BASE64 || secrets.KEYSTORE }}
         run: |
-          mkdir -p android/keystore
-          if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | base64 -d > android/keystore/release.jks
-            echo "Keystore successfully decoded from GitHub Secrets."
-          else
-            echo "Notice: No secret keystore found. Generating temporary fallback keystore for build validation."
-            keytool -genkeypair -v -keystore android/keystore/release.jks -alias hospital_key -keyalg RSA -keysize 2048 -validity 10000 -storepass "HospitalKey2026!" -keypass "HospitalKey2026!" -dname "CN=EH Ain El Turck, OU=Rhumatologie, O=Ministere de la Sante, L=Oran, C=DZ"
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::Missing secret ANDROID_KEYSTORE_BASE64. Store the keystore (base64) in GitHub repository secrets."
+            exit 1
           fi
+          mkdir -p android/keystore
+          echo "$KEYSTORE_BASE64" | base64 -d > android/keystore/release.jks
+          echo "Keystore successfully decoded from GitHub Secrets."
 
       - name: Build Signed APK & AAB with Gradle
         working-directory: android
         env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'HospitalKey2026!' }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS || 'hospital_key' }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || 'HospitalKey2026!' }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          if [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "::error::Missing signing secrets. Set KEYSTORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD in GitHub repository secrets."
+            exit 1
+          fi
           chmod +x gradlew
           ./gradlew assembleRelease bundleRelease \
             -Pandroid.injected.signing.store.file=$(pwd)/keystore/release.jks \
             -Pandroid.injected.signing.store.password="${KEYSTORE_PASSWORD}" \
             -Pandroid.injected.signing.key.alias="${KEY_ALIAS}" \
-            -Pandroid.injected.signing.key.password="${KEY_PASSWORD}" || ./gradlew assembleRelease bundleRelease
+            -Pandroid.injected.signing.key.password="${KEY_PASSWORD}"
 
       - name: Locate and Rename Artifacts
         run: |
