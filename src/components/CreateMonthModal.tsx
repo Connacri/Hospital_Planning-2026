@@ -34,7 +34,7 @@ export const CreateMonthModal: React.FC<CreateMonthModalProps> = ({
   }, [currentMonthName]);
 
   const initialMonthIdx = useMemo(() => {
-    const found = FRENCH_MONTH_NAMES.findIndex((m) =>
+    const found = FRENCH_MONTH_NAMES.findIndex((m: string) =>
       currentMonthName.toLowerCase().includes(m.toLowerCase())
     );
     return found !== -1 ? found : 9; // 9 = Octobre
@@ -217,7 +217,7 @@ export const CreateMonthModal: React.FC<CreateMonthModalProps> = ({
                 2. Sélectionner le Mois :
               </label>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                {FRENCH_MONTH_NAMES.map((m, idx) => (
+                {FRENCH_MONTH_NAMES.map((m: string, idx: number) => (
                   <button
                     key={m}
                     type="button"

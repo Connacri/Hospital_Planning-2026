@@ -62,13 +62,23 @@ import {
   buildStandard08h16hActivity,
   buildGuard16hActivity,
   buildHygiene12hActivity,
+  TableModificatifKey,
+  isTableModificatif,
+  TABLE_MODIFICATIF_LABELS,
+  GUARD_TEAM_THEMES,
+  getTeamBadgeClass,
+  getTeamTheme,
 } from './db/objectboxEngine';
+import { AnimatePresence } from 'framer-motion';
 import { PortraitPdfSheets } from './components/PortraitPdfSheets';
 import { LandscapePdfSheets } from './components/LandscapePdfSheets';
 import { QuickActionsFloatingMenu } from './components/QuickActionsFloatingMenu';
+import { DocumentQuickNavigator } from './components/DocumentQuickNavigator';
+import { CreateMonthModal } from './components/CreateMonthModal';
 import { GuardRotationModal } from './components/GuardRotationModal';
 import { LeaveTypesModal } from './components/LeaveTypesModal';
 import { MaternityModal } from './components/MaternityModal';
+import { ModificatifModal } from './components/ModificatifModal';
 import { StaffDistributionChartWidget } from './components/StaffDistributionChartWidget';
 import { ServiceSettingsModal } from './components/ServiceSettingsModal';
 import { GuardStatsModal } from './components/GuardStatsModal';
@@ -131,6 +141,9 @@ export default function App() {
   const [showQrCode, setShowQrCode] = useState(true);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [exportProgress, setExportProgress] = useState({ current: 0, total: 0 });
+  const [isCreateMonthModalOpen, setIsCreateMonthModalOpen] = useState(false);
+  const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>('all');
+  const [showDistributionChart, setShowDistributionChart] = useState(false);
 
   // Synchronise les marges d'impression physiques strictes (1.27cm des 4 côtés) pour l'export PDF
   useEffect(() => {
@@ -293,7 +306,32 @@ export default function App() {
   const [isLeaveTypesModalOpen, setIsLeaveTypesModalOpen] = useState(false);
   const [isMaternityModalOpen, setIsMaternityModalOpen] = useState(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+  const [isModificatifModalOpen, setIsModificatifModalOpen] = useState(false);
   const [maternityTargetStaff, setMaternityTargetStaff] = useState<StaffEntity | null>(null);
+
+  const handleToggleTableModificatif = (tableKey: TableModificatifKey) => {
+    objectBoxStore.toggleTableModificatif(tableKey);
+    const updated = !isTableModificatif(config, tableKey);
+    showToast(
+      updated
+        ? `Mention (Modificatif) ACTIVÉE sur : ${TABLE_MODIFICATIF_LABELS[tableKey]}`
+        : `Mention (Modificatif) DÉSACTIVÉE sur : ${TABLE_MODIFICATIF_LABELS[tableKey]}`
+    );
+  };
+
+  const handleSetAllTablesModificatif = (enabled: boolean) => {
+    objectBoxStore.setAllTablesModificatif(enabled);
+    showToast(
+      enabled
+        ? 'Mention (Modificatif) ACTIVÉE sur TOUS les 7 tableaux !'
+        : 'Mention (Modificatif) désactivée sur tous les tableaux.'
+    );
+  };
+
+  const handleLoadOctober2026 = () => {
+    objectBoxStore.loadOctoberPreset();
+    showToast("Plannings officiels d'Octobre 2026 (Service Rhumatologie) rechargés avec succès !");
+  };
 
   const handleOpenMaternityModal = (staff?: StaffEntity) => {
     setMaternityTargetStaff(staff || null);
@@ -326,14 +364,10 @@ export default function App() {
     );
   };
 
-  const handleLoadApril2026 = () => {
-    objectBoxStore.loadAprilPreset();
-    showToast("Plannings officiels d'Avril 2026 (avec Bakhouche Sarra en maternité) chargés !");
-  };
-
-  const handleLoadJanuary2026 = () => {
-    objectBoxStore.loadJanuaryPreset();
-    showToast('Planning Janvier 2026 (Modificatif) chargé !');
+  const handleSelectMonth = (year: number, monthIndex: number) => {
+    objectBoxStore.createNewMonth(year, monthIndex);
+    const monthName = objectBoxStore.getConfig().guardMonthName;
+    showToast(`Mois de « ${monthName} » activé avec continuité perpétuelle des gardes !`);
   };
 
   const handleApplyGuardRotation = (
@@ -502,9 +536,13 @@ export default function App() {
       const matchesCat =
         selectedStaffCategory === 'all' || s.category === selectedStaffCategory;
 
-      return matchesSearch && matchesCat;
+      const matchesTeam =
+        selectedTeamFilter === 'all' ||
+        (s.teamGroup && s.teamGroup.toUpperCase() === selectedTeamFilter.toUpperCase());
+
+      return matchesSearch && matchesCat && matchesTeam;
     });
-  }, [staffList, staffSearch, selectedStaffCategory]);
+  }, [staffList, staffSearch, selectedStaffCategory, selectedTeamFilter]);
 
   // ObjectBox Query results
   const queryResult = useMemo(() => {
@@ -767,9 +805,15 @@ class HospitalPdfGenerator {
               <div className="min-w-0 truncate">
                 <h1 className="text-xs sm:text-base font-bold tracking-tight text-white flex items-center gap-1.5 truncate">
                   <span className="truncate">{t.appTitle}</span>
-                  <span className="hidden xs:inline-block text-[9px] sm:text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-sky-950 text-sky-300 border border-sky-800 shrink-0">
-                    Octobre 2026
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateMonthModalOpen(true)}
+                    title="Changer de mois ou créer un nouveau mois en continuité perpétuelle"
+                    className="hidden xs:inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800 hover:border-sky-600 transition-colors shrink-0 cursor-pointer shadow-xs"
+                  >
+                    <Calendar className="w-3 h-3 text-sky-400 shrink-0" />
+                    <span>{config.guardMonthName || 'Octobre 2026'}</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => setIsServiceModalOpen(true)}
@@ -1118,28 +1162,40 @@ class HospitalPdfGenerator {
                   )}
                 </div>
 
-                {/* Modificatif Toggle Button */}
-                <button
-                  type="button"
-                  onClick={handleToggleModificatif}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${
-                    config.isModificatif
-                      ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-sm ring-2 ring-amber-300'
-                      : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800'
-                  }`}
-                  title="Afficher ou masquer la mention « (Modificatif) » en gras sur les titres des plannings"
-                >
-                  <span>(Modificatif)</span>
-                  <span
-                    className={`text-[9.5px] px-1 py-0.2 rounded font-mono font-extrabold ${
+                {/* Modificatif Toggle & Modal Buttons */}
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={handleToggleModificatif}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${
                       config.isModificatif
-                        ? 'bg-slate-950 text-amber-300'
-                        : 'bg-slate-800 text-slate-400'
+                        ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-sm ring-2 ring-amber-300'
+                        : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800'
                     }`}
+                    title="Activer ou désactiver (Modificatif) globalement"
                   >
-                    {config.isModificatif ? 'ACTIF' : 'OFF'}
-                  </span>
-                </button>
+                    <span>(Modificatif)</span>
+                    <span
+                      className={`text-[9.5px] px-1 py-0.2 rounded font-mono font-extrabold ${
+                        config.isModificatif
+                          ? 'bg-slate-950 text-amber-300'
+                          : 'bg-slate-800 text-slate-400'
+                      }`}
+                    >
+                      {config.isModificatif ? 'GLOBAL' : 'OFF'}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsModificatifModalOpen(true)}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-amber-700/80 bg-amber-950/70 hover:bg-amber-900 text-amber-200 text-xs font-bold transition-colors shadow-xs"
+                    title="Gérer la mention (Modificatif) par tableau individuel au choix"
+                  >
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Au Choix</span>
+                  </button>
+                </div>
 
                 {/* Maternity Quick Tool Button */}
                 <button
@@ -1163,8 +1219,17 @@ class HospitalPdfGenerator {
                   <span>Service & Hôpital</span>
                 </button>
 
-                {/* Quick Presets (Avril 2026 & Janvier 2026) */}
+                {/* Quick Presets (Octobre 2026, Avril 2026 & Janvier 2026) */}
                 <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs">
+                  <button
+                    type="button"
+                    onClick={handleLoadOctober2026}
+                    className="px-2 py-1 rounded bg-indigo-900/60 hover:bg-indigo-800 text-indigo-200 hover:text-white transition-colors text-[11px] font-bold border border-indigo-700/60"
+                    title="Recharger le planning officiel d'Octobre 2026"
+                  >
+                    🍁 Octobre 2026
+                  </button>
+                  <span className="text-slate-600">|</span>
                   <button
                     type="button"
                     onClick={handleLoadApril2026}
@@ -1418,6 +1483,7 @@ class HospitalPdfGenerator {
                       onOpenGuardRotationModal={() => setIsGuardRotationModalOpen(true)}
                       onOpenLeaveTypesModal={() => setIsLeaveTypesModalOpen(true)}
                       onOpenMaternityModal={handleOpenMaternityModal}
+                      onToggleTableModificatif={handleToggleTableModificatif}
                     />
                   ) : (
                     <LandscapePdfSheets
@@ -1434,6 +1500,7 @@ class HospitalPdfGenerator {
                       onOpenGuardRotationModal={() => setIsGuardRotationModalOpen(true)}
                       onOpenLeaveTypesModal={() => setIsLeaveTypesModalOpen(true)}
                       onOpenMaternityModal={handleOpenMaternityModal}
+                      onToggleTableModificatif={handleToggleTableModificatif}
                     />
                   )}
                 </div>
@@ -1457,6 +1524,8 @@ class HospitalPdfGenerator {
               onOpenMaternityModal={() => handleOpenMaternityModal()}
               isModificatif={config.isModificatif}
               onToggleModificatif={handleToggleModificatif}
+              onOpenModificatifModal={() => setIsModificatifModalOpen(true)}
+              onLoadOctoberPreset={handleLoadOctober2026}
               onLoadAprilPreset={handleLoadApril2026}
               onLoadJanuaryPreset={handleLoadJanuary2026}
               locale={locale}
@@ -2240,6 +2309,15 @@ class HospitalPdfGenerator {
         onClose={() => setIsServiceModalOpen(false)}
         config={config}
         onUpdateConfig={handleUpdateConfig}
+      />
+
+      {/* MODAL: MENTIONS MODIFICATIF AU CHOIX (TABLE PAR TABLE) */}
+      <ModificatifModal
+        isOpen={isModificatifModalOpen}
+        onClose={() => setIsModificatifModalOpen(false)}
+        config={config}
+        onToggleTable={handleToggleTableModificatif}
+        onSetAll={handleSetAllTablesModificatif}
       />
 
       {/* FOOTER */}

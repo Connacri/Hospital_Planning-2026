@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Lock,
   Unlock,
@@ -25,6 +26,7 @@ import {
   Archive,
   Download,
   Stamp,
+  Calendar,
 } from 'lucide-react';
 import { TranslationDictionary, SupportedLocale } from '../i18n/translations';
 
@@ -45,8 +47,9 @@ interface QuickActionsFloatingMenuProps {
   onOpenMaternityModal?: () => void;
   isModificatif?: boolean;
   onToggleModificatif?: () => void;
-  onLoadAprilPreset?: () => void;
-  onLoadJanuaryPreset?: () => void;
+  onOpenModificatifModal?: () => void;
+  onLoadOctoberPreset?: () => void;
+  onOpenCreateMonthModal?: () => void;
   onDirectPdfDownload?: () => void;
   onOpenGuardStats?: () => void;
   onOpenRegulatoryAlerts?: () => void;
@@ -74,8 +77,9 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
   onOpenMaternityModal,
   isModificatif = false,
   onToggleModificatif,
-  onLoadAprilPreset,
-  onLoadJanuaryPreset,
+  onOpenModificatifModal,
+  onLoadOctoberPreset,
+  onOpenCreateMonthModal,
   onDirectPdfDownload,
   onOpenGuardStats,
   onOpenRegulatoryAlerts,
@@ -96,104 +100,128 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const scrollToBottom = () => {
+    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+  };
+
   return (
-    <aside
+    <motion.aside
+      key="quick-actions-floating-menu"
+      initial={{ opacity: 0, y: 50, scale: 0.93 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 50, scale: 0.93 }}
+      transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
       aria-label={t.quickActionsTitle}
-      className="no-print fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-40 max-w-[calc(100vw-24px)] sm:max-w-sm select-none transition-all duration-300 font-sans"
+      className="no-print fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-40 max-w-[calc(100vw-24px)] sm:max-w-sm select-none font-sans"
     >
-      {/* COLLAPSED FLOATING PILL */}
-      {!isExpanded && (
-        <div className="flex items-center gap-2 bg-slate-950/95 backdrop-blur-md border border-slate-700/80 p-2 rounded-2xl shadow-2xl text-slate-100 hover:border-slate-500 transition-all">
-          <button
-            type="button"
-            onClick={() => onToggleReadOnly()}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
-              isReadOnly
-                ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                : 'bg-amber-600 hover:bg-amber-500 text-white'
-            }`}
-            title={
-              isReadOnly
-                ? 'Actuellement en Lecture Seule. Cliquez pour éditer.'
-                : 'Actuellement en Mode Édition. Cliquez pour verrouiller.'
-            }
+      <AnimatePresence mode="wait">
+        {/* COLLAPSED FLOATING PILL */}
+        {!isExpanded && (
+          <motion.div
+            key="collapsed-pill"
+            initial={{ opacity: 0, scale: 0.85, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.85, y: 15 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="flex items-center gap-2 bg-slate-950/95 backdrop-blur-md border border-slate-700/80 p-2 rounded-2xl shadow-2xl text-slate-100 hover:border-slate-500 transition-all"
           >
-            {isReadOnly ? (
-              <>
-                <Lock className="w-3.5 h-3.5" />
-                <span>{t.modeReadOnly}</span>
-              </>
-            ) : (
-              <>
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>{t.modeEdit}</span>
-              </>
+            <button
+              type="button"
+              onClick={() => onToggleReadOnly()}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                isReadOnly
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                  : 'bg-amber-600 hover:bg-amber-500 text-white'
+              }`}
+              title={
+                isReadOnly
+                  ? 'Actuellement en Lecture Seule. Cliquez pour éditer.'
+                  : 'Actuellement en Mode Édition. Cliquez pour verrouiller.'
+              }
+            >
+              {isReadOnly ? (
+                <>
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>{t.modeReadOnly}</span>
+                </>
+              ) : (
+                <>
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>{t.modeEdit}</span>
+                </>
+              )}
+            </button>
+
+            {isModificatif && (
+              <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-1 rounded-lg border border-amber-500/40">
+                (Modificatif)
+              </span>
             )}
-          </button>
 
-          {isModificatif && (
-            <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-1 rounded-lg border border-amber-500/40">
-              (Modificatif)
-            </span>
-          )}
+            <button
+              type="button"
+              onClick={() => setIsExpanded(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-slate-300 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+              title="Ouvrir le panneau d'actions rapides"
+            >
+              <span>{t.quickActionsTitle}</span>
+              <ChevronUp className="w-3.5 h-3.5 text-sky-400" />
+            </button>
+          </motion.div>
+        )}
 
-          <button
-            type="button"
-            onClick={() => setIsExpanded(true)}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-slate-300 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
-            title="Ouvrir le panneau d'actions rapides"
+        {/* EXPANDED FLOATING PANEL */}
+        {isExpanded && (
+          <motion.div
+            key="expanded-panel"
+            initial={{ opacity: 0, scale: 0.94, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.94, y: 20 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="w-[calc(100vw-24px)] sm:w-[350px] max-w-sm bg-slate-950/95 backdrop-blur-xl border border-slate-700/90 rounded-2xl shadow-2xl overflow-hidden ring-1 ring-white/10"
           >
-            <span>{t.quickActionsTitle}</span>
-            <ChevronUp className="w-3.5 h-3.5 text-sky-400" />
-          </button>
-        </div>
-      )}
+            {/* Header Bar */}
+            <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-900/80 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="p-1 rounded-md bg-sky-500/20 text-sky-400">
+                  <Sparkles className="w-3.5 h-3.5" />
+                </span>
+                <span className="text-xs font-bold tracking-tight text-white uppercase">
+                  {t.quickActionsTitle}
+                </span>
+              </div>
 
-      {/* EXPANDED FLOATING PANEL */}
-      {isExpanded && (
-        <div className="w-[calc(100vw-24px)] sm:w-[350px] max-w-sm bg-slate-950/95 backdrop-blur-xl border border-slate-700/90 rounded-2xl shadow-2xl overflow-hidden ring-1 ring-white/10 animate-in fade-in zoom-in-95 duration-150">
-          {/* Header Bar */}
-          <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-900/80 border-b border-slate-800">
-            <div className="flex items-center gap-2">
-              <span className="p-1 rounded-md bg-sky-500/20 text-sky-400">
-                <Sparkles className="w-3.5 h-3.5" />
-              </span>
-              <span className="text-xs font-bold tracking-tight text-white uppercase">
-                {t.quickActionsTitle}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 border ${
+                    isReadOnly
+                      ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                      : 'bg-amber-950 text-amber-300 border-amber-800'
+                  }`}
+                >
+                  {isReadOnly ? (
+                    <>
+                      <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" />
+                      <span>Protégé</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldAlert className="w-2.5 h-2.5 text-amber-400" />
+                      <span>Édition</span>
+                    </>
+                  )}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setIsExpanded(false)}
+                  className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                  title="Réduire le menu flottant"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-
-            <div className="flex items-center gap-1.5">
-              <span
-                className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 border ${
-                  isReadOnly
-                    ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
-                    : 'bg-amber-950 text-amber-300 border-amber-800'
-                }`}
-              >
-                {isReadOnly ? (
-                  <>
-                    <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" />
-                    <span>Protégé</span>
-                  </>
-                ) : (
-                  <>
-                    <ShieldAlert className="w-2.5 h-2.5 text-amber-400" />
-                    <span>Édition</span>
-                  </>
-                )}
-              </span>
-
-              <button
-                type="button"
-                onClick={() => setIsExpanded(false)}
-                className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
-                title="Réduire le menu flottant"
-              >
-                <ChevronDown className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
 
           <div className="p-3.5 space-y-3 text-xs max-h-[82vh] overflow-y-auto">
             {/* PRIMARY TOGGLE: READ-ONLY VS EDIT MODE */}
@@ -367,6 +395,17 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
                     </button>
                   )}
                 </div>
+                {onOpenModificatifModal && (
+                  <button
+                    type="button"
+                    onClick={onOpenModificatifModal}
+                    className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-amber-950/80 hover:bg-amber-900 border border-amber-700/80 text-amber-200 text-[11px] font-semibold transition-colors"
+                    title="Gérer la mention (Modificatif) tableau par tableau ou globale"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Mentions (Modificatif) au Choix</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -435,30 +474,33 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
             </div>
 
             {/* MONTH / PDF PRESETS */}
-            {(onLoadAprilPreset || onLoadJanuaryPreset) && (
-              <div className="pt-2 border-t border-slate-800/80 space-y-1">
+            {(onLoadOctoberPreset || onOpenCreateMonthModal) && (
+              <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
                 <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider flex items-center justify-between">
-                  <span>Modèles PDF Officiels</span>
+                  <span>Mois &amp; Continuité</span>
+                  <span className="text-[9px] text-sky-400 font-mono">100% Automatique</span>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
-                  {onLoadAprilPreset && (
+                  {onLoadOctoberPreset && (
                     <button
                       type="button"
-                      onClick={onLoadAprilPreset}
-                      className="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded text-[10.5px] font-medium text-left truncate transition-colors"
-                      title="Charger le modèle officiel Avril 2026"
+                      onClick={onLoadOctoberPreset}
+                      className="px-2 py-1.5 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700 text-indigo-200 rounded-lg text-[10.5px] font-bold text-left truncate transition-colors flex items-center justify-between"
+                      title="Recharger le modèle officiel d'Octobre 2026 (Actuel)"
                     >
-                      🌸 Avril 2026 (PDF)
+                      <span className="truncate">🍁 Octobre 2026</span>
+                      <span className="text-[9px] bg-indigo-500/30 text-indigo-300 px-1 py-0.2 rounded font-mono shrink-0 ml-1">31j</span>
                     </button>
                   )}
-                  {onLoadJanuaryPreset && (
+                  {onOpenCreateMonthModal && (
                     <button
                       type="button"
-                      onClick={onLoadJanuaryPreset}
-                      className="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded text-[10.5px] font-medium text-left truncate transition-colors"
-                      title="Charger l'exemple Janvier 2026 (Modificatif)"
+                      onClick={onOpenCreateMonthModal}
+                      className="px-2 py-1.5 bg-sky-950/80 hover:bg-sky-900 border border-sky-700 text-sky-200 rounded-lg text-[10.5px] font-bold text-left truncate transition-colors flex items-center justify-between"
+                      title="Créer ou choisir un mois suivant en continuité perpétuelle"
                     >
-                      ❄️ Janvier 2026 <strong>(Modif)</strong>
+                      <span className="truncate">🗓️ Mois Suivant...</span>
+                      <span className="text-[9px] bg-sky-500/30 text-sky-300 px-1 py-0.2 rounded font-mono shrink-0 ml-1">+1</span>
                     </button>
                   )}
                 </div>
@@ -467,7 +509,7 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
 
             {/* ZOOM & PRINT CONTROLS (RESPONSIVE 2-ROW DESIGN) */}
             <div className="pt-2.5 border-t border-slate-800/90 space-y-2">
-              {/* Row 1: Zoom tools + Back to top */}
+              {/* Row 1: Zoom tools + Back to top & Jump to bottom */}
               <div className="flex items-center justify-between gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
                 <div className="flex items-center gap-0.5">
                   <button
@@ -521,9 +563,17 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
                     type="button"
                     onClick={scrollToTop}
                     className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors ml-0.5"
-                    title="Retour en haut"
+                    title="Remonter tout en haut de la page"
                   >
-                    <ArrowUp className="w-3.5 h-3.5" />
+                    <ArrowUp className="w-3.5 h-3.5 text-sky-400" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={scrollToBottom}
+                    className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors"
+                    title="Descendre tout en bas de la page (Signatures &amp; Validations)"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5 text-sky-400" />
                   </button>
                 </div>
               </div>
@@ -554,8 +604,9 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
-    </aside>
+      </AnimatePresence>
+    </motion.aside>
   );
 };

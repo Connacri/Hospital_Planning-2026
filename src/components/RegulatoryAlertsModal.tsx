@@ -52,10 +52,12 @@ export const RegulatoryAlertsModal: React.FC<RegulatoryAlertsModalProps> = ({
         const nextDay = d + 1;
         const codeNext = (staff.dailyActivity[nextDay] || '').trim().toUpperCase();
 
-        // Si l'agent fait une garde de nuit
-        if (codeCurrent === 'N' || codeCurrent === 'NUIT') {
-          // Double garde consécutive : N suivi de N
-          if (codeNext === 'N' || codeNext === 'NUIT') {
+        // Si l'agent fait une garde de nuit (uniquement pour le personnel de garde)
+        const isNightGuard = (staff.category === 'paramedical_guard' && (codeCurrent === 'NUIT' || codeCurrent === 'G')) || (codeCurrent === 'NUIT');
+        if (isNightGuard) {
+          // Double garde consécutive : NUIT suivi de NUIT
+          const isNextNight = (staff.category === 'paramedical_guard' && (codeNext === 'NUIT' || codeNext === 'G')) || (codeNext === 'NUIT');
+          if (isNextNight) {
             list.push({
               id: `double-${staff.id}-${d}`,
               type: 'double_guard',

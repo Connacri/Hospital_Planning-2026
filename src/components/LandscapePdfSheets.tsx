@@ -7,6 +7,8 @@ import {
   buildGuard16hActivity,
   buildHygiene12hActivity,
   getStaffMaternitySpan,
+  TableModificatifKey,
+  isTableModificatif,
 } from '../db/objectboxEngine';
 import { EditableText } from './EditableText';
 import { OfficialHospitalStamp, OfficialHospitalQrCode } from './OfficialStampAndQr';
@@ -29,6 +31,7 @@ interface LandscapePdfSheetsProps {
   onOpenGuardRotationModal?: () => void;
   onOpenLeaveTypesModal?: () => void;
   onOpenMaternityModal?: (staff?: StaffEntity) => void;
+  onToggleTableModificatif?: (key: TableModificatifKey) => void;
 }
 
 const OfficialLandscapeHeader: React.FC<{
@@ -487,6 +490,7 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
   onOpenGuardRotationModal,
   onOpenLeaveTypesModal,
   onOpenMaternityModal,
+  onToggleTableModificatif,
 }) => {
   const medicalRows = staffList
     .filter((s) => s.category === 'medical')
@@ -523,7 +527,7 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
 
   const medicalChunks = chunkArray(medicalRows, 12);
   const paramedicalDayChunks = chunkArray(paramedicalDayRows, 12);
-  const paramedicalGuardChunks = chunkArray(paramedicalGuardRows, 14);
+  const paramedicalGuardChunks = chunkArray(paramedicalGuardRows, 20);
   const hygieneChunks = chunkArray(hygieneRows, 12);
 
   return (
@@ -535,10 +539,11 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
         medicalChunks.map((chunk, chunkIdx) => (
           <section
             key={`med-page-${chunkIdx}`}
+            id={`doc-sheet-l1-${chunkIdx}`}
             aria-label={`PDF 2 Page 1 - Tableau d'activité Personnel Médical ${
               chunkIdx > 0 ? `(Suite ${chunkIdx + 1})` : ''
             }`}
-            className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
+            className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
           >
             <div>
               <OfficialLandscapeHeader
@@ -562,7 +567,7 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                       }
                     }}
                   />
-                  {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf2Page1Title) && (
+                  {isTableModificatif(config, 'pdf2Page1') && !/\(Modificatif\)/i.test(config.pdf2Page1Title) && (
                     <strong className="font-bold text-black font-pdf">
                       (Modificatif)
                     </strong>
@@ -574,6 +579,23 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                     </span>
                   )}
                 </h2>
+                {!readOnly && onToggleTableModificatif && chunkIdx === 0 && (
+                  <div className="no-print mt-1 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => onToggleTableModificatif('pdf2Page1')}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-sans font-bold transition-all border shadow-2xs ${
+                        isTableModificatif(config, 'pdf2Page1')
+                          ? 'bg-amber-100 text-amber-900 border-amber-400 hover:bg-amber-200'
+                          : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'
+                      }`}
+                      title="Activer ou désactiver (Modificatif) sur ce tableau"
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${isTableModificatif(config, 'pdf2Page1') ? 'bg-amber-600' : 'bg-slate-400'}`} />
+                      <span>Modificatif : {isTableModificatif(config, 'pdf2Page1') ? 'Oui' : 'Non'}</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               <ActivityGridTable
@@ -638,10 +660,11 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
         paramedicalDayChunks.map((chunk, chunkIdx) => (
           <section
             key={`pday-page-${chunkIdx}`}
+            id={`doc-sheet-l2-${chunkIdx}`}
             aria-label={`PDF 2 Page 2 - Tableau d'activité 08h-16h ${
               chunkIdx > 0 ? `(Suite ${chunkIdx + 1})` : ''
             }`}
-            className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
+            className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
           >
             <div>
               <OfficialLandscapeHeader
@@ -665,7 +688,7 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                       }
                     }}
                   />
-                  {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf2Page2Title) && (
+                  {isTableModificatif(config, 'pdf2Page2') && !/\(Modificatif\)/i.test(config.pdf2Page2Title) && (
                     <strong className="font-bold text-black font-pdf">
                       (Modificatif)
                     </strong>
@@ -677,6 +700,23 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                     </span>
                   )}
                 </h2>
+                {!readOnly && onToggleTableModificatif && chunkIdx === 0 && (
+                  <div className="no-print mt-1 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => onToggleTableModificatif('pdf2Page2')}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-sans font-bold transition-all border shadow-2xs ${
+                        isTableModificatif(config, 'pdf2Page2')
+                          ? 'bg-amber-100 text-amber-900 border-amber-400 hover:bg-amber-200'
+                          : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'
+                      }`}
+                      title="Activer ou désactiver (Modificatif) sur ce tableau"
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${isTableModificatif(config, 'pdf2Page2') ? 'bg-amber-600' : 'bg-slate-400'}`} />
+                      <span>Modificatif : {isTableModificatif(config, 'pdf2Page2') ? 'Oui' : 'Non'}</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               <ActivityGridTable
@@ -741,10 +781,11 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
         paramedicalGuardChunks.map((chunk, chunkIdx) => (
           <section
             key={`pguard-page-${chunkIdx}`}
+            id={`doc-sheet-l3-${chunkIdx}`}
             aria-label={`PDF 2 Page 3 - Tableau d'activité 16h Équipes A-E ${
               chunkIdx > 0 ? `(Suite ${chunkIdx + 1})` : ''
             }`}
-            className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
+            className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
           >
             <div>
               <OfficialLandscapeHeader
@@ -769,18 +810,35 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                       }
                     }}
                   />
-                  {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf2Page3Title) && (
+                  {isTableModificatif(config, 'pdf2Page3') && !/\(Modificatif\)/i.test(config.pdf2Page3Title) && (
                     <strong className="font-bold text-black font-pdf">
                       (Modificatif)
                     </strong>
                   )}
                   {chunkIdx > 0 && (
                     <span className="text-xs font-semibold text-slate-700 font-sans ml-1 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
-                      Suite {chunkIdx + 1}/{paramedicalGuardChunks.length} — Lignes {chunkIdx * 14 + 1} à{' '}
-                      {Math.min((chunkIdx + 1) * 14, paramedicalGuardRows.length)}
+                      Suite {chunkIdx + 1}/{paramedicalGuardChunks.length} — Lignes {chunkIdx * 20 + 1} à{' '}
+                      {Math.min((chunkIdx + 1) * 20, paramedicalGuardRows.length)}
                     </span>
                   )}
                 </h2>
+                {!readOnly && onToggleTableModificatif && chunkIdx === 0 && (
+                  <div className="no-print mt-0.5 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => onToggleTableModificatif('pdf2Page3')}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-sans font-bold transition-all border shadow-2xs ${
+                        isTableModificatif(config, 'pdf2Page3')
+                          ? 'bg-amber-100 text-amber-900 border-amber-400 hover:bg-amber-200'
+                          : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'
+                      }`}
+                      title="Activer ou désactiver (Modificatif) sur ce tableau"
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${isTableModificatif(config, 'pdf2Page3') ? 'bg-amber-600' : 'bg-slate-400'}`} />
+                      <span>Modificatif : {isTableModificatif(config, 'pdf2Page3') ? 'Oui' : 'Non'}</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               <ActivityGridTable
@@ -876,10 +934,11 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
         hygieneChunks.map((chunk, chunkIdx) => (
           <section
             key={`hyg-page-${chunkIdx}`}
+            id={`doc-sheet-l4-${chunkIdx}`}
             aria-label={`PDF 2 Page 4 - Tableau d'activité Agents d'Hygiène 12h ${
               chunkIdx > 0 ? `(Suite ${chunkIdx + 1})` : ''
             }`}
-            className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
+            className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
           >
             <div>
               <OfficialLandscapeHeader
@@ -903,7 +962,7 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                       }
                     }}
                   />
-                  {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf2Page5Title) && (
+                  {isTableModificatif(config, 'pdf2Page5') && !/\(Modificatif\)/i.test(config.pdf2Page5Title) && (
                     <strong className="font-bold text-black font-pdf">
                       (Modificatif)
                     </strong>
@@ -915,6 +974,23 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                     </span>
                   )}
                 </h2>
+                {!readOnly && onToggleTableModificatif && chunkIdx === 0 && (
+                  <div className="no-print mt-1 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => onToggleTableModificatif('pdf2Page5')}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-sans font-bold transition-all border shadow-2xs ${
+                        isTableModificatif(config, 'pdf2Page5')
+                          ? 'bg-amber-100 text-amber-900 border-amber-400 hover:bg-amber-200'
+                          : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'
+                      }`}
+                      title="Activer ou désactiver (Modificatif) sur ce tableau"
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${isTableModificatif(config, 'pdf2Page5') ? 'bg-amber-600' : 'bg-slate-400'}`} />
+                      <span>Modificatif : {isTableModificatif(config, 'pdf2Page5') ? 'Oui' : 'Non'}</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               <ActivityGridTable

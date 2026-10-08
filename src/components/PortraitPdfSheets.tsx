@@ -9,6 +9,8 @@ import {
   buildHygiene12hActivity,
   DEFAULT_LEAVE_TYPES,
   LeaveTypeItem,
+  TableModificatifKey,
+  isTableModificatif,
 } from '../db/objectboxEngine';
 import { EditableText } from './EditableText';
 import { OfficialHospitalStamp, OfficialHospitalQrCode } from './OfficialStampAndQr';
@@ -30,6 +32,7 @@ interface PortraitPdfSheetsProps {
   onOpenGuardRotationModal?: () => void;
   onOpenLeaveTypesModal?: () => void;
   onOpenMaternityModal?: (staff?: StaffEntity) => void;
+  onToggleTableModificatif?: (key: TableModificatifKey) => void;
 }
 
 const LeavePickerButton: React.FC<{
@@ -336,6 +339,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
   onOpenGuardRotationModal,
   onOpenLeaveTypesModal,
   onOpenMaternityModal,
+  onToggleTableModificatif,
 }) => {
   const doctors = staffList
     .filter((s) => s.category === 'medical')
@@ -472,10 +476,11 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
         doctorChunksP1.map((chunk, chunkIdx) => (
           <section
             key={`doc-p1-${chunkIdx}`}
+            id={`doc-sheet-p1-${chunkIdx}`}
             aria-label={`PDF 1 Page 1 - Planning des Médecins ${
               chunkIdx > 0 ? `(Suite ${chunkIdx + 1})` : ''
             }`}
-            className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
+            className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
           >
             <div>
               <OfficialPortraitHeader
@@ -500,7 +505,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                       }
                     }}
                   />
-                  {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf1Page1Title) && (
+                  {isTableModificatif(config, 'pdf1Page1') && !/\(Modificatif\)/i.test(config.pdf1Page1Title) && (
                     <strong className="font-bold text-black font-pdf">
                       (Modificatif)
                     </strong>
@@ -512,6 +517,23 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                     </span>
                   )}
                 </h2>
+                {!readOnly && onToggleTableModificatif && chunkIdx === 0 && (
+                  <div className="no-print mt-1.5 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => onToggleTableModificatif('pdf1Page1')}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-sans font-bold transition-all border shadow-2xs ${
+                        isTableModificatif(config, 'pdf1Page1')
+                          ? 'bg-amber-100 text-amber-900 border-amber-400 hover:bg-amber-200'
+                          : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'
+                      }`}
+                      title="Activer ou désactiver (Modificatif) sur ce tableau"
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${isTableModificatif(config, 'pdf1Page1') ? 'bg-amber-600' : 'bg-slate-400'}`} />
+                      <span>Modificatif : {isTableModificatif(config, 'pdf1Page1') ? 'Oui' : 'Non'}</span>
+                    </button>
+                  </div>
+                )}
                 <div className="text-[15px] font-medium text-black mt-1">
                   <EditableText
                     value={config.pdf1Page1Subtitle}
@@ -644,10 +666,11 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
         doctorChunksP2.map((chunk, chunkIdx) => (
           <section
             key={`doc-p2-${chunkIdx}`}
+            id={`doc-sheet-p2-${chunkIdx}`}
             aria-label={`PDF 1 Page 2 - Liste du personnel médical ${
               chunkIdx > 0 ? `(Suite ${chunkIdx + 1})` : ''
             }`}
-            className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
+            className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
           >
             <div>
               <OfficialPortraitHeader
@@ -672,7 +695,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                       }
                     }}
                   />
-                  {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf1Page2Title) && (
+                  {isTableModificatif(config, 'pdf1Page2') && !/\(Modificatif\)/i.test(config.pdf1Page2Title) && (
                     <strong className="font-bold text-black font-pdf">
                       (Modificatif)
                     </strong>
@@ -684,6 +707,23 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                     </span>
                   )}
                 </h2>
+                {!readOnly && onToggleTableModificatif && chunkIdx === 0 && (
+                  <div className="no-print mt-1.5 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => onToggleTableModificatif('pdf1Page2')}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-sans font-bold transition-all border shadow-2xs ${
+                        isTableModificatif(config, 'pdf1Page2')
+                          ? 'bg-amber-100 text-amber-900 border-amber-400 hover:bg-amber-200'
+                          : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'
+                      }`}
+                      title="Activer ou désactiver (Modificatif) sur ce tableau"
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${isTableModificatif(config, 'pdf1Page2') ? 'bg-amber-600' : 'bg-slate-400'}`} />
+                      <span>Modificatif : {isTableModificatif(config, 'pdf1Page2') ? 'Oui' : 'Non'}</span>
+                    </button>
+                  </div>
+                )}
                 <div className="text-[14px] font-medium text-black mt-1.5">
                   <EditableText
                     value={config.pdf1Page2Subtitle}
@@ -797,8 +837,9 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
          ===================================================================== */}
       {(activeSubPage === 'all' || activeSubPage === 'p3') && (
         <section
+          id="doc-sheet-p3"
           aria-label="PDF 1 Page 3 - Planning du Personnel Paramédical"
-          className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
+          className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
         >
           <div>
             <OfficialPortraitHeader config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} compact={true} />
@@ -811,12 +852,29 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                   readOnly={readOnly}
                   onChange={(v) => onUpdateConfig({ pdf1Page3Title: v })}
                 />
-                {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf1Page3Title) && (
+                {isTableModificatif(config, 'pdf1Page3') && !/\(Modificatif\)/i.test(config.pdf1Page3Title) && (
                   <strong className="font-bold text-black font-pdf">
                     (Modificatif)
                   </strong>
                 )}
               </h2>
+              {!readOnly && onToggleTableModificatif && (
+                <div className="no-print mt-1 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => onToggleTableModificatif('pdf1Page3')}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-sans font-bold transition-all border shadow-2xs ${
+                      isTableModificatif(config, 'pdf1Page3')
+                        ? 'bg-amber-100 text-amber-900 border-amber-400 hover:bg-amber-200'
+                        : 'bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200'
+                    }`}
+                    title="Activer ou désactiver (Modificatif) sur ce tableau"
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${isTableModificatif(config, 'pdf1Page3') ? 'bg-amber-600' : 'bg-slate-400'}`} />
+                    <span>Modificatif : {isTableModificatif(config, 'pdf1Page3') ? 'Oui' : 'Non'}</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {!readOnly && (onOpenLeaveTypesModal || onOpenGuardRotationModal || onOpenMaternityModal) && (
