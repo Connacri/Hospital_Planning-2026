@@ -57,6 +57,7 @@ import {
   LeaveTypeItem,
   DEFAULT_LEAVE_TYPES,
   DEFAULT_GUARD_ROTATION_ORDER,
+  GUARD_MONTHS_PRESETS,
   buildStandard08h16hActivity,
   buildGuard16hActivity,
   buildHygiene12hActivity,
@@ -248,15 +249,19 @@ export default function App() {
       isModificatif: false,
     };
     handleUpdateConfig(partial);
-    handleApplyGuardRotation(config.guardRotationOrder || DEFAULT_GUARD_ROTATION_ORDER, nextOffset);
+    const nextPreset = GUARD_MONTHS_PRESETS.find((m) => m.name === nextMonthName);
+    handleApplyGuardRotation(
+      config.guardRotationOrder || DEFAULT_GUARD_ROTATION_ORDER,
+      nextOffset,
+      nextPreset?.daysCount ?? 31,
+      true
+    );
     showToast(`Planning dupliqué et mis à jour pour ${nextMonthName} !`);
   };
 
   const handleLoadArchive = (archive: MonthlyArchiveRecord) => {
     handleUpdateConfig(archive.config);
-    archive.staffList.forEach((s) => {
-      objectBoxStore.saveStaff(s);
-    });
+    objectBoxStore.restoreStaffList(archive.staffList);
     setSnapshot(objectBoxStore.getSnapshot());
     showToast(`Archive "${archive.name}" restaurée avec succès !`);
   };

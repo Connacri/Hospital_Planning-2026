@@ -1202,6 +1202,14 @@ export class ObjectBoxLocalStore {
     return created;
   }
 
+  restoreStaffList(staffList: StaffEntity[]): void {
+    this.snapshot = {
+      ...this.snapshot,
+      staffBox: staffList.map((s) => ({ ...s })),
+    };
+    this.notify();
+  }
+
   updateStaffField<K extends keyof StaffEntity>(id: number, field: K, value: StaffEntity[K]): void {
     const idx = this.snapshot.staffBox.findIndex((s) => s.id === id);
     if (idx === -1) return;
