@@ -111,6 +111,13 @@ jobs:
           npx cap add android || true
           npx cap copy android
           npx cap sync android
+          cat >> android/app/build.gradle << 'EOF'
+
+          configurations.all {
+              exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+              exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
+          }
+          EOF
 
       - name: Decode Android Keystore from GitHub Secrets
         env:
