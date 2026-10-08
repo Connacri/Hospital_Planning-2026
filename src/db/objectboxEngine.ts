@@ -141,7 +141,41 @@ export interface ObjectBoxDatabaseSnapshot {
   staffBox: StaffEntity[];
 }
 
-const STORAGE_KEY = 'eh_ain_el_turck_objectbox_store_v7';
+const STORAGE_KEY = 'eh_ain_el_turck_objectbox_store_v11';
+
+/**
+ * Format doctor weekly schedule Consultation cells strictly:
+ * Line 1: Consultation
+ * Line 2: E.P.S.P BenSmir (or E.P.S.P Mers El Kebir)
+ */
+export function formatConsultationText(val: string): string {
+  if (!val) return val;
+  return val
+    // Match Consultation + EPSP (with or without spaces/dots) + BenSmir on same or subsequent line
+    .replace(/Consultation\s*E\.?P\.?S\.?P\.?\s*[\r\n]+\s*Ben\s*Smir/gi, 'Consultation\nE.P.S.P BenSmir')
+    .replace(/Consultation\s*E\.?P\.?S\.?P\.?\s*[\r\n]+\s*BenSmir/gi, 'Consultation\nE.P.S.P BenSmir')
+    .replace(/Consultation\s*E\.?P\.?S\.?P\.?\s+Ben\s*Smir/gi, 'Consultation\nE.P.S.P BenSmir')
+    .replace(/Consultation\s*E\.?P\.?S\.?P\.?\s+BenSmir/gi, 'Consultation\nE.P.S.P BenSmir')
+    .replace(/ConsultationE\.?P\.?S\.?P\.?\s*Ben\s*Smir/gi, 'Consultation\nE.P.S.P BenSmir')
+    .replace(/ConsultationE\.?P\.?S\.?P\.?BenSmir/gi, 'Consultation\nE.P.S.P BenSmir')
+    .replace(/Consultation\s*E\.P\.S\.P[\r\n]+BenSmir/gi, 'Consultation\nE.P.S.P BenSmir')
+    .replace(/Consultation\s*E\.P\.S\.P[\r\n]+Ben\s*Smir/gi, 'Consultation\nE.P.S.P BenSmir')
+    .replace(/Consultation[\r\n]+\s*E\.?P\.?S\.?P\.?[\r\n]+\s*Ben\s*Smir/gi, 'Consultation\nE.P.S.P BenSmir')
+    .replace(/Consultation[\r\n]+\s*E\.?P\.?S\.?P\.?[\r\n]+\s*BenSmir/gi, 'Consultation\nE.P.S.P BenSmir')
+    // Mers El Kebir variations
+    .replace(/Consultation\s*E\.?P\.?S\.?P\.?\s*[\r\n]+\s*Mers\s*El\s*Kebir/gi, 'Consultation\nE.P.S.P Mers El Kebir')
+    .replace(/Consultation\s*E\.?P\.?S\.?P\.?\s+Mers\s*El\s*Kebir/gi, 'Consultation\nE.P.S.P Mers El Kebir')
+    .replace(/ConsultationE\.?P\.?S\.?P\.?\s*Mers\s*El\s*Kebir/gi, 'Consultation\nE.P.S.P Mers El Kebir')
+    .replace(/Consultation[\r\n]+\s*E\.?P\.?S\.?P\.?[\r\n]+\s*Mers\s*El\s*Kebir/gi, 'Consultation\nE.P.S.P Mers El Kebir');
+}
+
+/**
+ * Ensures grades in the landscape activity sheets remain strictly on a single line.
+ */
+export function sanitizeSingleLineGrade(grade: string): string {
+  if (!grade) return '';
+  return grade.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
 
 const FRENCH_DOW_OCT_2026: string[] = [
   'JEU', 'VEN', 'SAM', 'DIM', 'LUN', 'MAR', 'MER'
@@ -151,6 +185,20 @@ export function buildOctober2026Days(): DayColumnMeta[] {
   const cols: DayColumnMeta[] = [];
   for (let d = 1; d <= 31; d++) {
     const dow = FRENCH_DOW_OCT_2026[(d - 1) % 7];
+    const isBlackColumn = dow === 'VEN' || dow === 'SAM';
+    cols.push({ day: d, dow, isBlackColumn });
+  }
+  return cols;
+}
+
+const FRENCH_DOW_APR_2026: string[] = [
+  'MER', 'JEU', 'VEN', 'SAM', 'DIM', 'LUN', 'MAR'
+];
+
+export function buildApril2026Days(): DayColumnMeta[] {
+  const cols: DayColumnMeta[] = [];
+  for (let d = 1; d <= 30; d++) {
+    const dow = FRENCH_DOW_APR_2026[(d - 1) % 7];
     const isBlackColumn = dow === 'VEN' || dow === 'SAM';
     cols.push({ day: d, dow, isBlackColumn });
   }
@@ -449,6 +497,597 @@ export function buildLegendFromLeaveTypes(leaveTypes: LeaveTypeItem[]): string[]
 }
 
 /**
+ * Create official April 2026 snapshot matching the user's provided PDF documents exactly
+ */
+export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
+  const daysColumns = buildApril2026Days();
+
+  const config: HospitalDocumentConfig = {
+    id: 1,
+    republicHeader: 'RÉPUBLIQUE ALGÉRIENNE DÉMOCRATIQUE ET POPULAIRE',
+    ministryHeader: 'MINISTÈRE DE LA SANTÉ, DE LA POPULATION ET DE LA RÉFORME HOSPITALIÈRE',
+    hospitalHeader: "Établissement Hospitalier d'Aïn El Türck - Dr. Medjber Tami",
+    unitTitle: 'Unité : Service de Rhumatologie',
+    isModificatif: false,
+    modificatifOverrides: {
+      pdf1Page1: false,
+      pdf1Page2: false,
+      pdf1Page3: false,
+      pdf2Page1: false,
+      pdf2Page2: false,
+      pdf2Page3: false,
+      pdf2Page5: false,
+    },
+    currentPreset: 'april_2026',
+    // PDF 1 (Portrait)
+    pdf1Page1Title: "Planning des Médecins « Mois d'Avril 2026 »",
+    pdf1Page1Subtitle: 'DE 8H À 16H',
+    pdf1Page1Columns: ['Nom et Prénom', 'Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi'],
+    pdf1Page1Obs: 'OBS : Journée de RCP tous les Mardis à 11 h',
+    pdf1Page2Title: "La liste du personnel médical du mois d'Avril 2026",
+    pdf1Page2Subtitle: 'DE 8H À 16H',
+    pdf1Page2Columns: ['Nom et Prénom', 'Fonction', 'O.B.S'],
+    pdf1Page3Title: "Planning du Personnel Paramédical du Mois d'Avril 2026",
+    pdf1Page3Columns: ['Horaire', 'Nom et Prénom', 'Fonction', 'OBS'],
+    pdf1Page3Obs08h16h: '',
+    pdf1Page3Obs16h: '',
+    pdf1Page3Obs12h: '',
+    // PDF 2 (Landscape)
+    pdf2Page1Title: "TABLEAU D'ACTIVITÉ DU MOIS D'AVRIL 2026 | 08h–16h — Personnel Médical",
+    pdf2Page2Title: "TABLEAU D'ACTIVITÉ DU MOIS D'AVRIL 2026 | 08h–16h",
+    pdf2Page3Title: "TABLEAU D'ACTIVITÉ DU MOIS D'AVRIL 2026 | 24h",
+    pdf2Page5Title: "TABLEAU D'ACTIVITÉ DU MOIS D'AVRIL 2026 | Agents d'Hygiène — 12h",
+    pdf2NameColHeader: 'Nom et Prénom',
+    pdf2GradeColHeader: 'Grade',
+    pdf2TeamColHeader: 'Équipe',
+    cityDatePortrait: 'fait à Aïn el Türck le : 24/03/2026',
+    cityDateLandscape: 'fait à Aïn el Türck le : 24/03/2026',
+    legendItems: [
+      'Jour',
+      'Nuit',
+      'RE : Récupération',
+      'C : Congé',
+      'CM : Congé Maladie',
+      'M : Maternité',
+      'N : Normal',
+      'F : Jour Férié',
+    ],
+    leaveTypes: [...DEFAULT_LEAVE_TYPES],
+    guardRotationOrder: ['A', 'D', 'B', 'C'],
+    guardMonthName: 'Avril 2026',
+    guardMonthOffsetDays: 0,
+    nbNotice: "N.B : Toutes modifications de programme ne doivent se faire qu'après accord de la direction",
+    signaturesPortrait: ['Le Médecin chef', 'Le Surveillant Médical', 'DAPM', 'Le Directeur Général'],
+    signaturesLandscape: ['Le Médecin Chef', 'Le Surveillant Médical', 'DAPM', 'Le Directeur Général'],
+    daysColumns,
+  };
+
+  const emptyWeekly: DoctorWeeklySchedule = {
+    dimanche: 'Service',
+    lundi: 'Service',
+    mardi: 'Service',
+    mercredi: 'Service',
+    jeudi: 'Service',
+  };
+
+  const aprNormal = buildStandard08h16hActivity(30, daysColumns);
+
+  const staffBox: StaffEntity[] = [
+    // 1. PERSONNEL MÉDICAL (6 Médecins)
+    {
+      id: 1,
+      fullName: 'Medjadi Mohsine',
+      category: 'medical',
+      rolePortrait: 'Médecin Chef Rhumatologue',
+      gradeLandscape: 'Médecin Chef Rhumatologue',
+      obsPortrait: 'Médecin Chef',
+      horaireBlock: '08h-16h',
+      teamGroup: '',
+      portraitOrder: 1,
+      landscapeOrder: 1,
+      weeklySchedule: {
+        dimanche: 'Service Biothérapie',
+        lundi: 'DMO',
+        mardi: 'Visite Générale',
+        mercredi: 'Consultation\nE.P.S.P BenSmir',
+        jeudi: 'Journée Pédagogique',
+      },
+      dailyActivity: { ...aprNormal },
+    },
+    {
+      id: 2,
+      fullName: 'Ouadah Souad',
+      category: 'medical',
+      rolePortrait: 'Médecin Principal en Rhumatologie',
+      gradeLandscape: 'Médecin Principal en Rhumatologie',
+      obsPortrait: '08h-16h',
+      horaireBlock: '08h-16h',
+      teamGroup: '',
+      portraitOrder: 2,
+      landscapeOrder: 2,
+      weeklySchedule: {
+        dimanche: 'Journée Pédagogique',
+        lundi: 'Consultation\nE.P.S.P Mers El Kebir',
+        mardi: 'Visite Générale',
+        mercredi: 'DMO',
+        jeudi: 'Service Biothérapie',
+      },
+      dailyActivity: { ...aprNormal },
+    },
+    {
+      id: 3,
+      fullName: 'Bouziane Kheira',
+      category: 'medical',
+      rolePortrait: 'Médecin Principal en Rhumatologie',
+      gradeLandscape: 'Médecin Principal en Rhumatologie',
+      obsPortrait: 'Congé (29/03 - 22/04)',
+      horaireBlock: '08h-16h',
+      teamGroup: '',
+      portraitOrder: 3,
+      landscapeOrder: 3,
+      weeklySchedule: {
+        dimanche: 'Consultation\nE.P.S.P BenSmir',
+        lundi: 'Journée Pédagogique',
+        mardi: 'Visite Générale',
+        mercredi: 'Service',
+        jeudi: 'DMO',
+      },
+      dailyActivity: { ...aprNormal },
+    },
+    {
+      id: 4,
+      fullName: 'Tlemsani Naziha',
+      category: 'medical',
+      rolePortrait: 'Médecin Généraliste Principale',
+      gradeLandscape: 'Médecin Généraliste',
+      obsPortrait: 'Congé (24/03 - 07/04)',
+      horaireBlock: '08h-16h',
+      teamGroup: '',
+      portraitOrder: 4,
+      landscapeOrder: 4,
+      weeklySchedule: {
+        dimanche: 'Service',
+        lundi: 'Service',
+        mardi: 'Consultation\nE.P.S.P BenSmir',
+        mercredi: 'Service',
+        jeudi: 'Service',
+      },
+      dailyActivity: { ...aprNormal },
+    },
+    {
+      id: 5,
+      fullName: 'Boumazouzi Hind',
+      category: 'medical',
+      rolePortrait: 'Médecin Généraliste Principale',
+      gradeLandscape: 'Médecin Généraliste',
+      obsPortrait: 'Congé (26/03 - 05/04)',
+      horaireBlock: '08h-16h',
+      teamGroup: '',
+      portraitOrder: 5,
+      landscapeOrder: 5,
+      weeklySchedule: {
+        dimanche: 'Service',
+        lundi: 'Service',
+        mardi: 'Visite Générale',
+        mercredi: 'Service',
+        jeudi: 'Consultation\nE.P.S.P BenSmir',
+      },
+      dailyActivity: { ...aprNormal },
+    },
+    {
+      id: 6,
+      fullName: 'Benrahal Yasmina',
+      category: 'medical',
+      rolePortrait: 'Médecin Généraliste',
+      gradeLandscape: 'Médecin Généraliste',
+      obsPortrait: 'Congé (06/04 - 12/04)',
+      horaireBlock: '08h-16h',
+      teamGroup: '',
+      portraitOrder: 6,
+      landscapeOrder: 6,
+      weeklySchedule: {
+        dimanche: 'Service',
+        lundi: 'Service',
+        mardi: 'Service',
+        mercredi: 'Service',
+        jeudi: 'Service',
+      },
+      dailyActivity: { ...aprNormal },
+    },
+
+    // 2. PERSONNEL PARAMÉDICAL 08h-16h (9 Agents)
+    {
+      id: 7,
+      fullName: 'Kerarma Djelloul',
+      category: 'paramedical_day',
+      rolePortrait: 'I.SSP Surveillant Médical',
+      gradeLandscape: 'I.SSP Surveillant Médical',
+      obsPortrait: 'Surveillant Médical',
+      horaireBlock: '08h-16h',
+      teamGroup: '',
+      portraitOrder: 1,
+      landscapeOrder: 1,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: { ...aprNormal },
+    },
+    {
+      id: 8,
+      fullName: 'Meddah Fadela',
+      category: 'paramedical_day',
+      rolePortrait: 'Psychologue',
+      gradeLandscape: 'Psychologue',
+      obsPortrait: 'Congé (24/03 - 02/04)',
+      horaireBlock: '08h-16h',
+      teamGroup: '',
+      portraitOrder: 2,
+      landscapeOrder: 2,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: { ...aprNormal },
+    },
+    {
+      id: 9,
+      fullName: 'Bouaziz Nacer',
+      category: 'paramedical_day',
+      rolePortrait: 'ATS principal',
+      gradeLandscape: 'ATS principal',
+      obsPortrait: '',
+      horaireBlock: '08h-16h',
+      teamGroup: '',
+      portraitOrder: 3,
+      landscapeOrder: 3,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: { ...aprNormal },
+    },
+    {
+      id: 10,
+      fullName: 'Rahmani Ibtissem',
+      category: 'paramedical_day',
+      rolePortrait: 'ATS principal',
+      gradeLandscape: 'ATS principal',
+      obsPortrait: 'Congé (23/03 - 06/04)',
+      horaireBlock: '08h-16h',
+      teamGroup: '',
+      portraitOrder: 4,
+      landscapeOrder: 4,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: { ...aprNormal },
+    },
+    {
+      id: 11,
+      fullName: 'Kassab Hichem',
+      category: 'paramedical_day',
+      rolePortrait: 'ATS principal',
+      gradeLandscape: 'ATS principal',
+      obsPortrait: '',
+      horaireBlock: '08h-16h',
+      teamGroup: '',
+      portraitOrder: 5,
+      landscapeOrder: 5,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: { ...aprNormal },
+    },
+    {
+      id: 12,
+      fullName: 'Behloul Zahra',
+      category: 'paramedical_day',
+      rolePortrait: 'Administrateur',
+      gradeLandscape: 'Administrateur',
+      obsPortrait: 'Chargée de DMO',
+      horaireBlock: '08h-16h',
+      teamGroup: '',
+      portraitOrder: 6,
+      landscapeOrder: 6,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: { ...aprNormal },
+    },
+    {
+      id: 13,
+      fullName: 'Naamoun Sarra',
+      category: 'paramedical_day',
+      rolePortrait: 'Chargée de pharmacie',
+      gradeLandscape: 'Chargée de pharmacie',
+      obsPortrait: 'Congé (15/03 - 02/04)',
+      horaireBlock: '08h-16h',
+      teamGroup: '',
+      portraitOrder: 7,
+      landscapeOrder: 7,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: { ...aprNormal },
+    },
+    {
+      id: 14,
+      fullName: 'Zalegh Fatima',
+      category: 'paramedical_day',
+      rolePortrait: 'Agent de bureau',
+      gradeLandscape: 'Agent de bureau',
+      obsPortrait: '',
+      horaireBlock: '08h-16h',
+      teamGroup: '',
+      portraitOrder: 8,
+      landscapeOrder: 8,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: { ...aprNormal },
+    },
+    {
+      id: 15,
+      fullName: 'Baoud Kholoud',
+      category: 'paramedical_day',
+      rolePortrait: 'Agent de bureau',
+      gradeLandscape: 'Agent de bureau',
+      obsPortrait: 'Congé (23/03 - 11/04)',
+      horaireBlock: '08h-16h',
+      teamGroup: '',
+      portraitOrder: 9,
+      landscapeOrder: 9,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: { ...aprNormal },
+    },
+
+    // 3. PARAMÉDICAL GARDE 24h (15 Agents, Groupes A, B, C, D)
+    // Groupe A
+    {
+      id: 16,
+      fullName: 'Bakhouche Sarra',
+      category: 'paramedical_guard',
+      rolePortrait: 'ATS',
+      gradeLandscape: 'ATS',
+      obsPortrait: 'CONGÉ de MATERNITÉ. 25/11/2025 au 26/04/2026',
+      horaireBlock: '24h',
+      teamGroup: 'A',
+      portraitOrder: 1,
+      landscapeOrder: 1,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: buildContinuousGuard16hActivity('A', ['A', 'D', 'B', 'C'], 0, 30),
+      maternityLeave: {
+        startDay: 1,
+        endDay: 26,
+        label: 'Congé de Maternité',
+        datesText: '25/11/2025 au 26/04/2026',
+      },
+    },
+    {
+      id: 17,
+      fullName: 'Behloul Sihem',
+      category: 'paramedical_guard',
+      rolePortrait: 'ATS',
+      gradeLandscape: 'ATS',
+      obsPortrait: '',
+      horaireBlock: '24h',
+      teamGroup: 'A',
+      portraitOrder: 2,
+      landscapeOrder: 2,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: buildContinuousGuard16hActivity('A', ['A', 'D', 'B', 'C'], 0, 30),
+    },
+    {
+      id: 18,
+      fullName: 'Bouabida Ikram',
+      category: 'paramedical_guard',
+      rolePortrait: 'ATS principal',
+      gradeLandscape: 'ATS principal',
+      obsPortrait: '',
+      horaireBlock: '24h',
+      teamGroup: 'A',
+      portraitOrder: 3,
+      landscapeOrder: 3,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: buildContinuousGuard16hActivity('A', ['A', 'D', 'B', 'C'], 0, 30),
+    },
+    {
+      id: 19,
+      fullName: 'Ben Kara Ahmed',
+      category: 'paramedical_guard',
+      rolePortrait: 'ATS',
+      gradeLandscape: 'ATS',
+      obsPortrait: 'Congé (29/04 - 01/05)',
+      horaireBlock: '24h',
+      teamGroup: 'A',
+      portraitOrder: 4,
+      landscapeOrder: 4,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: buildContinuousGuard16hActivity('A', ['A', 'D', 'B', 'C'], 0, 30),
+    },
+
+    // Groupe B
+    {
+      id: 20,
+      fullName: 'Hiadsi Souad',
+      category: 'paramedical_guard',
+      rolePortrait: 'ATS principal',
+      gradeLandscape: 'ATS principal',
+      obsPortrait: '',
+      horaireBlock: '24h',
+      teamGroup: 'B',
+      portraitOrder: 5,
+      landscapeOrder: 5,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: buildContinuousGuard16hActivity('B', ['A', 'D', 'B', 'C'], 0, 30),
+    },
+    {
+      id: 21,
+      fullName: 'Ait Menguellat Lilia',
+      category: 'paramedical_guard',
+      rolePortrait: 'ATS principal',
+      gradeLandscape: 'ATS principal',
+      obsPortrait: '',
+      horaireBlock: '24h',
+      teamGroup: 'B',
+      portraitOrder: 6,
+      landscapeOrder: 6,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: buildContinuousGuard16hActivity('B', ['A', 'D', 'B', 'C'], 0, 30),
+    },
+    {
+      id: 22,
+      fullName: 'Kadri Karima',
+      category: 'paramedical_guard',
+      rolePortrait: 'ATS principal',
+      gradeLandscape: 'ATS principal',
+      obsPortrait: 'Congé (25/03 - 10/04)',
+      horaireBlock: '24h',
+      teamGroup: 'B',
+      portraitOrder: 7,
+      landscapeOrder: 7,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: buildContinuousGuard16hActivity('B', ['A', 'D', 'B', 'C'], 0, 30),
+    },
+
+    // Groupe C
+    {
+      id: 23,
+      fullName: 'Chaabane Abdelhamid',
+      category: 'paramedical_guard',
+      rolePortrait: 'infirmier major',
+      gradeLandscape: 'infirmier major',
+      obsPortrait: 'Congé (22/03 - 20/04)',
+      horaireBlock: '24h',
+      teamGroup: 'C',
+      portraitOrder: 8,
+      landscapeOrder: 8,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: buildContinuousGuard16hActivity('C', ['A', 'D', 'B', 'C'], 0, 30),
+    },
+    {
+      id: 24,
+      fullName: 'Mahdjoubi Sami',
+      category: 'paramedical_guard',
+      rolePortrait: 'ATS',
+      gradeLandscape: 'ATS',
+      obsPortrait: '',
+      horaireBlock: '24h',
+      teamGroup: 'C',
+      portraitOrder: 9,
+      landscapeOrder: 9,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: buildContinuousGuard16hActivity('C', ['A', 'D', 'B', 'C'], 0, 30),
+    },
+    {
+      id: 25,
+      fullName: 'Bouderouez Fatiha',
+      category: 'paramedical_guard',
+      rolePortrait: 'IDE',
+      gradeLandscape: 'IDE',
+      obsPortrait: '',
+      horaireBlock: '24h',
+      teamGroup: 'C',
+      portraitOrder: 10,
+      landscapeOrder: 10,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: buildContinuousGuard16hActivity('C', ['A', 'D', 'B', 'C'], 0, 30),
+    },
+    {
+      id: 26,
+      fullName: 'Belarbi Mohamed',
+      category: 'paramedical_guard',
+      rolePortrait: 'ATS',
+      gradeLandscape: 'ATS',
+      obsPortrait: '',
+      horaireBlock: '24h',
+      teamGroup: 'C',
+      portraitOrder: 11,
+      landscapeOrder: 11,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: buildContinuousGuard16hActivity('C', ['A', 'D', 'B', 'C'], 0, 30),
+    },
+
+    // Groupe D
+    {
+      id: 27,
+      fullName: 'Moussa Hadjar',
+      category: 'paramedical_guard',
+      rolePortrait: 'ATS principal',
+      gradeLandscape: 'ATS principal',
+      obsPortrait: 'Congé (25/03 - 10/04)',
+      horaireBlock: '24h',
+      teamGroup: 'D',
+      portraitOrder: 12,
+      landscapeOrder: 12,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: buildContinuousGuard16hActivity('D', ['A', 'D', 'B', 'C'], 0, 30),
+    },
+    {
+      id: 28,
+      fullName: 'Hamdi Souad',
+      category: 'paramedical_guard',
+      rolePortrait: 'IDE',
+      gradeLandscape: 'IDE',
+      obsPortrait: '',
+      horaireBlock: '24h',
+      teamGroup: 'D',
+      portraitOrder: 13,
+      landscapeOrder: 13,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: buildContinuousGuard16hActivity('D', ['A', 'D', 'B', 'C'], 0, 30),
+    },
+    {
+      id: 29,
+      fullName: 'Guerle Mohamed Yacine',
+      category: 'paramedical_guard',
+      rolePortrait: 'ATS',
+      gradeLandscape: 'ATS',
+      obsPortrait: '',
+      horaireBlock: '24h',
+      teamGroup: 'D',
+      portraitOrder: 14,
+      landscapeOrder: 14,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: buildContinuousGuard16hActivity('D', ['A', 'D', 'B', 'C'], 0, 30),
+    },
+    {
+      id: 30,
+      fullName: 'Isselma Mohamed Nabi',
+      category: 'paramedical_guard',
+      rolePortrait: 'ATS',
+      gradeLandscape: 'ATS',
+      obsPortrait: 'Congé (24/03 - 17/04)',
+      horaireBlock: '24h',
+      teamGroup: 'D',
+      portraitOrder: 15,
+      landscapeOrder: 15,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: buildContinuousGuard16hActivity('D', ['A', 'D', 'B', 'C'], 0, 30),
+    },
+
+    // 4. AGENTS D'HYGIÈNE 12h (2 Agents)
+    {
+      id: 31,
+      fullName: 'Mohand Fatiha',
+      category: 'hygiene',
+      rolePortrait: "Agent d'hygiène",
+      gradeLandscape: "Agent d'hygiène",
+      obsPortrait: '',
+      horaireBlock: '12h',
+      teamGroup: '',
+      portraitOrder: 1,
+      landscapeOrder: 1,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: buildHygiene12hActivity(false, 30),
+    },
+    {
+      id: 32,
+      fullName: 'Touati Fatima',
+      category: 'hygiene',
+      rolePortrait: "Agent d'hygiène",
+      gradeLandscape: "Agent d'hygiène",
+      obsPortrait: '',
+      horaireBlock: '12h',
+      teamGroup: '',
+      portraitOrder: 2,
+      landscapeOrder: 2,
+      weeklySchedule: { ...emptyWeekly },
+      dailyActivity: buildHygiene12hActivity(true, 30),
+    },
+  ];
+
+  return {
+    version: 11,
+    updatedAt: new Date().toISOString(),
+    config,
+    staffBox,
+  };
+}
+
+/**
  * Create official October 2026 snapshot matching the user's provided PDF documents
  */
 export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
@@ -531,7 +1170,7 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Medjadi Mohsine',
       category: 'medical',
       rolePortrait: 'Médecin Chef Rhumatologue',
-      gradeLandscape: 'Médecin Chef\nRhumatologue',
+      gradeLandscape: 'Médecin Chef Rhumatologue',
       obsPortrait: '08h-16h',
       horaireBlock: '08h-16h',
       teamGroup: '',
@@ -541,8 +1180,8 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
         dimanche: 'Service Biothérapie',
         lundi: 'DMO',
         mardi: 'Visite Générale',
-        mercredi: 'ConsultationE.P.S.P\nBenSmir',
-        jeudi: 'Journée\nPédagogique',
+        mercredi: 'Consultation\nE.P.S.P BenSmir',
+        jeudi: 'Journée Pédagogique',
       },
       dailyActivity: { ...octNormal },
     },
@@ -551,15 +1190,15 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Ouadah Souad',
       category: 'medical',
       rolePortrait: 'Médecin Principal en Rhumatologie',
-      gradeLandscape: 'Médecin Principal\nen Rhumatologie',
+      gradeLandscape: 'Médecin Principal en Rhumatologie',
       obsPortrait: '08h-16h',
       horaireBlock: '08h-16h',
       teamGroup: '',
       portraitOrder: 2,
       landscapeOrder: 2,
       weeklySchedule: {
-        dimanche: 'Journée\nPédagogique',
-        lundi: 'Consultation E.P.S.P\nMers El Kebir',
+        dimanche: 'Journée Pédagogique',
+        lundi: 'Consultation\nE.P.S.P Mers El Kebir',
         mardi: 'Visite Générale',
         mercredi: 'DMO',
         jeudi: 'Service Biothérapie',
@@ -568,35 +1207,55 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
     },
     {
       id: 3,
-      fullName: 'Tlemsani Naziha',
+      fullName: 'Bouziane Kheira',
       category: 'medical',
-      rolePortrait: 'Médecin Généraliste Principal',
-      gradeLandscape: 'Médecin\nGénéraliste',
-      obsPortrait: '08h-16h',
+      rolePortrait: 'Médecin Principal en Rhumatologie',
+      gradeLandscape: 'Médecin Principal en Rhumatologie',
+      obsPortrait: 'Congé (29/03 - 22/04)',
       horaireBlock: '08h-16h',
       teamGroup: '',
       portraitOrder: 3,
       landscapeOrder: 3,
       weeklySchedule: {
+        dimanche: 'Consultation\nE.P.S.P BenSmir',
+        lundi: 'Journée Pédagogique',
+        mardi: 'Visite Générale',
+        mercredi: 'Service',
+        jeudi: 'DMO',
+      },
+      dailyActivity: { ...octNormal },
+    },
+    {
+      id: 4,
+      fullName: 'Tlemsani Naziha',
+      category: 'medical',
+      rolePortrait: 'Médecin Généraliste Principale',
+      gradeLandscape: 'Médecin Généraliste',
+      obsPortrait: '08h-16h',
+      horaireBlock: '08h-16h',
+      teamGroup: '',
+      portraitOrder: 4,
+      landscapeOrder: 4,
+      weeklySchedule: {
         dimanche: 'SERVICE',
         lundi: 'SERVICE',
-        mardi: 'ConsultationE.P.S.P\nBenSmir',
+        mardi: 'Consultation\nE.P.S.P BenSmir',
         mercredi: 'SERVICE',
         jeudi: 'SERVICE',
       },
       dailyActivity: { ...octNormal },
     },
     {
-      id: 4,
+      id: 5,
       fullName: 'Boumazouzi Hind',
       category: 'medical',
-      rolePortrait: 'Médecin Généraliste Principal',
-      gradeLandscape: 'Médecin\nGénéraliste',
+      rolePortrait: 'Médecin Généraliste Principale',
+      gradeLandscape: 'Médecin Généraliste',
       obsPortrait: '08h-16h',
       horaireBlock: '08h-16h',
       teamGroup: '',
-      portraitOrder: 4,
-      landscapeOrder: 4,
+      portraitOrder: 5,
+      landscapeOrder: 5,
       weeklySchedule: {
         dimanche: 'SERVICE',
         lundi: 'SERVICE',
@@ -607,16 +1266,16 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
       dailyActivity: { ...octNormal },
     },
     {
-      id: 5,
+      id: 6,
       fullName: 'Benrahal Yasmina',
       category: 'medical',
       rolePortrait: 'Médecin Généraliste',
-      gradeLandscape: 'Médecin\nGénéraliste',
+      gradeLandscape: 'Médecin Généraliste',
       obsPortrait: '08h-16h',
       horaireBlock: '08h-16h',
       teamGroup: '',
-      portraitOrder: 5,
-      landscapeOrder: 5,
+      portraitOrder: 6,
+      landscapeOrder: 6,
       weeklySchedule: { ...emptyWeekly },
       dailyActivity: { ...octNormal },
     },
@@ -1052,7 +1711,7 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
 }
 
 export function createInitialSeedSnapshot(): ObjectBoxDatabaseSnapshot {
-  return createOctober2026Snapshot();
+  return createApril2026Snapshot();
 }
 
 /**
@@ -1107,32 +1766,25 @@ export class ObjectBoxLocalStore {
       if (raw) {
         const parsed = JSON.parse(raw) as ObjectBoxDatabaseSnapshot;
         if (parsed && parsed.config && Array.isArray(parsed.staffBox)) {
-          // If stored version is older than 7, refresh to October 2026 official PDF baseline
-          if (!parsed.version || parsed.version < 7) {
-            const seed = createOctober2026Snapshot();
+          // If stored version is older than 11, refresh to April 2026 official PDF baseline
+          if (!parsed.version || parsed.version < 11) {
+            const seed = createApril2026Snapshot();
             this.persistAsync(seed);
             return seed;
           }
 
-          // Normalize Ben Smir in weekly schedules
+          // Sanitize all grades to be single line and format Consultation cells
           parsed.staffBox.forEach((staff) => {
+            if (staff.gradeLandscape) {
+              staff.gradeLandscape = sanitizeSingleLineGrade(staff.gradeLandscape);
+            }
             if (staff.weeklySchedule) {
               const days = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi'] as const;
               days.forEach((d) => {
                 if (typeof staff.weeklySchedule[d] === 'string') {
-                  staff.weeklySchedule[d] = staff.weeklySchedule[d]
-                    .replace(/Ben\s*\n\s*Smir/gi, 'Ben Smir')
-                    .replace(/Consultation\s+E\.P\.S\.P\s+Ben\s+Smir/gi, 'Consultation E.P.S.P\nBen Smir');
+                  staff.weeklySchedule[d] = formatConsultationText(staff.weeklySchedule[d]);
                 }
               });
-            }
-            // If currently October 2026, ensure maternity leave is removed for Bakhouche Sarra per official PDF
-            if (
-              staff.fullName.toLowerCase().includes('bakhouche') &&
-              (parsed.config?.guardMonthName?.includes('Octobre') || !parsed.config?.guardMonthName)
-            ) {
-              delete staff.maternityLeave;
-              staff.obsPortrait = '';
             }
           });
           return parsed;

@@ -37,6 +37,26 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Fine, sharp, professional administrative table borders */
+.fine-table {
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+  border: 0.5px solid #000000 !important;
+}
+
+.fine-table th,
+.fine-table td {
+  border: 0.5px solid #000000 !important;
+}
+
+@media print {
+  .fine-table,
+  .fine-table th,
+  .fine-table td {
+    border: 0.35pt solid #000000 !important;
+  }
+}
+
 /* Exact Strict A4 Paper Dimensions (21cm x 29.7cm) & 1.27cm (12.7mm) Margins on ALL 4 sides */
 .a4-portrait-sheet {
   width: 210mm !important;
