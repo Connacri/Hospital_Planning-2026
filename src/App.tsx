@@ -47,6 +47,7 @@ import {
   Archive,
   Stamp,
   CheckCircle2,
+  Globe,
 } from 'lucide-react';
 import {
   objectBoxStore,
@@ -68,6 +69,8 @@ import { QuickActionsFloatingMenu } from './components/QuickActionsFloatingMenu'
 import { GuardRotationModal } from './components/GuardRotationModal';
 import { LeaveTypesModal } from './components/LeaveTypesModal';
 import { MaternityModal } from './components/MaternityModal';
+import { StaffDistributionChartWidget } from './components/StaffDistributionChartWidget';
+import { ServiceSettingsModal } from './components/ServiceSettingsModal';
 import { GuardStatsModal } from './components/GuardStatsModal';
 import { RegulatoryAlertsModal } from './components/RegulatoryAlertsModal';
 import { StaffShareModal } from './components/StaffShareModal';
@@ -244,7 +247,7 @@ export default function App() {
       pdf1Page3Title: `Planning du Personnel Paramédical du ${nextMonthName}`,
       pdf2Page1Title: `TABLEAU D'ACTIVITÉ DU ${nextMonthName.toUpperCase()} — 08h à 16h`,
       pdf2Page2Title: `TABLEAU D'ACTIVITÉ DU ${nextMonthName.toUpperCase()} — 08h à 16h`,
-      pdf2Page3Title: `TABLEAU D'ACTIVITÉ DU ${nextMonthName.toUpperCase()} — 16h / 24h`,
+      pdf2Page3Title: `TABLEAU D'ACTIVITÉ DU ${nextMonthName.toUpperCase()} — 16h`,
       pdf2Page5Title: `TABLEAU D'ACTIVITÉ DU ${nextMonthName.toUpperCase()} — Agents d'hygiène 12h`,
       isModificatif: false,
     };
@@ -285,10 +288,11 @@ export default function App() {
   const [queryLimit, setQueryLimit] = useState<number>(10);
   const [queryOrderField, setQueryOrderField] = useState<'name' | 'id' | 'portraitOrder'>('id');
 
-  // Modals for Guard Rotation, Leave Types & Maternity Leave Management
+  // Modals for Guard Rotation, Leave Types, Service Settings & Maternity Leave Management
   const [isGuardRotationModalOpen, setIsGuardRotationModalOpen] = useState(false);
   const [isLeaveTypesModalOpen, setIsLeaveTypesModalOpen] = useState(false);
   const [isMaternityModalOpen, setIsMaternityModalOpen] = useState(false);
+  const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [maternityTargetStaff, setMaternityTargetStaff] = useState<StaffEntity | null>(null);
 
   const handleOpenMaternityModal = (staff?: StaffEntity) => {
@@ -752,28 +756,36 @@ class HospitalPdfGenerator {
       )}
 
       {/* TOP HOSPITAL BRANDING & NAVIGATION BAR */}
-      <header className="no-print bg-slate-950/95 border-b border-slate-800 sticky top-0 z-40 backdrop-blur">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 gap-4">
+      <header className="no-print bg-slate-950/95 border-b border-slate-800 sticky top-0 z-40 backdrop-blur w-full max-w-full overflow-hidden">
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 w-full max-w-full">
+          <div className="flex items-center justify-between h-14 sm:h-16 gap-1.5 sm:gap-4 w-full min-w-0">
             {/* Hospital Logo & Identity */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-sky-900/30">
-                <Building2 className="w-5 h-5" />
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 overflow-hidden">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-sky-900/30 shrink-0">
+                <Building2 className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <div>
-                <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-2">
-                  <span>{t.appTitle}</span>
-                  <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800">
+              <div className="min-w-0 truncate">
+                <h1 className="text-xs sm:text-base font-bold tracking-tight text-white flex items-center gap-1.5 truncate">
+                  <span className="truncate">{t.appTitle}</span>
+                  <span className="hidden xs:inline-block text-[9px] sm:text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-sky-950 text-sky-300 border border-sky-800 shrink-0">
                     Octobre 2026
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsServiceModalOpen(true)}
+                    title="Modifier le service ou établissement"
+                    className="p-0.5 text-slate-400 hover:text-sky-300 rounded transition-colors shrink-0"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                  </button>
                 </h1>
-                <p className="text-xs text-slate-400 truncate max-w-[280px] sm:max-w-md">
-                  {t.appSubtitle}
+                <p className="text-[10px] sm:text-xs text-slate-400 truncate hidden sm:block">
+                  {config.unitTitle || t.appSubtitle}
                 </p>
               </div>
             </div>
 
-            {/* Main Tabs Navigation */}
+            {/* Main Tabs Navigation (Desktop) */}
             <nav className="hidden md:flex items-center gap-1 bg-slate-900/90 p-1 rounded-lg border border-slate-800 text-sm">
               <button
                 type="button"
@@ -845,9 +857,24 @@ class HospitalPdfGenerator {
             </nav>
 
             {/* Quick Actions & Language Selector */}
-            <div className="flex items-center gap-2">
-              {/* Language Selector */}
-              <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs font-semibold">
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+              {/* Mobile Compact Language Selector */}
+              <div className="sm:hidden flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-[11px] font-bold">
+                <Globe className="w-3.5 h-3.5 text-sky-400 ml-1 mr-0.5 shrink-0" />
+                <select
+                  value={locale}
+                  onChange={(e) => setLocale(e.target.value as SupportedLocale)}
+                  aria-label="Sélectionner la langue"
+                  className="bg-transparent text-sky-300 font-bold text-[11px] px-1 py-1 focus:outline-none cursor-pointer"
+                >
+                  <option value="fr" className="bg-slate-900 text-white">FR</option>
+                  <option value="ar" className="bg-slate-900 text-white">عربي</option>
+                  <option value="en" className="bg-slate-900 text-white">EN</option>
+                </select>
+              </div>
+
+              {/* Desktop Language Selector Pills */}
+              <div className="hidden sm:flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs font-semibold">
                 {(['fr', 'en', 'ar'] as SupportedLocale[]).map((l) => (
                   <button
                     key={l}
@@ -869,10 +896,10 @@ class HospitalPdfGenerator {
                 type="button"
                 onClick={() => window.print()}
                 title={t.printCurrentView}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow transition-colors"
+                className="inline-flex items-center justify-center gap-1.5 p-2 sm:px-3 sm:py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow transition-colors shrink-0"
               >
-                <Printer className="w-4 h-4" />
-                <span className="hidden sm:inline">{t.printCurrentView}</span>
+                <Printer className="w-4 h-4 shrink-0" />
+                <span className="hidden md:inline">{t.printCurrentView}</span>
               </button>
 
               {/* Restore Seed */}
@@ -880,67 +907,67 @@ class HospitalPdfGenerator {
                 type="button"
                 onClick={() => setShowResetConfirm(true)}
                 title={t.resetDefaultData}
-                className="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-lg transition-colors"
+                className="p-2 sm:p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-lg transition-colors shrink-0"
               >
-                <RotateCcw className="w-4 h-4" />
+                <RotateCcw className="w-4 h-4 shrink-0" />
               </button>
             </div>
           </div>
         </div>
 
         {/* Mobile Navigation Bar */}
-        <div className="md:hidden flex items-center justify-around bg-slate-950 border-t border-slate-800 px-2 py-1 text-xs">
+        <nav className="md:hidden grid grid-cols-5 bg-slate-950 border-t border-slate-800 px-1 py-1 text-xs w-full max-w-full">
           <button
             type="button"
             onClick={() => setActiveTab('documents')}
-            className={`p-1.5 flex flex-col items-center ${
+            className={`p-1 flex flex-col items-center justify-center min-w-0 truncate ${
               activeTab === 'documents' ? 'text-sky-400 font-bold' : 'text-slate-400'
             }`}
           >
-            <FileText className="w-4 h-4" />
-            <span className="text-[10px] mt-0.5">{t.navDocuments}</span>
+            <FileText className="w-4 h-4 shrink-0" />
+            <span className="text-[9px] mt-0.5 truncate max-w-full">{t.navDocuments}</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('staff')}
-            className={`p-1.5 flex flex-col items-center ${
+            className={`p-1 flex flex-col items-center justify-center min-w-0 truncate ${
               activeTab === 'staff' ? 'text-sky-400 font-bold' : 'text-slate-400'
             }`}
           >
-            <Users className="w-4 h-4" />
-            <span className="text-[10px] mt-0.5">{t.navStaffManager}</span>
+            <Users className="w-4 h-4 shrink-0" />
+            <span className="text-[9px] mt-0.5 truncate max-w-full">{t.navStaffManager}</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('objectbox')}
-            className={`p-1.5 flex flex-col items-center ${
+            className={`p-1 flex flex-col items-center justify-center min-w-0 truncate ${
               activeTab === 'objectbox' ? 'text-sky-400 font-bold' : 'text-slate-400'
             }`}
           >
-            <Database className="w-4 h-4" />
-            <span className="text-[10px] mt-0.5">{t.navObjectBoxStudio}</span>
+            <Database className="w-4 h-4 shrink-0" />
+            <span className="text-[9px] mt-0.5 truncate max-w-full">{t.navObjectBoxStudio}</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('flutter')}
-            className={`p-1.5 flex flex-col items-center ${
+            className={`p-1 flex flex-col items-center justify-center min-w-0 truncate ${
               activeTab === 'flutter' ? 'text-sky-400 font-bold' : 'text-slate-400'
             }`}
           >
-            <Code2 className="w-4 h-4" />
-            <span className="text-[10px] mt-0.5">{t.navFlutterExport}</span>
+            <Code2 className="w-4 h-4 shrink-0" />
+            <span className="text-[9px] mt-0.5 truncate max-w-full">{t.navFlutterExport}</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('privacy')}
-            className={`p-1.5 flex flex-col items-center ${
+            className={`p-1 flex flex-col items-center justify-center min-w-0 truncate ${
               activeTab === 'privacy' ? 'text-sky-400 font-bold' : 'text-slate-400'
             }`}
           >
-            <Shield className="w-4 h-4" />
-            <span className="text-[10px] mt-0.5">{t.navLegalPrivacy}</span>
+            <Shield className="w-4 h-4 shrink-0" />
+            <span className="text-[9px] mt-0.5 truncate max-w-full">{t.navLegalPrivacy}</span>
           </button>
-        </div>
+        </nav>
       </header>
 
       {/* MAIN CONTENT AREA */}
@@ -951,8 +978,8 @@ class HospitalPdfGenerator {
         {activeTab === 'documents' && (
           <div className="space-y-6">
             {/* Toolbar Controls */}
-            <div className="no-print bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-4 shadow-lg">
-              <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="no-print bg-slate-950 p-3 sm:p-4 rounded-xl border border-slate-800 space-y-4 shadow-lg max-w-full overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-4">
                 {/* Orientation Selector */}
                 <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs font-semibold">
                   <button
@@ -1125,6 +1152,17 @@ class HospitalPdfGenerator {
                   <span>Congé Maternité</span>
                 </button>
 
+                {/* Service & Hospital Settings Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsServiceModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-sky-800/80 bg-sky-950/60 hover:bg-sky-900 text-sky-200 text-xs font-bold transition-colors shadow-sm"
+                  title="Modifier l'en-tête, le nom de l'établissement ou le service"
+                >
+                  <Building2 className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Service & Hôpital</span>
+                </button>
+
                 {/* Quick Presets (Avril 2026 & Janvier 2026) */}
                 <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs">
                   <button
@@ -1177,66 +1215,73 @@ class HospitalPdfGenerator {
                 </div>
 
                 {/* Zoom Controller */}
-                <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs text-slate-300">
-                  <button
-                    type="button"
-                    onClick={() => setZoomLevel((z) => Math.max(30, z - 10))}
-                    title="Zoom -"
-                    className="p-1 hover:text-white rounded"
-                  >
-                    <ZoomOut className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="font-mono text-[11px] px-1.5">{zoomLevel}%</span>
-                  <button
-                    type="button"
-                    onClick={() => setZoomLevel((z) => Math.min(160, z + 10))}
-                    title="Zoom +"
-                    className="p-1 hover:text-white rounded"
-                  >
-                    <ZoomIn className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setZoomLevel(50)}
-                    title="Zoom 50%"
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${zoomLevel === 50 ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
-                  >
-                    50%
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setZoomLevel(75)}
-                    title="Zoom 75%"
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${zoomLevel === 75 ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
-                  >
-                    75%
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setZoomLevel(100)}
-                    title="Reset 100%"
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${zoomLevel === 100 ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
-                  >
-                    100%
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleFitPageComplete}
-                    title="Afficher la page complète (A4 vertical entier 100% visible de haut en bas)"
-                    className="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 text-[10px] font-bold transition-colors"
-                  >
-                    <Eye className="w-3 h-3" />
-                    <span>Page Entière</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleFitWidth}
-                    title="Ajuster la largeur pour voir les 30/31 jours sans coupure"
-                    className="flex items-center gap-1 px-2 py-0.5 rounded bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800 text-[10px] font-bold transition-colors"
-                  >
-                    <Maximize2 className="w-3 h-3" />
-                    <span>Largeur</span>
-                  </button>
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs text-slate-300 max-w-full">
+                  {/* Primary Zoom +/- & Percentage */}
+                  <div className="flex items-center gap-0.5 shrink-0 bg-slate-950/70 px-1 py-0.5 rounded border border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setZoomLevel((z) => Math.max(30, z - 10))}
+                      title="Zoom -"
+                      className="p-1 hover:text-white rounded transition-colors"
+                    >
+                      <ZoomOut className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="font-mono text-[11px] px-1 font-bold text-white shrink-0 min-w-[34px] text-center">{zoomLevel}%</span>
+                    <button
+                      type="button"
+                      onClick={() => setZoomLevel((z) => Math.min(160, z + 10))}
+                      title="Zoom +"
+                      className="p-1 hover:text-white rounded transition-colors"
+                    >
+                      <ZoomIn className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Preset & Fit Buttons */}
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setZoomLevel(50)}
+                      title="Zoom 50%"
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${zoomLevel === 50 ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      50%
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setZoomLevel(75)}
+                      title="Zoom 75%"
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${zoomLevel === 75 ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      75%
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setZoomLevel(100)}
+                      title="Reset 100%"
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${zoomLevel === 100 ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
+                    >
+                      100%
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleFitPageComplete}
+                      title="Afficher la page complète (A4 vertical entier visible)"
+                      className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 text-[10px] font-bold transition-colors"
+                    >
+                      <Eye className="w-3 h-3 shrink-0" />
+                      <span>Page</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleFitWidth}
+                      title="Ajuster la largeur pour voir les 30/31 jours sans coupure"
+                      className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800 text-[10px] font-bold transition-colors"
+                    >
+                      <Maximize2 className="w-3 h-3 shrink-0" />
+                      <span>Largeur</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* PDF Print Margins Selector */}
@@ -1339,6 +1384,9 @@ class HospitalPdfGenerator {
               </div>
             </div>
 
+            {/* Visual Staff Presence & Distribution Widget (Recharts) */}
+            <StaffDistributionChartWidget staffList={staffList} config={config} />
+
             {/* Document Sheets Render Stage */}
             <div className="w-full overflow-x-auto overflow-y-visible py-4 sm:py-6 px-1 sm:px-4 flex justify-start lg:justify-center">
               <div
@@ -1436,6 +1484,16 @@ class HospitalPdfGenerator {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsServiceModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-sky-300 border border-slate-700 rounded-lg text-xs font-semibold shadow transition-colors"
+                    title="Modifier l'intitulé du service ou de l'établissement hospitalier"
+                  >
+                    <Building2 className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Service & Hôpital</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => setIsGuardRotationModalOpen(true)}
@@ -2174,6 +2232,14 @@ class HospitalPdfGenerator {
         targetStaff={maternityTargetStaff}
         onApplyMaternityLeave={handleApplyMaternityLeave}
         onRemoveMaternityLeave={handleRemoveMaternityLeave}
+      />
+
+      {/* MODAL: SERVICE & HOSPITAL CONFIGURATION */}
+      <ServiceSettingsModal
+        isOpen={isServiceModalOpen}
+        onClose={() => setIsServiceModalOpen(false)}
+        config={config}
+        onUpdateConfig={handleUpdateConfig}
       />
 
       {/* FOOTER */}

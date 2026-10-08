@@ -342,7 +342,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
     // PDF 2 (Landscape)
     pdf2Page1Title: "TABLEAU D'ACTIVITÉ DU MOIS D'AVRIL 2026 | 08h–16h — Personnel Médical",
     pdf2Page2Title: "TABLEAU D'ACTIVITÉ DU MOIS D'AVRIL 2026 | 08h–16h",
-    pdf2Page3Title: "TABLEAU D'ACTIVITÉ DU MOIS D'AVRIL 2026 | 24h",
+    pdf2Page3Title: "TABLEAU D'ACTIVITÉ DU MOIS D'AVRIL 2026 | 16h",
     pdf2Page5Title: "TABLEAU D'ACTIVITÉ DU MOIS D'AVRIL 2026 | Agents d'Hygiène — 12h",
     pdf2NameColHeader: 'Nom et Prénom',
     pdf2GradeColHeader: 'Grade',
@@ -662,7 +662,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
       })(),
     },
 
-    // ======================== 3. PARAMÉDICAL GARDE 24h (15 Staff · Groupes A-D) ========================
+    // ======================== 3. PARAMÉDICAL GARDE 16h (15 Staff · Groupes A-D) ========================
     // Groupe A
     {
       id: 16,
@@ -671,7 +671,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
       rolePortrait: 'ATS',
       gradeLandscape: 'ATS',
       obsPortrait: '',
-      horaireBlock: '24h',
+      horaireBlock: '16h',
       teamGroup: 'A',
       portraitOrder: 1,
       landscapeOrder: 1,
@@ -692,7 +692,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
       rolePortrait: 'ATS',
       gradeLandscape: 'ATS',
       obsPortrait: '',
-      horaireBlock: '24h',
+      horaireBlock: '16h',
       teamGroup: 'A',
       portraitOrder: 2,
       landscapeOrder: 2,
@@ -713,7 +713,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
       rolePortrait: 'ATS principal',
       gradeLandscape: 'ATS principal',
       obsPortrait: '',
-      horaireBlock: '24h',
+      horaireBlock: '16h',
       teamGroup: 'A',
       portraitOrder: 3,
       landscapeOrder: 3,
@@ -733,7 +733,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
       rolePortrait: 'ATS',
       gradeLandscape: 'ATS',
       obsPortrait: '',
-      horaireBlock: '24h',
+      horaireBlock: '16h',
       teamGroup: 'A',
       portraitOrder: 4,
       landscapeOrder: 4,
@@ -757,7 +757,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
       rolePortrait: 'ATS principal',
       gradeLandscape: 'ATS principal',
       obsPortrait: '',
-      horaireBlock: '24h',
+      horaireBlock: '16h',
       teamGroup: 'B',
       portraitOrder: 5,
       landscapeOrder: 5,
@@ -779,7 +779,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
       rolePortrait: 'ATS principal',
       gradeLandscape: 'ATS principal',
       obsPortrait: '',
-      horaireBlock: '24h',
+      horaireBlock: '16h',
       teamGroup: 'B',
       portraitOrder: 6,
       landscapeOrder: 6,
@@ -799,7 +799,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
       rolePortrait: 'ATS principal',
       gradeLandscape: 'ATS principal',
       obsPortrait: '',
-      horaireBlock: '24h',
+      horaireBlock: '16h',
       teamGroup: 'B',
       portraitOrder: 7,
       landscapeOrder: 7,
@@ -821,7 +821,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
       rolePortrait: 'infirmier major',
       gradeLandscape: 'infirmier major',
       obsPortrait: '',
-      horaireBlock: '24h',
+      horaireBlock: '16h',
       teamGroup: 'C',
       portraitOrder: 8,
       landscapeOrder: 8,
@@ -843,7 +843,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
       rolePortrait: 'ATS',
       gradeLandscape: 'ATS',
       obsPortrait: '',
-      horaireBlock: '24h',
+      horaireBlock: '16h',
       teamGroup: 'C',
       portraitOrder: 9,
       landscapeOrder: 9,
@@ -863,7 +863,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
       rolePortrait: 'ATS',
       gradeLandscape: 'ATS',
       obsPortrait: '',
-      horaireBlock: '24h',
+      horaireBlock: '16h',
       teamGroup: 'C',
       portraitOrder: 10,
       landscapeOrder: 10,
@@ -883,7 +883,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
       rolePortrait: 'IDE',
       gradeLandscape: 'IDE',
       obsPortrait: '',
-      horaireBlock: '24h',
+      horaireBlock: '16h',
       teamGroup: 'C',
       portraitOrder: 11,
       landscapeOrder: 11,
@@ -905,7 +905,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
       rolePortrait: 'IDE',
       gradeLandscape: 'IDE',
       obsPortrait: '',
-      horaireBlock: '24h',
+      horaireBlock: '16h',
       teamGroup: 'D',
       portraitOrder: 12,
       landscapeOrder: 13,
@@ -926,7 +926,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
       rolePortrait: 'ATS',
       gradeLandscape: 'ATS',
       obsPortrait: '',
-      horaireBlock: '24h',
+      horaireBlock: '16h',
       teamGroup: 'D',
       portraitOrder: 13,
       landscapeOrder: 14,
@@ -946,7 +946,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
       rolePortrait: 'ATS principal',
       gradeLandscape: 'ATS principal',
       obsPortrait: 'Congé (25/03 - 10/04)',
-      horaireBlock: '24h',
+      horaireBlock: '16h',
       teamGroup: 'D',
       portraitOrder: 14,
       landscapeOrder: 12,
@@ -967,7 +967,7 @@ export function createApril2026Snapshot(): ObjectBoxDatabaseSnapshot {
       rolePortrait: 'ATS',
       gradeLandscape: 'ATS',
       obsPortrait: 'Congé (24/03 - 17/04)',
-      horaireBlock: '24h',
+      horaireBlock: '16h',
       teamGroup: 'D',
       portraitOrder: 15,
       landscapeOrder: 15,
@@ -1039,8 +1039,8 @@ export function createJanuary2026Snapshot(): ObjectBoxDatabaseSnapshot {
   base.config.pdf1Page3Title = 'Planning du Personnel Paramédical du Mois de Janvier 2026 (Modificatif)';
   base.config.pdf2Page1Title = "TABLEAU D'ACTIVITÉ DU MOIS DE JANVIER 2026 (Modificatif) | 08h–16h — Personnel Médical";
   base.config.pdf2Page2Title = "TABLEAU D'ACTIVITÉ DU MOIS DE JANVIER 2026 (Modificatif) | 08h–16h";
-  base.config.pdf2Page3Title = "TABLEAU D'ACTIVITÉ DU MOIS DE JANVIER 2026 (Modificatif) 24h";
-  base.config.pdf2Page5Title = "TABLEAU D'ACTIVITÉ DU MOIS DE JANVIER 2026 (Modificatif) 24h";
+  base.config.pdf2Page3Title = "TABLEAU D'ACTIVITÉ DU MOIS DE JANVIER 2026 (Modificatif) 16h";
+  base.config.pdf2Page5Title = "TABLEAU D'ACTIVITÉ DU MOIS DE JANVIER 2026 (Modificatif) Agents d'Hygiène — 12h";
 
   // In January 2026, Bakhouche Sarra has maternity leave for all 31 days (since 25/11/2025 to 26/04/2026 covers all January)
   base.staffBox = base.staffBox.map((s) => {

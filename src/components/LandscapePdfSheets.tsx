@@ -238,25 +238,28 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
       <table className="w-full border-collapse border border-[#B5B5B5] text-center font-pdf">
         <thead>
           <tr className={`${compactRows ? 'h-[24px]' : 'h-[32px]'} text-[11.5px] leading-[1.1]`}>
-            <th className="border border-[#B5B5B5] bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black font-medium w-[14.5%] px-1">
+            <th className={`border border-[#B5B5B5] bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black font-medium ${showTeamColumn ? 'w-[15%]' : 'w-[16.5%]'} px-1 whitespace-nowrap`}>
               <EditableText
                 value={config.pdf2NameColHeader}
                 readOnly={readOnly}
+                className="whitespace-nowrap"
                 onChange={(v) => onUpdateConfig({ pdf2NameColHeader: v })}
               />
             </th>
-            <th className="border border-[#B5B5B5] bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black font-medium w-[9.5%] px-1">
+            <th className={`border border-[#B5B5B5] bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black font-medium ${showTeamColumn ? 'w-[11.5%]' : 'w-[12.5%]'} px-1 whitespace-nowrap`}>
               <EditableText
                 value={config.pdf2GradeColHeader}
                 readOnly={readOnly}
+                className="whitespace-nowrap"
                 onChange={(v) => onUpdateConfig({ pdf2GradeColHeader: v })}
               />
             </th>
             {showTeamColumn && (
-              <th className="border border-[#B5B5B5] bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black font-medium w-[3.8%] px-0.5">
+              <th className="border border-[#B5B5B5] bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black font-medium w-[3.5%] px-0.5 whitespace-nowrap">
                 <EditableText
                   value={config.pdf2TeamColHeader}
                   readOnly={readOnly}
+                  className="whitespace-nowrap"
                   onChange={(v) => onUpdateConfig({ pdf2TeamColHeader: v })}
                 />
               </th>
@@ -302,10 +305,11 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
               className={`group ${rowHeightClass} font-medium transition-colors`}
             >
               {/* Nom et Prénom */}
-              <td className="border border-[#CCCCCC] bg-white text-black px-1.5 relative whitespace-nowrap">
+              <td className="border border-[#CCCCCC] bg-white text-black px-1.5 relative whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
                 <EditableText
                   value={staff.fullName}
                   readOnly={readOnly}
+                  className="whitespace-nowrap"
                   onChange={(v) => onUpdateStaffField(staff.id, 'fullName', v)}
                 />
                 {!readOnly && (
@@ -321,10 +325,11 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
               </td>
 
               {/* Grade */}
-              <td className="border border-[#CCCCCC] bg-white text-black px-1 leading-[1.1] text-[11px] align-middle">
+              <td className="border border-[#CCCCCC] bg-white text-black px-1 leading-[1.1] text-[11px] align-middle whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
                 <EditableText
                   value={staff.gradeLandscape}
                   readOnly={readOnly}
+                  className="whitespace-nowrap"
                   onChange={(v) => onUpdateStaffField(staff.id, 'gradeLandscape', v)}
                 />
               </td>
@@ -507,365 +512,465 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
     jeudi: 'SERVICE',
   };
 
+  const chunkArray = <T,>(items: T[], size: number): T[][] => {
+    if (items.length === 0) return [[]];
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) {
+      chunks.push(items.slice(i, i + size));
+    }
+    return chunks;
+  };
+
+  const medicalChunks = chunkArray(medicalRows, 12);
+  const paramedicalDayChunks = chunkArray(paramedicalDayRows, 12);
+  const paramedicalGuardChunks = chunkArray(paramedicalGuardRows, 14);
+  const hygieneChunks = chunkArray(hygieneRows, 12);
+
   return (
     <div className="flex flex-col items-center gap-8 print-only-container">
       {/* =====================================================================
           PDF 2 — PAGE 1: TABLEAU D'ACTIVITÉ | 08h–16h — Personnel Médical
          ===================================================================== */}
-      {(activeSubPage === 'all' || activeSubPage === 'p1') && (
-        <section
-          aria-label="PDF 2 Page 1 - Tableau d'activité Personnel Médical"
-          className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
-        >
-          <div>
-            <OfficialLandscapeHeader config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} />
+      {(activeSubPage === 'all' || activeSubPage === 'p1') &&
+        medicalChunks.map((chunk, chunkIdx) => (
+          <section
+            key={`med-page-${chunkIdx}`}
+            aria-label={`PDF 2 Page 1 - Tableau d'activité Personnel Médical ${
+              chunkIdx > 0 ? `(Suite ${chunkIdx + 1})` : ''
+            }`}
+            className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
+          >
+            <div>
+              <OfficialLandscapeHeader
+                config={config}
+                onUpdateConfig={onUpdateConfig}
+                readOnly={readOnly}
+              />
 
-            <div className="mt-12 mb-2.5 text-center">
-              <h2 className="text-[20px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
-                <EditableText
-                  value={config.pdf2Page1Title}
-                  readOnly={readOnly}
-                  onChange={(v) => onUpdateConfig({ pdf2Page1Title: v })}
-                />
-                {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf2Page1Title) && (
-                  <strong className="font-bold text-black font-pdf">
-                    (Modificatif)
-                  </strong>
-                )}
-              </h2>
-            </div>
-
-            <ActivityGridTable
-              rows={medicalRows}
-              showTeamColumn={false}
-              config={config}
-              activePaintCode={activePaintCode}
-              readOnly={readOnly}
-              onUpdateConfig={onUpdateConfig}
-              onUpdateStaffField={onUpdateStaffField}
-              onUpdateStaffDayCell={onUpdateStaffDayCell}
-              onDeleteStaff={onDeleteStaff}
-              onOpenMaternityModal={onOpenMaternityModal}
-            />
-
-            {!readOnly && (
-              <div className="no-print mt-1.5 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() =>
-                    onAddStaff({
-                      fullName: 'Nouveau Médecin',
-                      category: 'medical',
-                      rolePortrait: 'Médecin Généraliste',
-                      gradeLandscape: 'Médecin',
-                      obsPortrait: '08h-16h',
-                      horaireBlock: '08h-16h',
-                      teamGroup: '',
-                      portraitOrder: medicalRows.length + 1,
-                      landscapeOrder: medicalRows.length + 1,
-                      weeklySchedule: { ...emptyWeekly },
-                      dailyActivity: buildStandard08h16hActivity(),
-                    })
-                  }
-                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-sans font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>Ajouter ligne</span>
-                </button>
+              <div className="mt-12 mb-2.5 text-center">
+                <h2 className="text-[20px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
+                  <EditableText
+                    value={
+                      chunkIdx === 0
+                        ? config.pdf2Page1Title
+                        : `${config.pdf2Page1Title} (Suite)`
+                    }
+                    readOnly={readOnly}
+                    onChange={(v) => {
+                      if (chunkIdx === 0) {
+                        onUpdateConfig({ pdf2Page1Title: v });
+                      }
+                    }}
+                  />
+                  {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf2Page1Title) && (
+                    <strong className="font-bold text-black font-pdf">
+                      (Modificatif)
+                    </strong>
+                  )}
+                  {chunkIdx > 0 && (
+                    <span className="text-xs font-semibold text-slate-700 font-sans ml-1 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
+                      Suite {chunkIdx + 1}/{medicalChunks.length} — Lignes {chunkIdx * 12 + 1} à{' '}
+                      {Math.min((chunkIdx + 1) * 12, medicalRows.length)}
+                    </span>
+                  )}
+                </h2>
               </div>
-            )}
 
-            <OfficialLandscapeLegendAndFooter
-              config={config}
-              onUpdateConfig={onUpdateConfig}
-              showNb
-              showSignatures
-              readOnly={readOnly}
-              showOfficialStamp={showOfficialStamp}
-              showQrCode={showQrCode}
-              validationStatus={validationStatus}
-              onOpenLeaveTypesModal={onOpenLeaveTypesModal}
-            />
-          </div>
-        </section>
-      )}
+              <ActivityGridTable
+                rows={chunk}
+                showTeamColumn={false}
+                config={config}
+                activePaintCode={activePaintCode}
+                readOnly={readOnly}
+                onUpdateConfig={onUpdateConfig}
+                onUpdateStaffField={onUpdateStaffField}
+                onUpdateStaffDayCell={onUpdateStaffDayCell}
+                onDeleteStaff={onDeleteStaff}
+                onOpenMaternityModal={onOpenMaternityModal}
+              />
+
+              {!readOnly && chunkIdx === medicalChunks.length - 1 && (
+                <div className="no-print mt-1.5 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onAddStaff({
+                        fullName: 'Nouveau Médecin',
+                        category: 'medical',
+                        rolePortrait: 'Médecin Généraliste',
+                        gradeLandscape: 'Médecin',
+                        obsPortrait: '08h-16h',
+                        horaireBlock: '08h-16h',
+                        teamGroup: '',
+                        portraitOrder: medicalRows.length + 1,
+                        landscapeOrder: medicalRows.length + 1,
+                        weeklySchedule: { ...emptyWeekly },
+                        dailyActivity: buildStandard08h16hActivity(),
+                      })
+                    }
+                    className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-sans font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Ajouter ligne</span>
+                  </button>
+                </div>
+              )}
+
+              <OfficialLandscapeLegendAndFooter
+                config={config}
+                onUpdateConfig={onUpdateConfig}
+                showNb
+                showSignatures
+                readOnly={readOnly}
+                showOfficialStamp={showOfficialStamp}
+                showQrCode={showQrCode}
+                validationStatus={validationStatus}
+                onOpenLeaveTypesModal={onOpenLeaveTypesModal}
+              />
+            </div>
+          </section>
+        ))}
 
       {/* =====================================================================
           PDF 2 — PAGE 2: TABLEAU D'ACTIVITÉ | 08h–16h (Paramédical Jour)
          ===================================================================== */}
-      {(activeSubPage === 'all' || activeSubPage === 'p2') && (
-        <section
-          aria-label="PDF 2 Page 2 - Tableau d'activité 08h-16h"
-          className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
-        >
-          <div>
-            <OfficialLandscapeHeader config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} />
+      {(activeSubPage === 'all' || activeSubPage === 'p2') &&
+        paramedicalDayChunks.map((chunk, chunkIdx) => (
+          <section
+            key={`pday-page-${chunkIdx}`}
+            aria-label={`PDF 2 Page 2 - Tableau d'activité 08h-16h ${
+              chunkIdx > 0 ? `(Suite ${chunkIdx + 1})` : ''
+            }`}
+            className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
+          >
+            <div>
+              <OfficialLandscapeHeader
+                config={config}
+                onUpdateConfig={onUpdateConfig}
+                readOnly={readOnly}
+              />
 
-            <div className="mt-12 mb-2.5 text-center">
-              <h2 className="text-[20px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
-                <EditableText
-                  value={config.pdf2Page2Title}
-                  readOnly={readOnly}
-                  onChange={(v) => onUpdateConfig({ pdf2Page2Title: v })}
-                />
-                {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf2Page2Title) && (
-                  <strong className="font-bold text-black font-pdf">
-                    (Modificatif)
-                  </strong>
-                )}
-              </h2>
-            </div>
-
-            <ActivityGridTable
-              rows={paramedicalDayRows}
-              showTeamColumn={false}
-              config={config}
-              activePaintCode={activePaintCode}
-              readOnly={readOnly}
-              onUpdateConfig={onUpdateConfig}
-              onUpdateStaffField={onUpdateStaffField}
-              onUpdateStaffDayCell={onUpdateStaffDayCell}
-              onDeleteStaff={onDeleteStaff}
-              onOpenMaternityModal={onOpenMaternityModal}
-            />
-
-            {!readOnly && (
-              <div className="no-print mt-1.5 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() =>
-                    onAddStaff({
-                      fullName: 'Nouvel Agent 08h-16h',
-                      category: 'paramedical_day',
-                      rolePortrait: 'ATS',
-                      gradeLandscape: 'ATS',
-                      obsPortrait: '',
-                      horaireBlock: '08h-16h',
-                      teamGroup: '',
-                      portraitOrder: paramedicalDayRows.length + 1,
-                      landscapeOrder: paramedicalDayRows.length + 1,
-                      weeklySchedule: { ...emptyWeekly },
-                      dailyActivity: buildStandard08h16hActivity(),
-                    })
-                  }
-                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-sans font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>Ajouter ligne</span>
-                </button>
+              <div className="mt-12 mb-2.5 text-center">
+                <h2 className="text-[20px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
+                  <EditableText
+                    value={
+                      chunkIdx === 0
+                        ? config.pdf2Page2Title
+                        : `${config.pdf2Page2Title} (Suite)`
+                    }
+                    readOnly={readOnly}
+                    onChange={(v) => {
+                      if (chunkIdx === 0) {
+                        onUpdateConfig({ pdf2Page2Title: v });
+                      }
+                    }}
+                  />
+                  {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf2Page2Title) && (
+                    <strong className="font-bold text-black font-pdf">
+                      (Modificatif)
+                    </strong>
+                  )}
+                  {chunkIdx > 0 && (
+                    <span className="text-xs font-semibold text-slate-700 font-sans ml-1 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
+                      Suite {chunkIdx + 1}/{paramedicalDayChunks.length} — Lignes {chunkIdx * 12 + 1} à{' '}
+                      {Math.min((chunkIdx + 1) * 12, paramedicalDayRows.length)}
+                    </span>
+                  )}
+                </h2>
               </div>
-            )}
 
-            <OfficialLandscapeLegendAndFooter
-              config={config}
-              onUpdateConfig={onUpdateConfig}
-              showNb
-              showSignatures
-              readOnly={readOnly}
-              showOfficialStamp={showOfficialStamp}
-              showQrCode={showQrCode}
-              validationStatus={validationStatus}
-              onOpenLeaveTypesModal={onOpenLeaveTypesModal}
-            />
-          </div>
-        </section>
-      )}
+              <ActivityGridTable
+                rows={chunk}
+                showTeamColumn={false}
+                config={config}
+                activePaintCode={activePaintCode}
+                readOnly={readOnly}
+                onUpdateConfig={onUpdateConfig}
+                onUpdateStaffField={onUpdateStaffField}
+                onUpdateStaffDayCell={onUpdateStaffDayCell}
+                onDeleteStaff={onDeleteStaff}
+                onOpenMaternityModal={onOpenMaternityModal}
+              />
+
+              {!readOnly && chunkIdx === paramedicalDayChunks.length - 1 && (
+                <div className="no-print mt-1.5 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onAddStaff({
+                        fullName: 'Nouvel Agent 08h-16h',
+                        category: 'paramedical_day',
+                        rolePortrait: 'ATS',
+                        gradeLandscape: 'ATS',
+                        obsPortrait: '',
+                        horaireBlock: '08h-16h',
+                        teamGroup: '',
+                        portraitOrder: paramedicalDayRows.length + 1,
+                        landscapeOrder: paramedicalDayRows.length + 1,
+                        weeklySchedule: { ...emptyWeekly },
+                        dailyActivity: buildStandard08h16hActivity(),
+                      })
+                    }
+                    className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-sans font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Ajouter ligne</span>
+                  </button>
+                </div>
+              )}
+
+              <OfficialLandscapeLegendAndFooter
+                config={config}
+                onUpdateConfig={onUpdateConfig}
+                showNb
+                showSignatures
+                readOnly={readOnly}
+                showOfficialStamp={showOfficialStamp}
+                showQrCode={showQrCode}
+                validationStatus={validationStatus}
+                onOpenLeaveTypesModal={onOpenLeaveTypesModal}
+              />
+            </div>
+          </section>
+        ))}
 
       {/* =====================================================================
-          PDF 2 — PAGE 3: TABLEAU D'ACTIVITÉ | 24h / 16h (Équipes A, B, C, D)
+          PDF 2 — PAGE 3: TABLEAU D'ACTIVITÉ | 16h (Équipes A, B, C, D, E)
          ===================================================================== */}
-      {(activeSubPage === 'all' || activeSubPage === 'p3') && (
-        <section
-          aria-label="PDF 2 Page 3 - Tableau d'activité 16h / 24h Équipes A-E"
-          className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
-        >
-          <div>
-            <OfficialLandscapeHeader
-              config={config}
-              onUpdateConfig={onUpdateConfig}
-              compact
-              readOnly={readOnly}
-            />
+      {(activeSubPage === 'all' || activeSubPage === 'p3') &&
+        paramedicalGuardChunks.map((chunk, chunkIdx) => (
+          <section
+            key={`pguard-page-${chunkIdx}`}
+            aria-label={`PDF 2 Page 3 - Tableau d'activité 16h Équipes A-E ${
+              chunkIdx > 0 ? `(Suite ${chunkIdx + 1})` : ''
+            }`}
+            className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
+          >
+            <div>
+              <OfficialLandscapeHeader
+                config={config}
+                onUpdateConfig={onUpdateConfig}
+                compact
+                readOnly={readOnly}
+              />
 
-            <div className="mt-1.5 mb-1 text-center">
-              <h2 className="text-[17px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
-                <EditableText
-                  value={config.pdf2Page3Title}
-                  readOnly={readOnly}
-                  onChange={(v) => onUpdateConfig({ pdf2Page3Title: v })}
-                />
-                {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf2Page3Title) && (
-                  <strong className="font-bold text-black font-pdf">
-                    (Modificatif)
-                  </strong>
-                )}
-              </h2>
-            </div>
-
-            <ActivityGridTable
-              rows={paramedicalGuardRows}
-              showTeamColumn={true}
-              compactRows
-              config={config}
-              activePaintCode={activePaintCode}
-              readOnly={readOnly}
-              onUpdateConfig={onUpdateConfig}
-              onUpdateStaffField={onUpdateStaffField}
-              onUpdateStaffDayCell={onUpdateStaffDayCell}
-              onDeleteStaff={onDeleteStaff}
-              onOpenMaternityModal={onOpenMaternityModal}
-            />
-
-            {!readOnly && (
-              <div className="no-print mt-1.5 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  {onOpenMaternityModal && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const bakhouche = staffList.find((s) => s.fullName.toLowerCase().includes('bakhouche'));
-                        onOpenMaternityModal(bakhouche || undefined);
-                      }}
-                      title="Gérer le congé de maternité (cellule fusionnée J1-J26)"
-                      className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-sans font-bold text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-300 rounded shadow-xs transition-colors"
-                    >
-                      <HeartHandshake className="w-3.5 h-3.5 text-rose-600" />
-                      <span>Congé de Maternité (Cellule Fusionnée)</span>
-                    </button>
+              <div className="mt-1.5 mb-1 text-center">
+                <h2 className="text-[17px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
+                  <EditableText
+                    value={
+                      chunkIdx === 0
+                        ? config.pdf2Page3Title
+                        : `${config.pdf2Page3Title} (Suite)`
+                    }
+                    readOnly={readOnly}
+                    onChange={(v) => {
+                      if (chunkIdx === 0) {
+                        onUpdateConfig({ pdf2Page3Title: v });
+                      }
+                    }}
+                  />
+                  {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf2Page3Title) && (
+                    <strong className="font-bold text-black font-pdf">
+                      (Modificatif)
+                    </strong>
                   )}
-                  {onOpenGuardRotationModal && (
-                    <button
-                      type="button"
-                      onClick={onOpenGuardRotationModal}
-                      title="Gérer la rotation des équipes (période ou perpétuelle)"
-                      className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-sans font-bold text-sky-800 bg-sky-50 hover:bg-sky-100 border border-sky-300 rounded shadow-xs transition-colors"
-                    >
-                      <Repeat className="w-3.5 h-3.5 text-sky-600" />
-                      <span>Rotation des Équipes</span>
-                    </button>
+                  {chunkIdx > 0 && (
+                    <span className="text-xs font-semibold text-slate-700 font-sans ml-1 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
+                      Suite {chunkIdx + 1}/{paramedicalGuardChunks.length} — Lignes {chunkIdx * 14 + 1} à{' '}
+                      {Math.min((chunkIdx + 1) * 14, paramedicalGuardRows.length)}
+                    </span>
                   )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    onAddStaff({
-                      fullName: 'Nouvel Agent 16h',
-                      category: 'paramedical_guard',
-                      rolePortrait: 'ATS',
-                      gradeLandscape: 'ATS',
-                      obsPortrait: '',
-                      horaireBlock: '16h',
-                      teamGroup: 'A',
-                      portraitOrder: paramedicalGuardRows.length + 1,
-                      landscapeOrder: paramedicalGuardRows.length + 1,
-                      weeklySchedule: { ...emptyWeekly },
-                      dailyActivity: buildGuard16hActivity('A'),
-                    })
-                  }
-                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-sans font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>Ajouter ligne</span>
-                </button>
+                </h2>
               </div>
-            )}
 
-            <OfficialLandscapeLegendAndFooter
-              config={config}
-              onUpdateConfig={onUpdateConfig}
-              showNb={true}
-              showSignatures
-              readOnly={readOnly}
-              showOfficialStamp={showOfficialStamp}
-              showQrCode={showQrCode}
-              validationStatus={validationStatus}
-              onOpenLeaveTypesModal={onOpenLeaveTypesModal}
-            />
-          </div>
-        </section>
-      )}
+              <ActivityGridTable
+                rows={chunk}
+                showTeamColumn={true}
+                compactRows
+                config={config}
+                activePaintCode={activePaintCode}
+                readOnly={readOnly}
+                onUpdateConfig={onUpdateConfig}
+                onUpdateStaffField={onUpdateStaffField}
+                onUpdateStaffDayCell={onUpdateStaffDayCell}
+                onDeleteStaff={onDeleteStaff}
+                onOpenMaternityModal={onOpenMaternityModal}
+              />
+
+              {!readOnly && chunkIdx === paramedicalGuardChunks.length - 1 && (
+                <div className="no-print mt-1.5 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    {onOpenMaternityModal && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const bakhouche = staffList.find((s) =>
+                            s.fullName.toLowerCase().includes('bakhouche')
+                          );
+                          onOpenMaternityModal(bakhouche || undefined);
+                        }}
+                        title="Gérer le congé de maternité (cellule fusionnée J1-J26)"
+                        className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-sans font-bold text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-300 rounded shadow-xs transition-colors"
+                      >
+                        <HeartHandshake className="w-3.5 h-3.5 text-rose-600" />
+                        <span>Congé de Maternité (Cellule Fusionnée)</span>
+                      </button>
+                    )}
+                    {onOpenGuardRotationModal && (
+                      <button
+                        type="button"
+                        onClick={onOpenGuardRotationModal}
+                        title="Gérer la rotation des équipes (période ou perpétuelle)"
+                        className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-sans font-bold text-sky-800 bg-sky-50 hover:bg-sky-100 border border-sky-300 rounded shadow-xs transition-colors"
+                      >
+                        <Repeat className="w-3.5 h-3.5 text-sky-600" />
+                        <span>Rotation des Équipes</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onAddStaff({
+                        fullName: 'Nouvel Agent 16h',
+                        category: 'paramedical_guard',
+                        rolePortrait: 'ATS',
+                        gradeLandscape: 'ATS',
+                        obsPortrait: '',
+                        horaireBlock: '16h',
+                        teamGroup: 'A',
+                        portraitOrder: paramedicalGuardRows.length + 1,
+                        landscapeOrder: paramedicalGuardRows.length + 1,
+                        weeklySchedule: { ...emptyWeekly },
+                        dailyActivity: buildGuard16hActivity('A'),
+                      })
+                    }
+                    className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-sans font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Ajouter ligne</span>
+                  </button>
+                </div>
+              )}
+
+              <OfficialLandscapeLegendAndFooter
+                config={config}
+                onUpdateConfig={onUpdateConfig}
+                showNb={true}
+                showSignatures
+                readOnly={readOnly}
+                showOfficialStamp={showOfficialStamp}
+                showQrCode={showQrCode}
+                validationStatus={validationStatus}
+                onOpenLeaveTypesModal={onOpenLeaveTypesModal}
+              />
+            </div>
+          </section>
+        ))}
 
       {/* =====================================================================
           PDF 2 — PAGE 4: TABLEAU D'ACTIVITÉ | Agents d'Hygiène — 12h
          ===================================================================== */}
-      {(activeSubPage === 'all' || activeSubPage === 'p4' || (activeSubPage as string) === 'p5') && (
-        <section
-          aria-label="PDF 2 Page 4 - Tableau d'activité Agents d'Hygiène 12h"
-          className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
-        >
-          <div>
-            <OfficialLandscapeHeader config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} />
+      {(activeSubPage === 'all' || activeSubPage === 'p4' || (activeSubPage as string) === 'p5') &&
+        hygieneChunks.map((chunk, chunkIdx) => (
+          <section
+            key={`hyg-page-${chunkIdx}`}
+            aria-label={`PDF 2 Page 4 - Tableau d'activité Agents d'Hygiène 12h ${
+              chunkIdx > 0 ? `(Suite ${chunkIdx + 1})` : ''
+            }`}
+            className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
+          >
+            <div>
+              <OfficialLandscapeHeader
+                config={config}
+                onUpdateConfig={onUpdateConfig}
+                readOnly={readOnly}
+              />
 
-            <div className="mt-24 mb-3 text-center">
-              <h2 className="text-[20px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
-                <EditableText
-                  value={config.pdf2Page5Title}
-                  readOnly={readOnly}
-                  onChange={(v) => onUpdateConfig({ pdf2Page5Title: v })}
-                />
-                {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf2Page5Title) && (
-                  <strong className="font-bold text-black font-pdf">
-                    (Modificatif)
-                  </strong>
-                )}
-              </h2>
-            </div>
-
-            <ActivityGridTable
-              rows={hygieneRows}
-              showTeamColumn={false}
-              config={config}
-              activePaintCode={activePaintCode}
-              readOnly={readOnly}
-              onUpdateConfig={onUpdateConfig}
-              onUpdateStaffField={onUpdateStaffField}
-              onUpdateStaffDayCell={onUpdateStaffDayCell}
-              onDeleteStaff={onDeleteStaff}
-              onOpenMaternityModal={onOpenMaternityModal}
-            />
-
-            {!readOnly && (
-              <div className="no-print mt-1.5 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() =>
-                    onAddStaff({
-                      fullName: "Nouvel Agent d'Hygiène",
-                      category: 'hygiene',
-                      rolePortrait: "Agent d'hygiène",
-                      gradeLandscape: "Agent d'hygiène",
-                      obsPortrait: '',
-                      horaireBlock: '12h',
-                      teamGroup: '',
-                      portraitOrder: hygieneRows.length + 1,
-                      landscapeOrder: hygieneRows.length + 1,
-                      weeklySchedule: { ...emptyWeekly },
-                      dailyActivity: buildHygiene12hActivity(hygieneRows.length % 2 === 0),
-                    })
-                  }
-                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-sans font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>Ajouter ligne</span>
-                </button>
+              <div className="mt-24 mb-3 text-center">
+                <h2 className="text-[20px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
+                  <EditableText
+                    value={
+                      chunkIdx === 0
+                        ? config.pdf2Page5Title
+                        : `${config.pdf2Page5Title} (Suite)`
+                    }
+                    readOnly={readOnly}
+                    onChange={(v) => {
+                      if (chunkIdx === 0) {
+                        onUpdateConfig({ pdf2Page5Title: v });
+                      }
+                    }}
+                  />
+                  {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf2Page5Title) && (
+                    <strong className="font-bold text-black font-pdf">
+                      (Modificatif)
+                    </strong>
+                  )}
+                  {chunkIdx > 0 && (
+                    <span className="text-xs font-semibold text-slate-700 font-sans ml-1 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
+                      Suite {chunkIdx + 1}/{hygieneChunks.length} — Lignes {chunkIdx * 12 + 1} à{' '}
+                      {Math.min((chunkIdx + 1) * 12, hygieneRows.length)}
+                    </span>
+                  )}
+                </h2>
               </div>
-            )}
 
-            <OfficialLandscapeLegendAndFooter
-              config={config}
-              onUpdateConfig={onUpdateConfig}
-              showNb
-              showSignatures
-              readOnly={readOnly}
-              showOfficialStamp={showOfficialStamp}
-              showQrCode={showQrCode}
-              validationStatus={validationStatus}
-              onOpenLeaveTypesModal={onOpenLeaveTypesModal}
-            />
-          </div>
-        </section>
-      )}
+              <ActivityGridTable
+                rows={chunk}
+                showTeamColumn={false}
+                config={config}
+                activePaintCode={activePaintCode}
+                readOnly={readOnly}
+                onUpdateConfig={onUpdateConfig}
+                onUpdateStaffField={onUpdateStaffField}
+                onUpdateStaffDayCell={onUpdateStaffDayCell}
+                onDeleteStaff={onDeleteStaff}
+                onOpenMaternityModal={onOpenMaternityModal}
+              />
+
+              {!readOnly && chunkIdx === hygieneChunks.length - 1 && (
+                <div className="no-print mt-1.5 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onAddStaff({
+                        fullName: "Nouvel Agent d'Hygiène",
+                        category: 'hygiene',
+                        rolePortrait: "Agent d'hygiène",
+                        gradeLandscape: "Agent d'hygiène",
+                        obsPortrait: '',
+                        horaireBlock: '12h',
+                        teamGroup: '',
+                        portraitOrder: hygieneRows.length + 1,
+                        landscapeOrder: hygieneRows.length + 1,
+                        weeklySchedule: { ...emptyWeekly },
+                        dailyActivity: buildHygiene12hActivity(hygieneRows.length % 2 === 0),
+                      })
+                    }
+                    className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-sans font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Ajouter ligne</span>
+                  </button>
+                </div>
+              )}
+
+              <OfficialLandscapeLegendAndFooter
+                config={config}
+                onUpdateConfig={onUpdateConfig}
+                showNb
+                showSignatures
+                readOnly={readOnly}
+                showOfficialStamp={showOfficialStamp}
+                showQrCode={showQrCode}
+                validationStatus={validationStatus}
+                onOpenLeaveTypesModal={onOpenLeaveTypesModal}
+              />
+            </div>
+          </section>
+        ))}
     </div>
   );
 };

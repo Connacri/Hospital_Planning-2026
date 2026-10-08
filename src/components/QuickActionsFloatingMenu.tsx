@@ -151,7 +151,7 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
 
       {/* EXPANDED FLOATING PANEL */}
       {isExpanded && (
-        <div className="w-[330px] sm:w-[350px] bg-slate-950/95 backdrop-blur-xl border border-slate-700/90 rounded-2xl shadow-2xl overflow-hidden ring-1 ring-white/10 animate-in fade-in zoom-in-95 duration-150">
+        <div className="w-[calc(100vw-24px)] sm:w-[350px] max-w-sm bg-slate-950/95 backdrop-blur-xl border border-slate-700/90 rounded-2xl shadow-2xl overflow-hidden ring-1 ring-white/10 animate-in fade-in zoom-in-95 duration-150">
           {/* Header Bar */}
           <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-900/80 border-b border-slate-800">
             <div className="flex items-center gap-2">
@@ -465,87 +465,93 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
               </div>
             )}
 
-            {/* ZOOM & PRINT CONTROLS */}
-            <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => onChangeZoom((z) => Math.max(50, z - 10))}
-                  className="p-1 text-slate-400 hover:text-white rounded"
-                  title="Zoom -"
-                >
-                  <ZoomOut className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={onResetZoom}
-                  className="px-1.5 font-mono text-[11px] text-slate-300 hover:text-white font-medium"
-                  title="Réinitialiser à 100%"
-                >
-                  {zoomLevel}%
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onChangeZoom((z) => Math.min(150, z + 10))}
-                  className="p-1 text-slate-400 hover:text-white rounded"
-                  title="Zoom +"
-                >
-                  <ZoomIn className="w-3.5 h-3.5" />
-                </button>
-                {onFitWidth && (
+            {/* ZOOM & PRINT CONTROLS (RESPONSIVE 2-ROW DESIGN) */}
+            <div className="pt-2.5 border-t border-slate-800/90 space-y-2">
+              {/* Row 1: Zoom tools + Back to top */}
+              <div className="flex items-center justify-between gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+                <div className="flex items-center gap-0.5">
                   <button
                     type="button"
-                    onClick={onFitWidth}
-                    className="px-1.5 py-0.5 text-[10px] font-semibold bg-sky-950 text-sky-300 hover:bg-sky-900 rounded border border-sky-800 transition-colors"
-                    title="Ajuster la vue pour voir tous les 30/31 jours"
+                    onClick={() => onChangeZoom((z) => Math.max(50, z - 10))}
+                    className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors"
+                    title="Zoom -"
                   >
-                    30j
+                    <ZoomOut className="w-3.5 h-3.5" />
                   </button>
-                )}
-                {onFitPageComplete && (
                   <button
                     type="button"
-                    onClick={onFitPageComplete}
-                    className="px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-950 text-emerald-300 hover:bg-emerald-900 rounded border border-emerald-800 transition-colors"
-                    title="Afficher la page complète (A4 vertical 100% visible)"
+                    onClick={onResetZoom}
+                    className="px-1.5 font-mono text-[11px] text-white font-bold hover:text-sky-300 transition-colors"
+                    title="Réinitialiser à 100%"
                   >
-                    Entier
+                    {zoomLevel}%
                   </button>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => onChangeZoom((z) => Math.min(150, z + 10))}
+                    className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors"
+                    title="Zoom +"
+                  >
+                    <ZoomIn className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  {onFitWidth && (
+                    <button
+                      type="button"
+                      onClick={onFitWidth}
+                      className="px-2 py-0.5 text-[10px] font-bold bg-sky-950 text-sky-300 hover:bg-sky-900 rounded-md border border-sky-800 transition-colors"
+                      title="Ajuster la vue pour voir tous les 30/31 jours"
+                    >
+                      30 jours
+                    </button>
+                  )}
+                  {onFitPageComplete && (
+                    <button
+                      type="button"
+                      onClick={onFitPageComplete}
+                      className="px-2 py-0.5 text-[10px] font-bold bg-emerald-950 text-emerald-300 hover:bg-emerald-900 rounded-md border border-emerald-800 transition-colors"
+                      title="Afficher la page complète (A4 vertical 100% visible)"
+                    >
+                      Entier
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={scrollToTop}
+                    className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors ml-0.5"
+                    title="Retour en haut"
+                  >
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
+              {/* Row 2: Print & PDF Direct Action Buttons */}
+              <div className={`grid ${onDirectPdfDownload ? 'grid-cols-2' : 'grid-cols-1'} gap-2`}>
                 {onDirectPdfDownload && (
                   <button
                     type="button"
                     onClick={onDirectPdfDownload}
-                    className="flex items-center gap-1 px-2.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-semibold transition-colors shadow-sm"
+                    className="flex items-center justify-center gap-1.5 py-2 px-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-bold text-xs transition-colors shadow-sm active:scale-95"
                     title="Télécharger le fichier PDF directement"
                   >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>PDF Direct</span>
+                    <Download className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">PDF Direct</span>
                   </button>
                 )}
 
                 <button
                   type="button"
                   onClick={onPrint}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-lg font-semibold transition-colors shadow-sm"
+                  className="flex items-center justify-center gap-1.5 py-2 px-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white rounded-xl font-bold text-xs transition-colors shadow-sm active:scale-95"
                   title="Imprimer ou enregistrer en PDF (A4)"
                 >
-                  <Printer className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Imprimer</span>
+                  <Printer className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                  <span className="truncate">Imprimer A4</span>
                 </button>
               </div>
-
-              <button
-                type="button"
-                onClick={scrollToTop}
-                className="p-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white rounded-lg transition-colors"
-                title="Retour en haut"
-              >
-                <ArrowUp className="w-3.5 h-3.5" />
-              </button>
             </div>
           </div>
         </div>

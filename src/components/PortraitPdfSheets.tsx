@@ -451,284 +451,346 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
       0
     );
 
+  const chunkArray = <T,>(items: T[], size: number): T[][] => {
+    if (items.length === 0) return [[]];
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) {
+      chunks.push(items.slice(i, i + size));
+    }
+    return chunks;
+  };
+
+  const doctorChunksP1 = chunkArray(doctors, 7);
+  const doctorChunksP2 = chunkArray(doctors, 12);
+
   return (
     <div className="flex flex-col items-center gap-8 print-only-container">
       {/* =====================================================================
           PDF 1 — PAGE 1: Planning des Médecins « Mois d'Octobre 2026 »
          ===================================================================== */}
-      {(activeSubPage === 'all' || activeSubPage === 'p1') && (
-        <section
-          aria-label="PDF 1 Page 1 - Planning des Médecins"
-          className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
-        >
-          <div>
-            <OfficialPortraitHeader config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} />
+      {(activeSubPage === 'all' || activeSubPage === 'p1') &&
+        doctorChunksP1.map((chunk, chunkIdx) => (
+          <section
+            key={`doc-p1-${chunkIdx}`}
+            aria-label={`PDF 1 Page 1 - Planning des Médecins ${
+              chunkIdx > 0 ? `(Suite ${chunkIdx + 1})` : ''
+            }`}
+            className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
+          >
+            <div>
+              <OfficialPortraitHeader
+                config={config}
+                onUpdateConfig={onUpdateConfig}
+                readOnly={readOnly}
+              />
 
-            {/* Title Block */}
-            <div className="mt-8 mb-4 text-center">
-              <h2 className="text-[18px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
-                <EditableText
-                  value={config.pdf1Page1Title}
-                  readOnly={readOnly}
-                  onChange={(v) => onUpdateConfig({ pdf1Page1Title: v })}
-                />
-                {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf1Page1Title) && (
-                  <strong className="font-bold text-black font-pdf">
-                    (Modificatif)
-                  </strong>
-                )}
-              </h2>
-              <div className="text-[15px] font-medium text-black mt-1">
-                <EditableText
-                  value={config.pdf1Page1Subtitle}
-                  readOnly={readOnly}
-                  onChange={(v) => onUpdateConfig({ pdf1Page1Subtitle: v })}
-                />
+              {/* Title Block */}
+              <div className="mt-8 mb-4 text-center">
+                <h2 className="text-[18px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
+                  <EditableText
+                    value={
+                      chunkIdx === 0
+                        ? config.pdf1Page1Title
+                        : `${config.pdf1Page1Title} (Suite)`
+                    }
+                    readOnly={readOnly}
+                    onChange={(v) => {
+                      if (chunkIdx === 0) {
+                        onUpdateConfig({ pdf1Page1Title: v });
+                      }
+                    }}
+                  />
+                  {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf1Page1Title) && (
+                    <strong className="font-bold text-black font-pdf">
+                      (Modificatif)
+                    </strong>
+                  )}
+                  {chunkIdx > 0 && (
+                    <span className="text-xs font-semibold text-slate-700 font-sans ml-1 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
+                      Suite {chunkIdx + 1}/{doctorChunksP1.length} — Médecins {chunkIdx * 7 + 1} à{' '}
+                      {Math.min((chunkIdx + 1) * 7, doctors.length)}
+                    </span>
+                  )}
+                </h2>
+                <div className="text-[15px] font-medium text-black mt-1">
+                  <EditableText
+                    value={config.pdf1Page1Subtitle}
+                    readOnly={readOnly}
+                    onChange={(v) => onUpdateConfig({ pdf1Page1Subtitle: v })}
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Doctors Weekly Table */}
-            <table className="w-full border-collapse border border-[#666666] text-center">
-              <thead>
-                <tr className="bg-[#3D3D3D] text-white text-[15px] font-medium h-[42px]">
-                  {config.pdf1Page1Columns.map((col, idx) => (
-                    <th
-                      key={idx}
-                      className={`border border-[#666666] px-2 py-1.5 font-medium ${
-                        idx === 0 ? 'w-[23.5%]' : 'w-[15.3%]'
-                      }`}
-                    >
-                      <EditableText
-                        value={col}
-                        darkSurface
-                        readOnly={readOnly}
-                        onChange={(v) => {
-                          const next = [...config.pdf1Page1Columns] as [
-                            string,
-                            string,
-                            string,
-                            string,
-                            string,
-                            string
-                          ];
-                          next[idx] = v;
-                          onUpdateConfig({ pdf1Page1Columns: next });
-                        }}
-                      />
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {doctors.map((doc) => (
-                  <tr
-                    key={doc.id}
-                    className="group bg-[#F2F2F2] hover:bg-[#EAEAEA] text-black h-[54px] transition-colors"
-                  >
-                    <td className="border border-[#7F7F7F] px-2 py-1.5 text-[16px] font-medium relative">
-                      <EditableText
-                        value={doc.fullName}
-                        readOnly={readOnly}
-                        onChange={(v) => onUpdateStaffField(doc.id, 'fullName', v)}
-                      />
-                      {!readOnly && (
-                        <button
-                          type="button"
-                          onClick={() => onDeleteStaff(doc.id)}
-                          title="Supprimer cette ligne"
-                          className="no-print opacity-0 group-hover:opacity-100 focus:opacity-100 absolute left-1 top-1/2 -translate-y-1/2 p-1 text-red-600 hover:bg-red-100 rounded transition-opacity"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </td>
-                    {(
-                      ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi'] as Array<
-                        keyof DoctorWeeklySchedule
-                      >
-                    ).map((dayKey) => (
-                      <td
-                        key={dayKey}
-                        className="border border-[#7F7F7F] px-1.5 py-1 text-[13.5px] leading-[1.25] font-medium align-middle"
+              {/* Doctors Weekly Table */}
+              <table className="w-full border-collapse border border-[#666666] text-center">
+                <thead>
+                  <tr className="bg-[#3D3D3D] text-white text-[15px] font-medium h-[42px]">
+                    {config.pdf1Page1Columns.map((col, idx) => (
+                      <th
+                        key={idx}
+                        className={`border border-[#666666] px-2 py-1.5 font-medium whitespace-nowrap ${
+                          idx === 0 ? 'w-[26%]' : 'w-[14.8%]'
+                        }`}
                       >
                         <EditableText
-                          value={doc.weeklySchedule[dayKey]}
-                          multiline
+                          value={col}
+                          darkSurface
                           readOnly={readOnly}
-                          onChange={(v) => onUpdateDoctorWeekly(doc.id, dayKey, v)}
+                          className="whitespace-nowrap"
+                          onChange={(v) => {
+                            const next = [...config.pdf1Page1Columns] as [
+                              string,
+                              string,
+                              string,
+                              string,
+                              string,
+                              string
+                            ];
+                            next[idx] = v;
+                            onUpdateConfig({ pdf1Page1Columns: next });
+                          }}
                         />
-                      </td>
+                      </th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {chunk.map((doc) => (
+                    <tr
+                      key={doc.id}
+                      className="group bg-[#F2F2F2] hover:bg-[#EAEAEA] text-black h-[54px] transition-colors"
+                    >
+                      <td className="border border-[#7F7F7F] px-2 py-1.5 text-[15.5px] font-medium relative whitespace-nowrap overflow-hidden text-ellipsis">
+                        <EditableText
+                          value={doc.fullName}
+                          readOnly={readOnly}
+                          className="whitespace-nowrap"
+                          onChange={(v) => onUpdateStaffField(doc.id, 'fullName', v)}
+                        />
+                        {!readOnly && (
+                          <button
+                            type="button"
+                            onClick={() => onDeleteStaff(doc.id)}
+                            title="Supprimer cette ligne"
+                            className="no-print opacity-0 group-hover:opacity-100 focus:opacity-100 absolute left-1 top-1/2 -translate-y-1/2 p-1 text-red-600 hover:bg-red-100 rounded transition-opacity"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </td>
+                      {(
+                        ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi'] as Array<
+                          keyof DoctorWeeklySchedule
+                        >
+                      ).map((dayKey) => (
+                        <td
+                          key={dayKey}
+                          className="border border-[#7F7F7F] px-1.5 py-1 text-[13.5px] leading-[1.25] font-medium align-middle"
+                        >
+                          <EditableText
+                            value={doc.weeklySchedule[dayKey]}
+                            multiline
+                            readOnly={readOnly}
+                            onChange={(v) => onUpdateDoctorWeekly(doc.id, dayKey, v)}
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
 
-            {/* Add Doctor Row Button (No-Print) */}
-            {!readOnly && (
-              <div className="no-print mt-2 flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleAddDoctor}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-sans font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Ajouter un médecin</span>
-                </button>
-              </div>
-            )}
+              {/* Add Doctor Row Button (No-Print) */}
+              {!readOnly && chunkIdx === doctorChunksP1.length - 1 && (
+                <div className="no-print mt-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleAddDoctor}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-sans font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Ajouter un médecin</span>
+                  </button>
+                </div>
+              )}
 
-            {/* Observation Box — Exact PDF reproduction */}
-            <div className="mt-4 border border-black rounded-[4px] px-3.5 py-1.5 text-[14px] font-medium text-black bg-white flex items-center justify-between">
-              <div className="flex-1">
-                <EditableText
-                  value={config.pdf1Page1Obs || 'OBS : Journée de RCP tous les Mardis à 11 h'}
-                  readOnly={readOnly}
-                  onChange={(v) => onUpdateConfig({ pdf1Page1Obs: v })}
-                />
+              {/* Observation Box — Exact PDF reproduction */}
+              <div className="mt-4 border border-black rounded-[4px] px-3.5 py-1.5 text-[14px] font-medium text-black bg-white flex items-center justify-between">
+                <div className="flex-1">
+                  <EditableText
+                    value={config.pdf1Page1Obs || 'OBS : Journée de RCP tous les Mardis à 11 h'}
+                    readOnly={readOnly}
+                    onChange={(v) => onUpdateConfig({ pdf1Page1Obs: v })}
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          <OfficialPortraitFooter
-            config={config}
-            onUpdateConfig={onUpdateConfig}
-            readOnly={readOnly}
-            showOfficialStamp={showOfficialStamp}
-            showQrCode={showQrCode}
-            validationStatus={validationStatus}
-          />
-        </section>
-      )}
+            <OfficialPortraitFooter
+              config={config}
+              onUpdateConfig={onUpdateConfig}
+              readOnly={readOnly}
+              showOfficialStamp={showOfficialStamp}
+              showQrCode={showQrCode}
+              validationStatus={validationStatus}
+            />
+          </section>
+        ))}
 
       {/* =====================================================================
           PDF 1 — PAGE 2: La liste du personnel médical du mois d'Octobre 2026
          ===================================================================== */}
-      {(activeSubPage === 'all' || activeSubPage === 'p2') && (
-        <section
-          aria-label="PDF 1 Page 2 - Liste du personnel médical"
-          className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
-        >
-          <div>
-            <OfficialPortraitHeader config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} />
+      {(activeSubPage === 'all' || activeSubPage === 'p2') &&
+        doctorChunksP2.map((chunk, chunkIdx) => (
+          <section
+            key={`doc-p2-${chunkIdx}`}
+            aria-label={`PDF 1 Page 2 - Liste du personnel médical ${
+              chunkIdx > 0 ? `(Suite ${chunkIdx + 1})` : ''
+            }`}
+            className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf"
+          >
+            <div>
+              <OfficialPortraitHeader
+                config={config}
+                onUpdateConfig={onUpdateConfig}
+                readOnly={readOnly}
+              />
 
-            {/* Title Block */}
-            <div className="mt-12 mb-4 text-center">
-              <h2 className="text-[16.5px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
-                <EditableText
-                  value={config.pdf1Page2Title}
-                  readOnly={readOnly}
-                  onChange={(v) => onUpdateConfig({ pdf1Page2Title: v })}
-                />
-                {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf1Page2Title) && (
-                  <strong className="font-bold text-black font-pdf">
-                    (Modificatif)
-                  </strong>
-                )}
-              </h2>
-              <div className="text-[14px] font-medium text-black mt-1.5">
-                <EditableText
-                  value={config.pdf1Page2Subtitle}
-                  readOnly={readOnly}
-                  onChange={(v) => onUpdateConfig({ pdf1Page2Subtitle: v })}
-                />
+              {/* Title Block */}
+              <div className="mt-12 mb-4 text-center">
+                <h2 className="text-[16.5px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
+                  <EditableText
+                    value={
+                      chunkIdx === 0
+                        ? config.pdf1Page2Title
+                        : `${config.pdf1Page2Title} (Suite)`
+                    }
+                    readOnly={readOnly}
+                    onChange={(v) => {
+                      if (chunkIdx === 0) {
+                        onUpdateConfig({ pdf1Page2Title: v });
+                      }
+                    }}
+                  />
+                  {config.isModificatif && !/\(Modificatif\)/i.test(config.pdf1Page2Title) && (
+                    <strong className="font-bold text-black font-pdf">
+                      (Modificatif)
+                    </strong>
+                  )}
+                  {chunkIdx > 0 && (
+                    <span className="text-xs font-semibold text-slate-700 font-sans ml-1 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
+                      Suite {chunkIdx + 1}/{doctorChunksP2.length} — Médecins {chunkIdx * 12 + 1} à{' '}
+                      {Math.min((chunkIdx + 1) * 12, doctors.length)}
+                    </span>
+                  )}
+                </h2>
+                <div className="text-[14px] font-medium text-black mt-1.5">
+                  <EditableText
+                    value={config.pdf1Page2Subtitle}
+                    readOnly={readOnly}
+                    onChange={(v) => onUpdateConfig({ pdf1Page2Subtitle: v })}
+                  />
+                </div>
               </div>
+
+              {/* Medical Staff List Table */}
+              <table className="w-full border-collapse border border-[#7F7F7F] text-center table-fixed">
+                <thead>
+                  <tr className="bg-[#D9D9D9] text-black text-[14px] font-medium h-[36px]">
+                    {config.pdf1Page2Columns.map((col, idx) => (
+                      <th
+                        key={idx}
+                        className={`border border-[#7F7F7F] px-2 py-1 font-medium whitespace-nowrap overflow-hidden text-ellipsis ${
+                          idx === 0 ? 'w-[33%]' : idx === 1 ? 'w-[45%]' : 'w-[22%]'
+                        }`}
+                      >
+                        <EditableText
+                          value={col}
+                          readOnly={readOnly}
+                          className="whitespace-nowrap"
+                          onChange={(v) => {
+                            const next = [...config.pdf1Page2Columns] as [
+                              string,
+                              string,
+                              string
+                            ];
+                            next[idx] = v;
+                            onUpdateConfig({ pdf1Page2Columns: next });
+                          }}
+                        />
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {chunk.map((doc) => (
+                    <tr
+                      key={doc.id}
+                      className="group bg-[#F9F9F9] hover:bg-[#F0F0F0] text-black h-[36px] text-[13.5px] font-medium transition-colors"
+                    >
+                      <td className="border border-[#7F7F7F] px-2 py-1 relative whitespace-nowrap overflow-hidden text-ellipsis align-middle">
+                        <EditableText
+                          value={doc.fullName}
+                          readOnly={readOnly}
+                          className="whitespace-nowrap"
+                          onChange={(v) => onUpdateStaffField(doc.id, 'fullName', v)}
+                        />
+                        {!readOnly && (
+                          <button
+                            type="button"
+                            onClick={() => onDeleteStaff(doc.id)}
+                            title="Supprimer cette ligne"
+                            className="no-print opacity-0 group-hover:opacity-100 focus:opacity-100 absolute left-1 top-1/2 -translate-y-1/2 p-1 text-red-600 hover:bg-red-100 rounded transition-opacity"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </td>
+                      <td className="border border-[#7F7F7F] px-2 py-1 whitespace-nowrap overflow-hidden text-ellipsis align-middle">
+                        <EditableText
+                          value={doc.rolePortrait}
+                          readOnly={readOnly}
+                          className="whitespace-nowrap"
+                          onChange={(v) => onUpdateStaffField(doc.id, 'rolePortrait', v)}
+                        />
+                      </td>
+                      <td className="border border-[#7F7F7F] px-2 py-1 whitespace-nowrap overflow-hidden text-ellipsis align-middle">
+                        <EditableText
+                          value={doc.obsPortrait}
+                          readOnly={readOnly}
+                          className="whitespace-nowrap"
+                          onChange={(v) => onUpdateStaffField(doc.id, 'obsPortrait', v)}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {!readOnly && chunkIdx === doctorChunksP2.length - 1 && (
+                <div className="no-print mt-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleAddDoctor}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-sans font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Ajouter un médecin</span>
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Medical Staff List Table */}
-            <table className="w-full border-collapse border border-[#7F7F7F] text-center table-fixed">
-              <thead>
-                <tr className="bg-[#D9D9D9] text-black text-[14px] font-medium h-[36px]">
-                  {config.pdf1Page2Columns.map((col, idx) => (
-                    <th
-                      key={idx}
-                      className={`border border-[#7F7F7F] px-2 py-1 font-medium whitespace-nowrap overflow-hidden text-ellipsis ${
-                        idx === 0 ? 'w-[30%]' : idx === 1 ? 'w-[46%]' : 'w-[24%]'
-                      }`}
-                    >
-                      <EditableText
-                        value={col}
-                        readOnly={readOnly}
-                        className="whitespace-nowrap"
-                        onChange={(v) => {
-                          const next = [...config.pdf1Page2Columns] as [string, string, string];
-                          next[idx] = v;
-                          onUpdateConfig({ pdf1Page2Columns: next });
-                        }}
-                      />
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {doctors.map((doc) => (
-                  <tr
-                    key={doc.id}
-                    className="group bg-[#F9F9F9] hover:bg-[#F0F0F0] text-black h-[36px] text-[13.5px] font-medium transition-colors"
-                  >
-                    <td className="border border-[#7F7F7F] px-2 py-1 relative whitespace-nowrap overflow-hidden text-ellipsis align-middle">
-                      <EditableText
-                        value={doc.fullName}
-                        readOnly={readOnly}
-                        className="whitespace-nowrap"
-                        onChange={(v) => onUpdateStaffField(doc.id, 'fullName', v)}
-                      />
-                      {!readOnly && (
-                        <button
-                          type="button"
-                          onClick={() => onDeleteStaff(doc.id)}
-                          title="Supprimer cette ligne"
-                          className="no-print opacity-0 group-hover:opacity-100 focus:opacity-100 absolute left-1 top-1/2 -translate-y-1/2 p-1 text-red-600 hover:bg-red-100 rounded transition-opacity"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </td>
-                    <td className="border border-[#7F7F7F] px-2 py-1 whitespace-nowrap overflow-hidden text-ellipsis align-middle">
-                      <EditableText
-                        value={doc.rolePortrait}
-                        readOnly={readOnly}
-                        className="whitespace-nowrap"
-                        onChange={(v) => onUpdateStaffField(doc.id, 'rolePortrait', v)}
-                      />
-                    </td>
-                    <td className="border border-[#7F7F7F] px-2 py-1 whitespace-nowrap overflow-hidden text-ellipsis align-middle">
-                      <EditableText
-                        value={doc.obsPortrait}
-                        readOnly={readOnly}
-                        className="whitespace-nowrap"
-                        onChange={(v) => onUpdateStaffField(doc.id, 'obsPortrait', v)}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {!readOnly && (
-              <div className="no-print mt-2 flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleAddDoctor}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-sans font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Ajouter un médecin</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          <OfficialPortraitFooter
-            config={config}
-            onUpdateConfig={onUpdateConfig}
-            readOnly={readOnly}
-            showOfficialStamp={showOfficialStamp}
-            showQrCode={showQrCode}
-            validationStatus={validationStatus}
-          />
-        </section>
-      )}
+            <OfficialPortraitFooter
+              config={config}
+              onUpdateConfig={onUpdateConfig}
+              readOnly={readOnly}
+              showOfficialStamp={showOfficialStamp}
+              showQrCode={showQrCode}
+              validationStatus={validationStatus}
+            />
+          </section>
+        ))}
 
       {/* =====================================================================
           PDF 1 — PAGE 3: Planning du Personnel Paramédical du Mois
@@ -799,13 +861,14 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
             )}
 
             {/* Paramedical Complete Table (08h-16h, 16h Groupes A-E, 12h) */}
-            <table className="w-full border-collapse border-[1.5px] border-black text-black text-[13.5px]">
+            <table className="w-full border-collapse border-[1.5px] border-black text-black text-[13.5px] table-fixed">
               <thead>
                 <tr className="h-[26px] text-center font-medium border-b-[1.5px] border-black">
-                  <th className="border border-black w-[11%] px-1">
+                  <th className="border border-black w-[10%] px-1 whitespace-nowrap">
                     <EditableText
                       value={config.pdf1Page3Columns[0]}
                       readOnly={readOnly}
+                      className="whitespace-nowrap"
                       onChange={(v) => {
                         const next = [...config.pdf1Page3Columns] as [
                           string,
@@ -818,10 +881,11 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                       }}
                     />
                   </th>
-                  <th className="border border-black w-[22.5%] px-2">
+                  <th className="border border-black w-[27%] px-2 whitespace-nowrap">
                     <EditableText
                       value={config.pdf1Page3Columns[1]}
                       readOnly={readOnly}
+                      className="whitespace-nowrap"
                       onChange={(v) => {
                         const next = [...config.pdf1Page3Columns] as [
                           string,
@@ -834,10 +898,11 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                       }}
                     />
                   </th>
-                  <th className="border border-black w-[22.5%] px-2">
+                  <th className="border border-black w-[27%] px-2 whitespace-nowrap">
                     <EditableText
                       value={config.pdf1Page3Columns[2]}
                       readOnly={readOnly}
+                      className="whitespace-nowrap"
                       onChange={(v) => {
                         const next = [...config.pdf1Page3Columns] as [
                           string,
@@ -850,10 +915,11 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                       }}
                     />
                   </th>
-                  <th className="border border-black w-[44%] px-2">
+                  <th className="border border-black w-[36%] px-2 whitespace-nowrap">
                     <EditableText
                       value={config.pdf1Page3Columns[3]}
                       readOnly={readOnly}
+                      className="whitespace-nowrap"
                       onChange={(v) => {
                         const next = [...config.pdf1Page3Columns] as [
                           string,
@@ -895,10 +961,11 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                         )}
                       </td>
                     )}
-                    <td className="border-r border-black px-1.5 py-[1px] font-medium relative">
+                    <td className="border-r border-black px-1.5 py-[1px] font-medium relative whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
                       <EditableText
                         value={staff.fullName}
                         readOnly={readOnly}
+                        className="whitespace-nowrap"
                         onChange={(v) => onUpdateStaffField(staff.id, 'fullName', v)}
                       />
                       {!readOnly && (
@@ -912,10 +979,11 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                         </button>
                       )}
                     </td>
-                    <td className="border-r border-black px-1.5 py-[1px] font-medium">
+                    <td className="border-r border-black px-1.5 py-[1px] font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
                       <EditableText
                         value={staff.rolePortrait}
                         readOnly={readOnly}
+                        className="whitespace-nowrap"
                         onChange={(v) => onUpdateStaffField(staff.id, 'rolePortrait', v)}
                       />
                     </td>
@@ -957,7 +1025,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                             rowSpan={Math.max(1, total16hRows)}
                             className="border border-black text-center align-middle font-medium text-[14px]"
                           >
-                            <span>24h</span>
+                            <span>16h</span>
                             {!readOnly && onOpenGuardRotationModal && (
                               <button
                                 type="button"
@@ -1009,10 +1077,11 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                             isVeryLast16hRow ? 'border-b border-black' : ''
                           }`}
                         >
-                          <td className="border-r border-black px-1.5 py-[1px] font-medium relative">
+                          <td className="border-r border-black px-1.5 py-[1px] font-medium relative whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
                             <EditableText
                               value={member.fullName}
                               readOnly={readOnly}
+                              className="whitespace-nowrap"
                               onChange={(v) => onUpdateStaffField(member.id, 'fullName', v)}
                             />
                             {!readOnly && (
@@ -1026,10 +1095,11 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                               </button>
                             )}
                           </td>
-                          <td className="border-r border-black px-1.5 py-[1px] font-medium">
+                          <td className="border-r border-black px-1.5 py-[1px] font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
                             <EditableText
                               value={member.rolePortrait}
                               readOnly={readOnly}
+                              className="whitespace-nowrap"
                               onChange={(v) => onUpdateStaffField(member.id, 'rolePortrait', v)}
                             />
                           </td>
@@ -1080,10 +1150,11 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                         )}
                       </td>
                     )}
-                    <td className="border-r border-black px-1.5 py-[1px] font-medium relative">
+                    <td className="border-r border-black px-1.5 py-[1px] font-medium relative whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
                       <EditableText
                         value={staff.fullName}
                         readOnly={readOnly}
+                        className="whitespace-nowrap"
                         onChange={(v) => onUpdateStaffField(staff.id, 'fullName', v)}
                       />
                       {!readOnly && (
@@ -1097,10 +1168,11 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                         </button>
                       )}
                     </td>
-                    <td className="border-r border-black px-1.5 py-[1px] font-medium">
+                    <td className="border-r border-black px-1.5 py-[1px] font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
                       <EditableText
                         value={staff.rolePortrait}
                         readOnly={readOnly}
+                        className="whitespace-nowrap"
                         onChange={(v) => onUpdateStaffField(staff.id, 'rolePortrait', v)}
                       />
                     </td>

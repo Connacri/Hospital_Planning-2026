@@ -1,17 +1,6 @@
 import React, { useState } from 'react';
-import {
-  X,
-  Plus,
-  Trash2,
-  Edit2,
-  Check,
-  Calendar,
-  Sparkles,
-  Tag,
-  AlertCircle,
-  HelpCircle,
-} from 'lucide-react';
-import { LeaveTypeItem, DEFAULT_LEAVE_TYPES } from '../db/objectboxEngine';
+import { Tag, Plus, Trash2, Edit2, Check, X, HelpCircle, Sparkles, AlertTriangle } from 'lucide-react';
+import { LeaveTypeItem } from '../db/objectboxEngine';
 
 interface LeaveTypesModalProps {
   isOpen: boolean;
@@ -22,27 +11,30 @@ interface LeaveTypesModalProps {
   onDeleteLeaveType: (id: string) => void;
 }
 
-const PRESET_LEAVES: Array<{ code: string; label: string; color: string }> = [
-  { code: 'CSS', label: 'Congé Sans Solde', color: '#ea580c' },
-  { code: 'CE', label: 'Congé Exceptionnel', color: '#0284c7' },
-  { code: 'AT', label: 'Accident de Travail', color: '#dc2626' },
-  { code: 'RC', label: 'Récupération Compensatrice', color: '#16a34a' },
-  { code: 'ST', label: 'Stage / Formation', color: '#7c3aed' },
-  { code: 'CS', label: 'Congé Spécial', color: '#db2777' },
-  { code: 'CA', label: 'Congé Annuel (Supplémentaire)', color: '#ca8a04' },
+const PRESET_SUGGESTIONS = [
+  { code: 'CA', label: 'Congé Annuel', color: '#16a34a' },
+  { code: 'CM', label: 'Congé Maladie', color: '#dc2626' },
+  { code: 'MAT', label: 'Congé Maternité', color: '#db2777' },
+  { code: 'REC', label: 'Récupération', color: '#ca8a04' },
+  { code: 'CSS', label: 'Congé Sans Solde', color: '#475569' },
+  { code: 'AT', label: 'Accident Travail', color: '#e11d48' },
+  { code: 'MIS', label: 'Mission / Stage', color: '#2563eb' },
+  { code: 'CP', label: 'Congé Paternité', color: '#0d9488' },
 ];
 
 const COLOR_OPTIONS = [
-  '#0284c7', // Sky
-  '#4338ca', // Indigo
-  '#059669', // Emerald
-  '#d97706', // Amber
-  '#e11d48', // Rose
-  '#9333ea', // Purple
-  '#475569', // Slate
-  '#0d9488', // Teal
-  '#ea580c', // Orange
-  '#dc2626', // Red
+  '#dc2626',
+  '#ea580c',
+  '#d97706',
+  '#16a34a',
+  '#0d9488',
+  '#0284c7',
+  '#2563eb',
+  '#7c3aed',
+  '#c026d3',
+  '#db2777',
+  '#475569',
+  '#111827',
 ];
 
 export const LeaveTypesModal: React.FC<LeaveTypesModalProps> = ({
@@ -53,14 +45,23 @@ export const LeaveTypesModal: React.FC<LeaveTypesModalProps> = ({
   onUpdateLeaveType,
   onDeleteLeaveType,
 }) => {
-  const [newCode, setNewCode] = useState('');
-  const [newLabel, setNewLabel] = useState('');
-  const [newColor, setNewColor] = useState(COLOR_OPTIONS[0]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editCode, setEditCode] = useState('');
   const [editLabel, setEditLabel] = useState('');
-  const [editColor, setEditColor] = useState('');
+  const [editColor, setEditColor] = useState(COLOR_OPTIONS[0]);
+
+  const [newCode, setNewCode] = useState('');
+  const [newLabel, setNewLabel] = useState('');
+  const [newColor, setNewColor] = useState(COLOR_OPTIONS[5]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Mandatory confirmation state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    type: 'delete' | 'edit' | 'add';
+    id?: string;
+    targetData?: { code: string; label: string; color: string };
+    message: string;
+  } | null>(null);
 
   if (!isOpen) return null;
 
@@ -71,16 +72,23 @@ export const LeaveTypesModal: React.FC<LeaveTypesModalProps> = ({
     setEditColor(item.color || COLOR_OPTIONS[0]);
   };
 
-  const handleSaveEdit = (id: string) => {
-    if (!editCode.trim() || !editLabel.trim()) {
-      return;
-    }
-    onUpdateLeaveType(id, {
-      code: editCode.trim(),
-      label: editLabel.trim(),
-      color: editColor,
+  const handleRequestSaveEdit = (id: string) => {
+    if (!editCode.trim() || !editLabel.trim()) return;
+    setConfirmDialog({
+      type: 'edit',
+      id,
+      targetData: { code: editCode.trim(), label: editLabel.trim(), color: editColor },
+      message: `Confirmer la modification du motif "${editCode.trim()}" (${editLabel.trim()}) ?`,
     });
-    setEditingId(null);
+  };
+
+  const handleRequestDelete = (item: LeaveTypeItem) => {
+    setConfirmDialog({
+      type: 'delete',
+      id: item.id,
+      targetData: { code: item.code, label: item.label, color: item.color || '#0284c7' },
+      message: `Confirmer la suppression du motif de congé "${item.code}" (${item.label}) ?`,
+    });
   };
 
   const handleAddSubmit = (e: React.FormEvent) => {
@@ -100,16 +108,15 @@ export const LeaveTypesModal: React.FC<LeaveTypesModalProps> = ({
       return;
     }
 
-    onAddLeaveType({
-      code: codeUpper,
-      label: newLabel.trim(),
-      color: newColor,
-      isSystem: false,
+    setConfirmDialog({
+      type: 'add',
+      targetData: {
+        code: codeUpper,
+        label: newLabel.trim(),
+        color: newColor,
+      },
+      message: `Confirmer la création du motif "${codeUpper}" (${newLabel.trim()}) ?`,
     });
-
-    setNewCode('');
-    setNewLabel('');
-    setErrorMsg(null);
   };
 
   const handleAddPreset = (preset: { code: string; label: string; color: string }) => {
@@ -117,18 +124,47 @@ export const LeaveTypesModal: React.FC<LeaveTypesModalProps> = ({
       setErrorMsg(`Le type "${preset.code}" est déjà présent dans la liste.`);
       return;
     }
-    onAddLeaveType({
-      code: preset.code,
-      label: preset.label,
-      color: preset.color,
-      isSystem: false,
+    setConfirmDialog({
+      type: 'add',
+      targetData: {
+        code: preset.code,
+        label: preset.label,
+        color: preset.color,
+      },
+      message: `Ajouter le statut prédéfini "${preset.code}" (${preset.label}) ?`,
     });
-    setErrorMsg(null);
+  };
+
+  const handleConfirmAction = () => {
+    if (!confirmDialog) return;
+
+    if (confirmDialog.type === 'delete' && confirmDialog.id) {
+      onDeleteLeaveType(confirmDialog.id);
+    } else if (confirmDialog.type === 'edit' && confirmDialog.id && confirmDialog.targetData) {
+      onUpdateLeaveType(confirmDialog.id, {
+        code: confirmDialog.targetData.code,
+        label: confirmDialog.targetData.label,
+        color: confirmDialog.targetData.color,
+      });
+      setEditingId(null);
+    } else if (confirmDialog.type === 'add' && confirmDialog.targetData) {
+      onAddLeaveType({
+        code: confirmDialog.targetData.code,
+        label: confirmDialog.targetData.label,
+        color: confirmDialog.targetData.color,
+        isSystem: false,
+      });
+      setNewCode('');
+      setNewLabel('');
+      setErrorMsg(null);
+    }
+
+    setConfirmDialog(null);
   };
 
   return (
-    <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto font-sans">
-      <div className="bg-slate-950 border border-slate-800 rounded-2xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto">
+    <div className="no-print fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto font-sans">
+      <div className="bg-slate-950 border border-slate-800 rounded-t-2xl sm:rounded-2xl max-w-2xl w-full max-h-[90vh] sm:max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-800 bg-slate-900/50 shrink-0">
           <div className="flex items-center gap-2.5 sm:gap-3">
@@ -137,42 +173,49 @@ export const LeaveTypesModal: React.FC<LeaveTypesModalProps> = ({
             </div>
             <div>
               <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2 flex-wrap">
-                <span>Gestion des Types de Congés & Statuts</span>
-                <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                <span>Gestion des Types de Congés &amp; Statuts</span>
+                <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">
                   {leaveTypes.length} types
                 </span>
               </h2>
-              <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
-                Mis à jour automatiquement dans la légende et les tableaux d'activité.
+              <p className="text-[11px] sm:text-xs text-slate-400">
+                Personnalisez les abréviations, couleurs et statuts disponibles dans les plannings
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Fermer"
             className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors shrink-0 min-h-[36px] min-w-[36px] flex items-center justify-center"
+            title="Fermer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-4 sm:p-6 space-y-5 sm:space-y-6 flex-1 overflow-y-auto">
+        {/* Scrollable Content */}
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 text-slate-300">
           {errorMsg && (
-            <div className="p-3 bg-red-950/60 border border-red-800 rounded-xl flex items-center gap-2 text-xs text-red-200">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            <div className="p-3 bg-red-950/60 border border-red-800 text-red-200 rounded-xl text-xs flex items-center justify-between">
               <span>{errorMsg}</span>
+              <button
+                type="button"
+                onClick={() => setErrorMsg(null)}
+                className="text-red-400 hover:text-white"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
           )}
 
-          {/* Quick Presets Section */}
+          {/* Quick presets */}
           <div>
             <div className="text-xs font-semibold text-slate-300 mb-2 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>Raccourcis : Ajouter un type de congé hospitalier courant en 1 clic</span>
+              <span>Modèles fréquents rapides :</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {PRESET_LEAVES.map((preset) => {
+              {PRESET_SUGGESTIONS.map((preset) => {
                 const alreadyExists = leaveTypes.some(
                   (lt) => lt.code.toLowerCase() === preset.code.toLowerCase()
                 );
@@ -182,10 +225,10 @@ export const LeaveTypesModal: React.FC<LeaveTypesModalProps> = ({
                     type="button"
                     disabled={alreadyExists}
                     onClick={() => handleAddPreset(preset)}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition-colors min-h-[36px] ${
+                    className={`text-xs px-2.5 py-1 rounded-lg border transition-all flex items-center gap-1.5 min-h-[32px] ${
                       alreadyExists
                         ? 'opacity-40 cursor-not-allowed bg-slate-900 border-slate-800 text-slate-500'
-                        : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-200 hover:text-white'
+                        : 'bg-slate-900 border-slate-700 text-slate-200 hover:border-slate-500 hover:bg-slate-850 shadow-xs'
                     }`}
                   >
                     <span
@@ -248,12 +291,12 @@ export const LeaveTypesModal: React.FC<LeaveTypesModalProps> = ({
                     type="color"
                     value={newColor}
                     onChange={(e) => setNewColor(e.target.value)}
-                    aria-label="Sélectionner une couleur"
-                    className="w-9 h-9 rounded border border-slate-700 bg-transparent cursor-pointer p-0.5 shrink-0"
+                    className="w-9 h-9 rounded-lg border border-slate-700 bg-transparent cursor-pointer shrink-0 p-0.5"
+                    title="Choisir une couleur"
                   />
                   <button
                     type="submit"
-                    className="flex-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs shadow transition-colors flex items-center justify-center gap-1 min-h-[38px]"
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2 px-3 rounded-lg flex items-center justify-center gap-1 transition-colors min-h-[38px] shadow-sm"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Ajouter</span>
@@ -263,16 +306,12 @@ export const LeaveTypesModal: React.FC<LeaveTypesModalProps> = ({
             </div>
           </form>
 
-          {/* Current Leaves Table */}
-          <div className="space-y-2">
-            <div className="text-xs font-semibold text-slate-300 flex items-center justify-between flex-wrap gap-1">
-              <span>Types de congés actuels dans le document ({leaveTypes.length})</span>
-              <span className="text-[11px] text-slate-500">
-                Légende et pinceau synchronisés en direct
-              </span>
+          {/* List of Existing Leave Types */}
+          <div>
+            <div className="text-xs font-semibold text-slate-300 mb-2">
+              Types de congés configurés dans le service :
             </div>
-
-            <div className="border border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-800/80 bg-slate-900/30">
+            <div className="divide-y divide-slate-850 border border-slate-800 rounded-xl overflow-hidden bg-slate-900/30">
               {leaveTypes.map((item) => {
                 const isEditing = editingId === item.id;
                 return (
@@ -304,7 +343,7 @@ export const LeaveTypesModal: React.FC<LeaveTypesModalProps> = ({
                         <div className="flex items-center gap-1.5 ml-auto">
                           <button
                             type="button"
-                            onClick={() => handleSaveEdit(item.id)}
+                            onClick={() => handleRequestSaveEdit(item.id)}
                             className="p-2 bg-emerald-600 text-white rounded hover:bg-emerald-500 transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
                             title="Sauvegarder"
                           >
@@ -352,7 +391,7 @@ export const LeaveTypesModal: React.FC<LeaveTypesModalProps> = ({
 
                           <button
                             type="button"
-                            onClick={() => onDeleteLeaveType(item.id)}
+                            onClick={() => handleRequestDelete(item)}
                             className="p-2 text-red-400 hover:text-red-300 rounded hover:bg-red-950/40 transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
                             title="Supprimer ce type de congé"
                           >
@@ -383,6 +422,40 @@ export const LeaveTypesModal: React.FC<LeaveTypesModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Confirmation Dialog */}
+      {confirmDialog && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-amber-500/20 text-amber-400 rounded-xl shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white">Confirmation requise</h4>
+                <p className="text-xs text-slate-300 mt-1">{confirmDialog.message}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setConfirmDialog(null)}
+                className="px-3 py-2 text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg min-h-[38px]"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmAction}
+                className="px-4 py-2 text-xs font-bold text-white bg-sky-600 hover:bg-sky-500 rounded-lg shadow-sm min-h-[38px]"
+              >
+                Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
