@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   FileText,
+  LayoutGrid,
   Users,
   Database,
   Code2,
@@ -91,10 +92,11 @@ import { MonthlyArchiveModal, MonthlyArchiveRecord } from './components/MonthlyA
 import { MonthHistoryModal } from './components/MonthHistoryModal';
 import { SupabaseSyncPanel } from './components/SupabaseSyncPanel';
 import { TableManagementModal, TableModalTab } from './components/TableManagementModal';
+import { ColumnWidthsFloatingModal } from './components/ColumnWidthsFloatingModal';
 import { exportDirectPdf } from './utils/pdfExportHelper';
 import { translations, SupportedLocale } from './i18n/translations';
-
-type ActiveTab = 'documents' | 'staff' | 'objectbox' | 'supabase' | 'flutter' | 'privacy';
+import { ModernMedicalDashboard } from './components/ModernMedicalDashboard';
+import { ModernAppSidebar, ActiveTab } from './components/ModernAppSidebar';
 
 export default function App() {
   const [locale, setLocale] = useState<SupportedLocale>('fr');
@@ -120,7 +122,7 @@ export default function App() {
   const staffList = snapshot.staffBox;
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<ActiveTab>('documents');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
 
   // Documents View State
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
@@ -154,6 +156,7 @@ export default function App() {
   const [showDistributionChart, setShowDistributionChart] = useState(false);
   const [isTableManagementModalOpen, setIsTableManagementModalOpen] = useState(false);
   const [tableManagementTab, setTableManagementTab] = useState<TableModalTab>('table1');
+  const [isColumnWidthsModalOpen, setIsColumnWidthsModalOpen] = useState(false);
 
   const handleOpenTableManagement = (tab: TableModalTab = 'table1') => {
     setTableManagementTab(tab);
@@ -828,7 +831,7 @@ class HospitalPdfGenerator {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen medical-dashboard-bg text-slate-900 p-2 sm:p-3.5 lg:p-5 flex flex-col justify-start font-sans antialiased">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="no-print fixed bottom-5 right-5 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-lg shadow-2xl flex items-center gap-2 border border-emerald-400 text-sm font-medium animate-in fade-in slide-in-from-bottom-3 duration-200">
@@ -837,185 +840,123 @@ class HospitalPdfGenerator {
         </div>
       )}
 
-      {/* TOP HOSPITAL BRANDING & NAVIGATION BAR */}
-      <header className="no-print bg-slate-950/95 border-b border-slate-800 sticky top-0 z-40 backdrop-blur w-full max-w-full overflow-hidden">
-        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 w-full max-w-full">
-          <div className="flex items-center justify-between h-14 sm:h-16 gap-1.5 sm:gap-4 w-full min-w-0">
-            {/* Hospital Logo & Identity */}
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 overflow-hidden">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-sky-900/30 shrink-0">
-                <Building2 className="w-4 h-4 sm:w-5 sm:h-5" />
+      {/* PROTOTYPE-INSPIRED CURVED CONTAINER FRAME */}
+      <div className="w-full max-w-[1720px] mx-auto bg-[#F7F8FC] rounded-[28px] sm:rounded-[36px] shadow-[0_30px_90px_rgba(0,0,0,0.65)] border border-slate-700/30 flex flex-col lg:flex-row min-h-[94vh] overflow-hidden">
+        
+        {/* Left Vertical Dark Pill Sidebar */}
+        <ModernAppSidebar
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          onOpenColumnWidths={() => setIsColumnWidthsModalOpen(true)}
+          onOpenCreateMonth={() => setIsCreateMonthModalOpen(true)}
+          onOpenServiceSettings={() => setIsServiceModalOpen(true)}
+          onOpenRegulatoryAlerts={() => setIsRegulatoryAlertsModalOpen(true)}
+          onOpenGuardStats={() => setIsGuardStatsModalOpen(true)}
+          locale={locale}
+          onToggleLocale={() => setLocale(locale === 'fr' ? 'ar' : locale === 'ar' ? 'en' : 'fr')}
+          staffCount={staffList.length}
+        />
+
+        {/* Right Main Content Stage */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-y-auto max-h-[calc(100vh-2rem)] p-3 sm:p-5 lg:p-6 text-slate-900">
+          
+          {/* Top Bar within the frame */}
+          <header className="no-print bg-white/80 backdrop-blur-md rounded-2xl border border-slate-100 p-3 sm:p-4 mb-4 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+            {/* Title & Month Button */}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-rose-500 to-indigo-600 flex items-center justify-center text-white shadow-md shrink-0">
+                <Building2 className="w-4 h-4" />
               </div>
               <div className="min-w-0 truncate">
-                <h1 className="text-xs sm:text-base font-bold tracking-tight text-white flex items-center gap-1.5 truncate">
-                  <span className="truncate">{t.appTitle}</span>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xs sm:text-sm font-extrabold text-slate-900 truncate">
+                    {t.appTitle}
+                  </h1>
                   <button
                     type="button"
                     onClick={() => setIsCreateMonthModalOpen(true)}
-                    title="Changer de mois ou créer un nouveau mois en continuité perpétuelle"
-                    className="hidden xs:inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800 hover:border-sky-600 transition-colors shrink-0 cursor-pointer shadow-xs"
+                    title="Changer de mois ou créer un nouveau mois"
+                    className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors shrink-0 shadow-xs"
                   >
-                    <Calendar className="w-3 h-3 text-sky-400 shrink-0" />
+                    <Calendar className="w-3 h-3 text-rose-500" />
                     <span>{config.guardMonthName || 'Octobre 2026'}</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsServiceModalOpen(true)}
-                    title="Modifier le service ou établissement"
-                    className="p-0.5 text-slate-400 hover:text-sky-300 rounded transition-colors shrink-0"
-                  >
-                    <Edit3 className="w-3 h-3" />
-                  </button>
-                </h1>
-                <p className="text-[10px] sm:text-xs text-slate-400 truncate hidden sm:block">
-                  {config.unitTitle || t.appSubtitle}
+                </div>
+                <p className="text-[10.5px] text-slate-400 truncate">
+                  {config.unitTitle || t.appSubtitle} · Dr. Medjber Tami
                 </p>
               </div>
             </div>
 
-            {/* Main Tabs Navigation (Desktop) */}
-            <nav className="hidden md:flex items-center gap-1 bg-slate-900/90 p-1 rounded-lg border border-slate-800 text-sm">
-              <button
-                type="button"
-                onClick={() => setActiveTab('documents')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors ${
-                  activeTab === 'documents'
-                    ? 'bg-sky-600 text-white shadow-sm'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
-                }`}
-              >
-                <FileText className="w-4 h-4" />
-                <span>{t.navDocuments}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab('staff')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors ${
-                  activeTab === 'staff'
-                    ? 'bg-sky-600 text-white shadow-sm'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
-                }`}
-              >
-                <Users className="w-4 h-4" />
-                <span>{t.navStaffManager}</span>
-                <span className="text-[11px] font-mono px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-                  {staffList.length}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab('objectbox')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors ${
-                  activeTab === 'objectbox'
-                    ? 'bg-sky-600 text-white shadow-sm'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
-                }`}
-              >
-                <Database className="w-4 h-4" />
-                <span>{t.navObjectBoxStudio}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab('supabase')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors ${
-                  activeTab === 'supabase'
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
-                }`}
-              >
-                <Cloud className="w-4 h-4 text-emerald-400" />
-                <span>{t.navSupabaseSync}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab('flutter')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors ${
-                  activeTab === 'flutter'
-                    ? 'bg-sky-600 text-white shadow-sm'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
-                }`}
-              >
-                <Code2 className="w-4 h-4" />
-                <span>{t.navFlutterExport}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab('privacy')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors ${
-                  activeTab === 'privacy'
-                    ? 'bg-sky-600 text-white shadow-sm'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
-                }`}
-              >
-                <Shield className="w-4 h-4" />
-                <span>{t.navLegalPrivacy}</span>
-              </button>
-            </nav>
-
-            {/* Quick Actions & Language Selector */}
-            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-              {/* Mobile Compact Language Selector */}
-              <div className="sm:hidden flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-[11px] font-bold">
-                <Globe className="w-3.5 h-3.5 text-sky-400 ml-1 mr-0.5 shrink-0" />
-                <select
-                  value={locale}
-                  onChange={(e) => setLocale(e.target.value as SupportedLocale)}
-                  aria-label="Sélectionner la langue"
-                  className="bg-transparent text-sky-300 font-bold text-[11px] px-1 py-1 focus:outline-none cursor-pointer"
+            {/* Quick Actions & Navigation tabs */}
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              {/* Tab Pills */}
+              <div className="flex items-center gap-1 p-1 bg-slate-100/90 rounded-xl text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('dashboard')}
+                  className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
+                    activeTab === 'dashboard'
+                      ? 'bg-white text-slate-900 shadow-sm font-bold'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
                 >
-                  <option value="fr" className="bg-slate-900 text-white">FR</option>
-                  <option value="ar" className="bg-slate-900 text-white">Ø¹Ø±Ø¨ÙŠ</option>
-                  <option value="en" className="bg-slate-900 text-white">EN</option>
-                </select>
+                  <LayoutGrid className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Dashboard</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('documents')}
+                  className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
+                    activeTab === 'documents'
+                      ? 'bg-white text-slate-900 shadow-sm font-bold'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Tableaux PDF</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('staff')}
+                  className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
+                    activeTab === 'staff'
+                      ? 'bg-white text-slate-900 shadow-sm font-bold'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Personnel</span>
+                  <span className="text-[10px] px-1.5 rounded-full bg-slate-200 text-slate-700">
+                    {staffList.length}
+                  </span>
+                </button>
               </div>
 
-              {/* Desktop Language Selector Pills */}
-              <div className="hidden sm:flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs font-semibold">
-                {(['fr', 'en', 'ar'] as SupportedLocale[]).map((l) => (
-                  <button
-                    key={l}
-                    type="button"
-                    onClick={() => setLocale(l)}
-                    className={`px-2 py-1 rounded transition-colors ${
-                      locale === l
-                        ? 'bg-slate-800 text-sky-400 font-bold'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    {l.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-
-              {/* Print Button */}
+              {/* Direct Print Button */}
               <button
                 type="button"
                 onClick={() => window.print()}
                 title={t.printCurrentView}
-                className="inline-flex items-center justify-center gap-1.5 p-2 sm:px-3 sm:py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow transition-colors shrink-0"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors shrink-0"
               >
-                <Printer className="w-4 h-4 shrink-0" />
-                <span className="hidden md:inline">{t.printCurrentView}</span>
+                <Printer className="w-3.5 h-3.5 text-rose-300" />
+                <span className="hidden sm:inline">Imprimer</span>
               </button>
 
-              {/* Direct PDF Export Button (no print dialog) */}
+              {/* Direct PDF Export */}
               <button
                 type="button"
                 onClick={handleDirectPdfDownload}
                 disabled={isExportingPdf}
                 title={t.exportPdfOnly}
-                className="inline-flex items-center justify-center gap-1.5 p-2 sm:px-3 sm:py-1.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-60 disabled:cursor-wait text-white rounded-lg text-xs font-semibold shadow transition-colors shrink-0"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 rounded-xl text-xs font-semibold shadow-xs transition-colors shrink-0"
               >
-                <Download className="w-4 h-4 shrink-0" />
-                <span className="hidden md:inline">
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">
                   {isExportingPdf
                     ? `${exportProgress.current}/${exportProgress.total}…`
-                    : t.exportPdfOnly}
+                    : 'Export PDF'}
                 </span>
               </button>
 
@@ -1024,81 +965,37 @@ class HospitalPdfGenerator {
                 type="button"
                 onClick={() => setShowResetConfirm(true)}
                 title={t.resetDefaultData}
-                className="p-2 sm:p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-lg transition-colors shrink-0"
+                className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-slate-100 rounded-lg transition-colors shrink-0"
               >
-                <RotateCcw className="w-4 h-4 shrink-0" />
+                <RotateCcw className="w-3.5 h-3.5" />
               </button>
             </div>
-          </div>
-        </div>
+          </header>
 
-        {/* Mobile Navigation Bar */}
-        <nav className="md:hidden flex items-center justify-between overflow-x-auto bg-slate-950 border-t border-slate-800 px-1 py-1 text-xs w-full max-w-full">
-          <button
-            type="button"
-            onClick={() => setActiveTab('documents')}
-            className={`p-1 flex flex-col items-center justify-center min-w-[50px] shrink-0 truncate ${
-              activeTab === 'documents' ? 'text-sky-400 font-bold' : 'text-slate-400'
-            }`}
-          >
-            <FileText className="w-4 h-4 shrink-0" />
-            <span className="text-[9px] mt-0.5 truncate max-w-full">{t.navDocuments}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('staff')}
-            className={`p-1 flex flex-col items-center justify-center min-w-[50px] shrink-0 truncate ${
-              activeTab === 'staff' ? 'text-sky-400 font-bold' : 'text-slate-400'
-            }`}
-          >
-            <Users className="w-4 h-4 shrink-0" />
-            <span className="text-[9px] mt-0.5 truncate max-w-full">{t.navStaffManager}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('objectbox')}
-            className={`p-1 flex flex-col items-center justify-center min-w-[50px] shrink-0 truncate ${
-              activeTab === 'objectbox' ? 'text-sky-400 font-bold' : 'text-slate-400'
-            }`}
-          >
-            <Database className="w-4 h-4 shrink-0" />
-            <span className="text-[9px] mt-0.5 truncate max-w-full">{t.navObjectBoxStudio}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('supabase')}
-            className={`p-1 flex flex-col items-center justify-center min-w-[50px] shrink-0 truncate ${
-              activeTab === 'supabase' ? 'text-emerald-400 font-bold' : 'text-slate-400'
-            }`}
-          >
-            <Cloud className="w-4 h-4 shrink-0 text-emerald-400" />
-            <span className="text-[9px] mt-0.5 truncate max-w-full">Supabase</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('flutter')}
-            className={`p-1 flex flex-col items-center justify-center min-w-[50px] shrink-0 truncate ${
-              activeTab === 'flutter' ? 'text-sky-400 font-bold' : 'text-slate-400'
-            }`}
-          >
-            <Code2 className="w-4 h-4 shrink-0" />
-            <span className="text-[9px] mt-0.5 truncate max-w-full">{t.navFlutterExport}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('privacy')}
-            className={`p-1 flex flex-col items-center justify-center min-w-[50px] shrink-0 truncate ${
-              activeTab === 'privacy' ? 'text-sky-400 font-bold' : 'text-slate-400'
-            }`}
-          >
-            <Shield className="w-4 h-4 shrink-0" />
-            <span className="text-[9px] mt-0.5 truncate max-w-full">{t.navLegalPrivacy}</span>
-          </button>
-        </nav>
-      </header>
-
-      {/* MAIN CONTENT AREA */}
-      <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8">
+          {/* MAIN CONTENT AREA */}
+          <main className="flex-1 w-full">
+            {/* TAB 0: MODERN MEDICAL DASHBOARD VIEW */}
+            {activeTab === 'dashboard' && (
+              <ModernMedicalDashboard
+                config={config}
+                staffList={staffList}
+                onOpenDocuments={(o) => {
+                  if (o) handleChangeOrientation(o);
+                  setActiveTab('documents');
+                }}
+                onOpenStaff={() => setActiveTab('staff')}
+                onOpenColumnWidths={() => setIsColumnWidthsModalOpen(true)}
+                onOpenTableManagement={handleOpenTableManagement}
+                onOpenServiceSettings={() => setIsServiceModalOpen(true)}
+                onOpenLeaveTypes={() => setIsLeaveTypesModalOpen(true)}
+                onOpenMonthHistory={() => setIsMonthHistoryModalOpen(true)}
+                onOpenRegulatoryAlerts={() => setIsRegulatoryAlertsModalOpen(true)}
+                onOpenGuardStats={() => setIsGuardStatsModalOpen(true)}
+                onOpenDocumentValidation={() => setIsDocumentValidationModalOpen(true)}
+                onOpenCreateMonth={() => setIsCreateMonthModalOpen(true)}
+                onQuickPrint={() => window.print()}
+              />
+            )}
         {/* ====================================================================
             TAB 1: DOCUMENTS & PDF (A4) VIEW
            ==================================================================== */}
@@ -1667,9 +1564,25 @@ class HospitalPdfGenerator {
               onOpenCreateMonthModal={() => setIsCreateMonthModalOpen(true)}
               onOpenSupabaseSync={() => setActiveTab('supabase')}
               onOpenTableManagementModal={handleOpenTableManagement}
+              onOpenColumnWidths={() => setIsColumnWidthsModalOpen(true)}
               locale={locale}
               t={t}
             />
+
+            {/* Floating button for quick access to Column Widths Adjuster */}
+            {!isColumnWidthsModalOpen && (
+              <div className="no-print fixed bottom-4 left-4 z-40">
+                <button
+                  type="button"
+                  onClick={() => setIsColumnWidthsModalOpen(true)}
+                  className="group flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-slate-900/95 hover:bg-slate-800 text-amber-300 hover:text-white border border-amber-500/40 hover:border-amber-400 shadow-2xl backdrop-blur-md text-xs font-bold transition-all hover:scale-105 active:scale-95"
+                  title="Ouvrir le panneau flottant pour régler les largeurs des colonnes (Nom, Grade, Équipe, etc.)"
+                >
+                  <SlidersHorizontal className="w-4 h-4 text-amber-400 group-hover:rotate-45 transition-transform" />
+                  <span>Régler Largeurs Colonnes</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -2360,6 +2273,8 @@ class HospitalPdfGenerator {
           </div>
         )}
       </main>
+        </div>
+      </div>
 
       {/* MODAL: ADD STAFF MEMBER */}
       {isAddStaffModalOpen && (
@@ -2663,6 +2578,14 @@ class HospitalPdfGenerator {
           objectBoxStore.createNewMonth(year, monthIndex, !!isModif);
           showToast(`Nouveau mois créé avec succès en continuité perpétuelle !`);
         }}
+      />
+
+      {/* FLOATING MODAL: RÉGLAGE EN DIRECT DES LARGEURS DE COLONNES */}
+      <ColumnWidthsFloatingModal
+        config={config}
+        isOpen={isColumnWidthsModalOpen}
+        onClose={() => setIsColumnWidthsModalOpen(false)}
+        orientation={orientation}
       />
 
       {/* FOOTER */}

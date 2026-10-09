@@ -13,6 +13,8 @@ import {
   isTableModificatif,
   getActiveNotesForTable,
   TableTargetKey,
+  cleanNoteText,
+  getColumnWidths,
 } from '../db/objectboxEngine';
 import { EditableText } from './EditableText';
 import { OfficialHospitalStamp, OfficialHospitalQrCode } from './OfficialStampAndQr';
@@ -478,6 +480,10 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
 
   const doctorChunksP1 = chunkArray(doctors, 7);
   const doctorChunksP2 = chunkArray(doctors, 12);
+  const cw = getColumnWidths(config);
+  const p1NameWidth = cw.portraitTable1.name;
+  const p1DayWidth = (100 - p1NameWidth) / 5;
+  const p2Widths = [cw.portraitTable2.name, cw.portraitTable2.grade, cw.portraitTable2.func];
 
   return (
     <div className="flex flex-col items-center gap-8 print-only-container">
@@ -588,8 +594,9 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                     {config.pdf1Page1Columns.map((col, idx) => (
                       <th
                         key={idx}
+                        style={{ width: `${idx === 0 ? p1NameWidth : p1DayWidth}%` }}
                         className={`border border-[#666666] px-1.5 py-1.5 font-bold whitespace-nowrap ${
-                          idx === 0 ? 'w-[32%] text-left pl-2.5 overflow-visible' : 'w-[13.6%] text-center overflow-hidden text-ellipsis'
+                          idx === 0 ? 'text-left pl-2.5 overflow-visible' : 'text-center overflow-hidden text-ellipsis'
                         }`}
                       >
                         <EditableText
@@ -698,7 +705,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                           >
                             <div className="flex-1">
                               <strong className="font-bold underline mr-1.5 text-black font-pdf">{note.prefix}</strong>
-                              <span>{note.text}</span>
+                              <span>{cleanNoteText(note.text, note.prefix)}</span>
                             </div>
                             {!readOnly && onOpenAddNoteModal && (
                               <button
@@ -852,9 +859,8 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                     {config.pdf1Page2Columns.map((col, idx) => (
                       <th
                         key={idx}
-                        className={`border border-[#666666] px-2 py-1.5 font-bold whitespace-nowrap overflow-hidden text-ellipsis ${
-                          idx === 0 ? 'w-[30%]' : idx === 1 ? 'w-[48%]' : 'w-[22%]'
-                        }`}
+                        style={{ width: `${p2Widths[idx]}%` }}
+                        className="border border-[#666666] px-2 py-1.5 font-bold whitespace-nowrap overflow-hidden text-ellipsis"
                       >
                         <EditableText
                           value={col}
@@ -941,7 +947,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                       >
                         <div className="flex-1">
                           <strong className="font-bold underline mr-1.5 text-black font-pdf">{note.prefix}</strong>
-                          <span>{note.text}</span>
+                          <span>{cleanNoteText(note.text, note.prefix)}</span>
                         </div>
                         {!readOnly && onOpenAddNoteModal && (
                           <button
@@ -1095,7 +1101,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
             <table className="w-full border-collapse border border-black text-black text-[13.5px] table-fixed">
               <thead>
                 <tr className="bg-[#3D3D3D] text-white text-[14px] font-bold h-[36px] text-center border-b border-black">
-                  <th className="border border-black w-[10%] px-1 whitespace-nowrap font-bold">
+                  <th style={{ width: `${cw.portraitTable3.num}%` }} className="border border-black px-1 whitespace-nowrap font-bold">
                     <EditableText
                       value={config.pdf1Page3Columns[0]}
                       darkSurface
@@ -1113,7 +1119,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                       }}
                     />
                   </th>
-                  <th className="border border-black w-[24%] px-2 whitespace-nowrap font-bold">
+                  <th style={{ width: `${cw.portraitTable3.name}%` }} className="border border-black px-2 whitespace-nowrap font-bold">
                     <EditableText
                       value={config.pdf1Page3Columns[1]}
                       darkSurface
@@ -1131,7 +1137,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                       }}
                     />
                   </th>
-                  <th className="border border-black w-[30%] px-2 whitespace-nowrap font-bold">
+                  <th style={{ width: `${cw.portraitTable3.func}%` }} className="border border-black px-2 whitespace-nowrap font-bold">
                     <EditableText
                       value={config.pdf1Page3Columns[2]}
                       darkSurface
@@ -1149,7 +1155,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                       }}
                     />
                   </th>
-                  <th className="border border-black w-[36%] px-2 whitespace-nowrap font-bold">
+                  <th style={{ width: `${cw.portraitTable3.obs}%` }} className="border border-black px-2 whitespace-nowrap font-bold">
                     <EditableText
                       value={config.pdf1Page3Columns[3]}
                       darkSurface
@@ -1470,7 +1476,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                     >
                       <div className="flex-1">
                         <strong className="font-bold underline mr-1.5 text-black font-pdf">{note.prefix}</strong>
-                        <span>{note.text}</span>
+                        <span>{cleanNoteText(note.text, note.prefix)}</span>
                       </div>
                       {!readOnly && onOpenAddNoteModal && (
                         <button

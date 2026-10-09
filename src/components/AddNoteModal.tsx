@@ -21,6 +21,7 @@ import {
   TABLE_TARGET_LABELS,
   objectBoxStore,
   HospitalDocumentConfig,
+  cleanNoteText,
 } from '../db/objectboxEngine';
 
 interface AddNoteModalProps {
@@ -122,11 +123,14 @@ export const AddNoteModal: React.FC<AddNoteModalProps> = ({
     const trimmed = noteText.trim();
     if (!trimmed) return;
 
+    const cleaned = cleanNoteText(trimmed, selectedPrefix);
+    if (!cleaned) return;
+
     const targets: TableTargetKey[] = selectedTargets.length === 0 ? ['all'] : selectedTargets;
 
     objectBoxStore.addDocumentNote({
       prefix: selectedPrefix,
-      text: trimmed,
+      text: cleaned,
       targetTables: targets,
       enabled: true,
     });
@@ -155,7 +159,10 @@ export const AddNoteModal: React.FC<AddNoteModalProps> = ({
 
   const handleSaveEdit = (id: string) => {
     if (!editingText.trim()) return;
-    objectBoxStore.updateDocumentNote(id, { text: editingText.trim() });
+    const note = notesList.find((n) => n.id === id);
+    const cleaned = cleanNoteText(editingText, note?.prefix);
+    if (!cleaned) return;
+    objectBoxStore.updateDocumentNote(id, { text: cleaned });
     setEditingNoteId(null);
   };
 
@@ -404,7 +411,7 @@ export const AddNoteModal: React.FC<AddNoteModalProps> = ({
                             </div>
                           ) : (
                             <p className="text-xs text-slate-800 leading-relaxed font-medium">
-                              {note.text}
+                              {cleanNoteText(note.text, note.prefix)}
                             </p>
                           )}
                         </div>

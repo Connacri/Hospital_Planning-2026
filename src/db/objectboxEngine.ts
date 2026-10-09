@@ -134,6 +134,67 @@ export interface HospitalDocumentConfig {
   guardRotationOrder?: string[];
   guardMonthName?: string;
   guardMonthOffsetDays?: number;
+  columnWidths?: TableColumnWidthSettings;
+}
+
+export interface TableColumnWidthSettings {
+  // Tableaux Paysage
+  landscapeMedical?: { name: number; grade: number };
+  landscapeParamedicalDay?: { name: number; grade: number };
+  landscapeGuard?: { name: number; grade: number; team: number };
+  landscapeHygiene?: { name: number; grade: number };
+
+  // Tableaux Portrait
+  portraitTable1?: { name: number };
+  portraitTable2?: { name: number; grade: number; func: number };
+  portraitTable3?: { num: number; name: number; func: number; obs: number };
+}
+
+export const DEFAULT_COLUMN_WIDTHS: Required<TableColumnWidthSettings> = {
+  landscapeMedical: { name: 12.0, grade: 18.0 },
+  landscapeParamedicalDay: { name: 11.0, grade: 12.5 },
+  landscapeGuard: { name: 10.5, grade: 10.8, team: 4.2 },
+  landscapeHygiene: { name: 11.0, grade: 12.5 },
+  portraitTable1: { name: 27.0 },
+  portraitTable2: { name: 28.0, grade: 50.0, func: 22.0 },
+  portraitTable3: { num: 10.0, name: 25.0, func: 31.0, obs: 34.0 },
+};
+
+export function getColumnWidths(config: HospitalDocumentConfig): Required<TableColumnWidthSettings> {
+  const cw = config.columnWidths;
+  return {
+    landscapeMedical: {
+      name: cw?.landscapeMedical?.name ?? DEFAULT_COLUMN_WIDTHS.landscapeMedical.name,
+      grade: cw?.landscapeMedical?.grade ?? DEFAULT_COLUMN_WIDTHS.landscapeMedical.grade,
+    },
+    landscapeParamedicalDay: {
+      name: cw?.landscapeParamedicalDay?.name ?? DEFAULT_COLUMN_WIDTHS.landscapeParamedicalDay.name,
+      grade: cw?.landscapeParamedicalDay?.grade ?? DEFAULT_COLUMN_WIDTHS.landscapeParamedicalDay.grade,
+    },
+    landscapeGuard: {
+      name: cw?.landscapeGuard?.name ?? DEFAULT_COLUMN_WIDTHS.landscapeGuard.name,
+      grade: cw?.landscapeGuard?.grade ?? DEFAULT_COLUMN_WIDTHS.landscapeGuard.grade,
+      team: cw?.landscapeGuard?.team ?? DEFAULT_COLUMN_WIDTHS.landscapeGuard.team,
+    },
+    landscapeHygiene: {
+      name: cw?.landscapeHygiene?.name ?? DEFAULT_COLUMN_WIDTHS.landscapeHygiene.name,
+      grade: cw?.landscapeHygiene?.grade ?? DEFAULT_COLUMN_WIDTHS.landscapeHygiene.grade,
+    },
+    portraitTable1: {
+      name: cw?.portraitTable1?.name ?? DEFAULT_COLUMN_WIDTHS.portraitTable1.name,
+    },
+    portraitTable2: {
+      name: cw?.portraitTable2?.name ?? DEFAULT_COLUMN_WIDTHS.portraitTable2.name,
+      grade: cw?.portraitTable2?.grade ?? DEFAULT_COLUMN_WIDTHS.portraitTable2.grade,
+      func: cw?.portraitTable2?.func ?? DEFAULT_COLUMN_WIDTHS.portraitTable2.func,
+    },
+    portraitTable3: {
+      num: cw?.portraitTable3?.num ?? DEFAULT_COLUMN_WIDTHS.portraitTable3.num,
+      name: cw?.portraitTable3?.name ?? DEFAULT_COLUMN_WIDTHS.portraitTable3.name,
+      func: cw?.portraitTable3?.func ?? DEFAULT_COLUMN_WIDTHS.portraitTable3.func,
+      obs: cw?.portraitTable3?.obs ?? DEFAULT_COLUMN_WIDTHS.portraitTable3.obs,
+    },
+  };
 }
 
 export type TableTargetKey =
@@ -166,30 +227,59 @@ export const TABLE_TARGET_LABELS: Record<TableTargetKey, string> = {
   pdf2Page5: 'Tableau Hygiène (12h)',
 };
 
+export function cleanNoteText(text: string, prefix?: string): string {
+  if (!text) return '';
+  let cleaned = text.trim();
+  // Supprime tout préfixe N.B. ou similaire déjà présent au début du texte pour éviter qu'il soit doublé
+  cleaned = cleaned.replace(/^(N\.?B\.?\s*:?|NOTE\s*:?|OBSERVATION\s*:?|AVIS\s*:?|RAPPEL\s*:?)\s*/i, '');
+  if (prefix) {
+    const escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    cleaned = cleaned.replace(new RegExp(`^${escapedPrefix}\\s*`, 'i'), '');
+  }
+  return cleaned.trim();
+}
+
 export function getActiveNotesForTable(
   config: HospitalDocumentConfig,
   tableKey: TableTargetKey
 ): DocumentNoteItem[] {
+  let notes: DocumentNoteItem[] = [];
   if (config.documentNotes && config.documentNotes.length > 0) {
-    return config.documentNotes.filter(
+    notes = config.documentNotes.filter(
       (n) => n.enabled && (n.targetTables.includes('all') || n.targetTables.includes(tableKey))
     );
-  }
-  // Fallback to legacy nbNotice
-  if (config.nbNotice) {
+  } else if (config.nbNotice) {
     if (tableKey === 'all' || tableKey === 'pdf1Page3' || tableKey === 'pdf2Page1') {
-      return [
-        {
-          id: 'default-legacy-nb',
-          prefix: 'N.B. :',
-          text: config.nbNotice,
-          targetTables: ['all'],
-          enabled: true,
-        },
-      ];
+      const cleaned = cleanNoteText(config.nbNotice);
+      if (cleaned) {
+        notes = [
+          {
+            id: 'default-legacy-nb',
+            prefix: 'N.B. :',
+            text: cleaned,
+            targetTables: ['all'],
+            enabled: true,
+          },
+        ];
+      }
     }
   }
-  return [];
+
+  // Déduplication et nettoyage strict pour éviter tout doublon de NB
+  const seen = new Set<string>();
+  const deduped: DocumentNoteItem[] = [];
+  for (const n of notes) {
+    const cleanedText = cleanNoteText(n.text, n.prefix);
+    const key = `${(n.prefix || '').trim().toLowerCase()}:::${cleanedText.toLowerCase()}`;
+    if (!seen.has(key) && cleanedText) {
+      seen.add(key);
+      deduped.push({
+        ...n,
+        text: cleanedText,
+      });
+    }
+  }
+  return deduped;
 }
 
 export interface ObjectBoxDatabaseSnapshot {
@@ -624,7 +714,7 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
     guardRotationOrder: ['A', 'D', 'B', 'E', 'C'],
     guardMonthName: 'Octobre 2026',
     guardMonthOffsetDays: 0,
-    nbNotice: "N.B : Toutes modifications de programme ne doivent se faire qu'après accord de la direction",
+    nbNotice: "Toutes modifications de programme ne doivent se faire qu'après accord de la direction",
     signaturesPortrait: ['Le Médecin chef', 'Le Surveillant Médical', 'DAPM', 'Le Directeur Général'],
     signaturesLandscape: ['Le Médecin Chef', 'Le Surveillant Médical', 'DAPM', 'Le Directeur Général'],
     daysColumns,
@@ -1273,6 +1363,36 @@ export class ObjectBoxLocalStore {
               staff.obsPortrait = '';
             }
           });
+
+          // Assurer qu'aucun préfixe N.B. n'est doublé dans la config stockée
+          if (parsed.config) {
+            if (parsed.config.nbNotice) {
+              const cleanedNb = cleanNoteText(parsed.config.nbNotice);
+              if (cleanedNb !== parsed.config.nbNotice) {
+                parsed.config.nbNotice = cleanedNb;
+                hasNormalized = true;
+              }
+            }
+            if (parsed.config.documentNotes && Array.isArray(parsed.config.documentNotes)) {
+              const seenNotes = new Set<string>();
+              const dedupedNotes: DocumentNoteItem[] = [];
+              parsed.config.documentNotes.forEach((n) => {
+                const cleanedText = cleanNoteText(n.text, n.prefix);
+                const key = `${(n.prefix || '').trim().toLowerCase()}:::${cleanedText.toLowerCase()}`;
+                if (!seenNotes.has(key) && cleanedText) {
+                  seenNotes.add(key);
+                  if (cleanedText !== n.text) {
+                    hasNormalized = true;
+                  }
+                  dedupedNotes.push({ ...n, text: cleanedText });
+                } else {
+                  hasNormalized = true;
+                }
+              });
+              parsed.config.documentNotes = dedupedNotes;
+            }
+          }
+
           if (hasNormalized) {
             this.persistAsync(parsed);
           }
@@ -1990,6 +2110,40 @@ export class ObjectBoxLocalStore {
       ...this.snapshot.config,
       documentNotes: currentNotes.map((n) => (n.id === id ? { ...n, enabled: !n.enabled } : n)),
     };
+    this.notify();
+  }
+
+  /**
+   * Met à jour les largeurs personnalisées des colonnes des tableaux
+   */
+  updateColumnWidths(partial: Partial<TableColumnWidthSettings>): void {
+    const current = getColumnWidths(this.snapshot.config);
+    const merged: Required<TableColumnWidthSettings> = {
+      landscapeMedical: { ...current.landscapeMedical, ...(partial.landscapeMedical || {}) },
+      landscapeParamedicalDay: { ...current.landscapeParamedicalDay, ...(partial.landscapeParamedicalDay || {}) },
+      landscapeGuard: { ...current.landscapeGuard, ...(partial.landscapeGuard || {}) },
+      landscapeHygiene: { ...current.landscapeHygiene, ...(partial.landscapeHygiene || {}) },
+      portraitTable1: { ...current.portraitTable1, ...(partial.portraitTable1 || {}) },
+      portraitTable2: { ...current.portraitTable2, ...(partial.portraitTable2 || {}) },
+      portraitTable3: { ...current.portraitTable3, ...(partial.portraitTable3 || {}) },
+    };
+    this.snapshot.config = {
+      ...this.snapshot.config,
+      columnWidths: merged,
+    };
+    this.persistAsync(this.snapshot);
+    this.notify();
+  }
+
+  /**
+   * Rétablit les largeurs par défaut recommandées
+   */
+  resetColumnWidths(): void {
+    this.snapshot.config = {
+      ...this.snapshot.config,
+      columnWidths: { ...DEFAULT_COLUMN_WIDTHS },
+    };
+    this.persistAsync(this.snapshot);
     this.notify();
   }
 }

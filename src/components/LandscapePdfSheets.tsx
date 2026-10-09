@@ -11,6 +11,8 @@ import {
   isTableModificatif,
   getActiveNotesForTable,
   TableTargetKey,
+  cleanNoteText,
+  getColumnWidths,
 } from '../db/objectboxEngine';
 import { EditableText } from './EditableText';
 import { OfficialHospitalStamp, OfficialHospitalQrCode } from './OfficialStampAndQr';
@@ -169,7 +171,7 @@ export const OfficialLandscapeTableUnderbar: React.FC<{
             >
               <div className="flex-1">
                 <strong className="font-bold underline mr-1 text-black font-pdf">{note.prefix}</strong>
-                <span>{note.text}</span>
+                <span>{cleanNoteText(note.text, note.prefix)}</span>
               </div>
               {!readOnly && onOpenAddNoteModal && (
                 <button
@@ -292,6 +294,9 @@ interface ActivityGridTableProps {
   activePaintCode: string | null;
   compactRows?: boolean;
   readOnly?: boolean;
+  nameColWidth?: number | string;
+  gradeColWidth?: number | string;
+  teamColWidth?: number | string;
   onUpdateConfig: (partial: Partial<HospitalDocumentConfig>) => void;
   onUpdateStaffField: <K extends keyof StaffEntity>(id: number, field: K, value: StaffEntity[K]) => void;
   onUpdateStaffDayCell: (id: number, day: number, code: string) => void;
@@ -306,6 +311,9 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
   activePaintCode,
   compactRows = false,
   readOnly = false,
+  nameColWidth,
+  gradeColWidth,
+  teamColWidth,
   onUpdateConfig,
   onUpdateStaffField,
   onUpdateStaffDayCell,
@@ -330,6 +338,19 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
 
   const rowHeightClass = compactRows ? 'h-[17px] text-[11px] leading-tight' : 'h-[25px] text-[12.5px]';
 
+  const formatWidth = (w?: number | string, fallback = 10): string => {
+    if (typeof w === 'number') return `${w}%`;
+    if (typeof w === 'string') {
+      if (w.startsWith('w-[')) return w.slice(3, -1);
+      return w.endsWith('%') ? w : `${w}%`;
+    }
+    return `${fallback}%`;
+  };
+
+  const effectiveNameWidth = formatWidth(nameColWidth, showTeamColumn ? 9.6 : 10.5);
+  const effectiveGradeWidth = formatWidth(gradeColWidth, showTeamColumn ? 10.5 : 12.0);
+  const effectiveTeamWidth = formatWidth(teamColWidth, 3.4);
+
   return (
     <div
       onMouseLeave={() => setIsMouseDown(false)}
@@ -339,31 +360,40 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
       <table className="w-full border-collapse border border-[#666666] text-center font-pdf table-fixed">
         <thead>
           <tr className={`${compactRows ? 'h-[24px]' : 'h-[30px]'} text-[11.5px] leading-[1.1] bg-[#3D3D3D] text-white font-bold`}>
-            <th className={`border border-[#555555] bg-[#3D3D3D] text-white font-bold ${showTeamColumn ? 'w-[11.5%]' : 'w-[12%]'} px-1 whitespace-nowrap text-left pl-1.5`}>
+            <th
+              style={{ width: effectiveNameWidth }}
+              className="border border-[#555555] bg-[#3D3D3D] text-white font-bold px-1 whitespace-nowrap text-left pl-1.5"
+            >
               <EditableText
                 value={config.pdf2NameColHeader}
                 darkSurface
                 readOnly={readOnly}
-                className="whitespace-nowrap font-bold text-white"
+                className="whitespace-nowrap font-bold text-white text-[11px]"
                 onChange={(v) => onUpdateConfig({ pdf2NameColHeader: v })}
               />
             </th>
-            <th className={`border border-[#555555] bg-[#3D3D3D] text-white font-bold ${showTeamColumn ? 'w-[13%]' : 'w-[15.5%]'} px-1 whitespace-nowrap text-center`}>
+            <th
+              style={{ width: effectiveGradeWidth }}
+              className="border border-[#555555] bg-[#3D3D3D] text-white font-bold px-1 whitespace-nowrap text-center"
+            >
               <EditableText
                 value={config.pdf2GradeColHeader}
                 darkSurface
                 readOnly={readOnly}
-                className="whitespace-nowrap font-bold text-white"
+                className="whitespace-nowrap font-bold text-white text-[11px]"
                 onChange={(v) => onUpdateConfig({ pdf2GradeColHeader: v })}
               />
             </th>
             {showTeamColumn && (
-              <th className="border border-[#555555] bg-[#3D3D3D] text-white font-bold w-[2.5%] px-0.5 whitespace-nowrap text-center">
+              <th
+                style={{ width: effectiveTeamWidth }}
+                className="border border-[#555555] bg-[#3D3D3D] text-white font-bold px-0.5 whitespace-nowrap text-center"
+              >
                 <EditableText
                   value={config.pdf2TeamColHeader}
                   darkSurface
                   readOnly={readOnly}
-                  className="whitespace-nowrap font-bold text-white"
+                  className="whitespace-nowrap font-bold text-white text-[10.5px]"
                   onChange={(v) => onUpdateConfig({ pdf2TeamColHeader: v })}
                 />
               </th>
@@ -417,13 +447,13 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
                 key={staff.id}
                 className={`group ${rowHeightClass} font-medium transition-colors`}
               >
-                {/* Nom et Prénom - largeur réduite pour libérer la place au grade et aux jours */}
+                {/* Nom et Prénom */}
                 <td className="border border-[#CCCCCC] bg-white text-black px-1.5 text-left relative whitespace-nowrap align-middle">
                   <EditableText
                     value={staff.fullName}
                     readOnly={readOnly}
                     className={`whitespace-nowrap font-semibold tracking-tight block overflow-visible ${
-                      compactRows ? 'text-[10px] sm:text-[10.5px]' : 'text-[11px] sm:text-[11.5px]'
+                      compactRows ? 'text-[10px] sm:text-[10.5px]' : 'text-[10.5px] sm:text-[11px]'
                     }`}
                     onChange={(v) => onUpdateStaffField(staff.id, 'fullName', v)}
                   />
@@ -439,14 +469,14 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
                   )}
                 </td>
 
-                {/* Grade - Texte en une seule ligne avec l'ancien font size */}
+                {/* Grade - Texte en une seule ligne avec espacement soigné pour éviter tout dépassement */}
                 <td className={`border border-[#CCCCCC] bg-white text-black px-1 leading-tight align-middle whitespace-nowrap text-center ${
-                  compactRows ? 'text-[10.5px] sm:text-[11px]' : 'text-[11px] sm:text-[11.5px]'
+                  compactRows ? 'text-[10px] sm:text-[10.5px]' : 'text-[10.5px] sm:text-[11px]'
                 }`}>
                   <EditableText
                     value={cleanGrade}
                     readOnly={readOnly}
-                    className="whitespace-nowrap font-medium block overflow-visible text-center"
+                    className="whitespace-nowrap font-medium block overflow-visible text-center tracking-tight"
                     onChange={(v) => onUpdateStaffField(staff.id, 'gradeLandscape', v.replace(/\r?\n+/g, ' ').trim())}
                   />
                 </td>
@@ -645,6 +675,7 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
   const paramedicalDayChunks = chunkArray(paramedicalDayRows, 12);
   const paramedicalGuardChunks = chunkArray(paramedicalGuardRows, 20);
   const hygieneChunks = chunkArray(hygieneRows, 12);
+  const cw = getColumnWidths(config);
 
   return (
     <div className="flex flex-col items-center gap-8 print-only-container">
@@ -717,6 +748,8 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
               <ActivityGridTable
                 rows={chunk}
                 showTeamColumn={false}
+                nameColWidth={cw.landscapeMedical.name}
+                gradeColWidth={cw.landscapeMedical.grade}
                 config={config}
                 activePaintCode={activePaintCode}
                 readOnly={readOnly}
@@ -847,6 +880,8 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
               <ActivityGridTable
                 rows={chunk}
                 showTeamColumn={false}
+                nameColWidth={cw.landscapeParamedicalDay.name}
+                gradeColWidth={cw.landscapeParamedicalDay.grade}
                 config={config}
                 activePaintCode={activePaintCode}
                 readOnly={readOnly}
@@ -978,6 +1013,9 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
               <ActivityGridTable
                 rows={chunk}
                 showTeamColumn={true}
+                teamColWidth={cw.landscapeGuard.team}
+                nameColWidth={cw.landscapeGuard.name}
+                gradeColWidth={cw.landscapeGuard.grade}
                 compactRows
                 config={config}
                 activePaintCode={activePaintCode}
@@ -1139,6 +1177,8 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
               <ActivityGridTable
                 rows={chunk}
                 showTeamColumn={false}
+                nameColWidth={cw.landscapeHygiene.name}
+                gradeColWidth={cw.landscapeHygiene.grade}
                 config={config}
                 activePaintCode={activePaintCode}
                 readOnly={readOnly}

@@ -30,6 +30,7 @@ import {
   CalendarOff,
   Cloud,
   Layers,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { TranslationDictionary, SupportedLocale } from '../i18n/translations';
 import { TableTargetKey } from '../db/objectboxEngine';
@@ -65,6 +66,7 @@ interface QuickActionsFloatingMenuProps {
   onOpenSupabaseSync?: () => void;
   onOpenTableManagementModal?: (tab?: 'table1' | 'table2' | 'table3') => void;
   onOpenAddNoteModal?: (target?: TableTargetKey) => void;
+  onOpenColumnWidths?: () => void;
   onCreateNextMonth?: () => void;
   locale: SupportedLocale;
   t: TranslationDictionary;
@@ -100,6 +102,7 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
   onOpenMonthlyArchive,
   onOpenSupabaseSync,
   onOpenTableManagementModal,
+  onOpenColumnWidths,
   onCreateNextMonth,
   locale,
   t,
@@ -171,6 +174,18 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
               <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-1 rounded-lg border border-amber-500/40">
                 (Modificatif)
               </span>
+            )}
+
+            {onOpenColumnWidths && (
+              <button
+                type="button"
+                onClick={onOpenColumnWidths}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-amber-300 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+                title="Régler les largeurs de colonnes (Nom, Grade, Équipe, etc.)"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Largeurs</span>
+              </button>
             )}
 
             <button
@@ -367,6 +382,21 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
                 </button>
               </div>
             </div>
+
+            {/* COLUMN WIDTHS REAL-TIME ADJUSTER BUTTON */}
+            {onOpenColumnWidths && (
+              <div className="pt-2 border-t border-slate-800/80">
+                <button
+                  type="button"
+                  onClick={onOpenColumnWidths}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-amber-600 via-indigo-600 to-indigo-700 hover:from-amber-500 hover:to-indigo-600 text-white text-xs font-bold shadow-md transition-all hover:scale-[1.01] active:scale-[0.99]"
+                  title="Ajuster en direct les largeurs de colonnes (Nom, Grade, Équipe, Dates/Jours) avec prévisualisation"
+                >
+                  <SlidersHorizontal className="w-4 h-4 text-amber-200" />
+                  <span>Régler Largeurs Colonnes PDF</span>
+                </button>
+              </div>
+            )}
 
             {/* HOSPITAL TOOLS: MATERNITY LEAVE, GUARD ROTATION & LEAVE TYPES */}
             <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
