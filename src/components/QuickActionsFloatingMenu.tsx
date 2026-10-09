@@ -29,6 +29,7 @@ import {
   Calendar,
   CalendarOff,
   Cloud,
+  Layers,
 } from 'lucide-react';
 import { TranslationDictionary, SupportedLocale } from '../i18n/translations';
 
@@ -62,6 +63,9 @@ interface QuickActionsFloatingMenuProps {
   onOpenDocumentValidation?: () => void;
   onOpenMonthlyArchive?: () => void;
   onOpenSupabaseSync?: () => void;
+  onOpenTableManagementModal?: (tab?: 'table1' | 'table2' | 'table3') => void;
+  onOpenAddNoteModal?: (target?: TableTargetKey) => void;
+  onCreateNextMonth?: () => void;
   locale: SupportedLocale;
   t: TranslationDictionary;
 }
@@ -96,6 +100,7 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
   onOpenDocumentValidation,
   onOpenMonthlyArchive,
   onOpenSupabaseSync,
+  onOpenTableManagementModal,
   locale,
   t,
 }) => {
@@ -500,6 +505,17 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
                   >
                     <Cloud className="w-3.5 h-3.5 text-emerald-400" />
                     <span>Remote DB &amp; Supabase Cloud Sync</span>
+                  </button>
+                )}
+                {onOpenTableManagementModal && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenTableManagementModal('table1')}
+                    className="col-span-2 flex items-center justify-center gap-1.5 px-2 py-1.5 bg-blue-950/80 hover:bg-blue-900 border border-blue-700 text-blue-200 rounded-lg text-[10.5px] font-bold transition-colors shadow-2xs"
+                    title="Ouvrir le formulaire pour réorganiser et affecter les tableaux"
+                  >
+                    <Layers className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Formulaires &amp; Réorganisation des 3 Tableaux</span>
                   </button>
                 )}
               </div>

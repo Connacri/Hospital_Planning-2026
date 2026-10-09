@@ -126,12 +126,70 @@ export interface HospitalDocumentConfig {
   legendItems: string[];
   leaveTypes?: LeaveTypeItem[];
   nbNotice: string;
+  tableNotes?: Record<string, string>;
+  documentNotes?: DocumentNoteItem[];
   signaturesPortrait: [string, string, string, string];
   signaturesLandscape: [string, string, string, string];
   daysColumns: DayColumnMeta[];
   guardRotationOrder?: string[];
   guardMonthName?: string;
   guardMonthOffsetDays?: number;
+}
+
+export type TableTargetKey =
+  | 'all'
+  | 'pdf1Page1'
+  | 'pdf1Page2'
+  | 'pdf1Page3'
+  | 'pdf2Page1'
+  | 'pdf2Page2'
+  | 'pdf2Page3'
+  | 'pdf2Page5';
+
+export interface DocumentNoteItem {
+  id: string;
+  prefix: string; // 'N.B. :' | 'NOTE :' | 'OBSERVATION :' | 'AVIS :'
+  text: string;
+  targetTables: TableTargetKey[]; // which tables to show on
+  enabled: boolean;
+  createdAt?: string;
+}
+
+export const TABLE_TARGET_LABELS: Record<TableTargetKey, string> = {
+  all: 'Tous les tableaux (Global)',
+  pdf1Page1: '1er Tableau : Planning des Médecins (Page 1)',
+  pdf1Page2: '2ème Tableau : Liste du Personnel Médical (Page 2)',
+  pdf1Page3: '3ème Tableau : Planning Paramédical (Page 3)',
+  pdf2Page1: 'Tableau Activité Médicale Paysage (08h-16h)',
+  pdf2Page2: 'Tableau Activité Paramédicale Jour (08h-16h)',
+  pdf2Page3: 'Tableau Garde Paramédicale (16h)',
+  pdf2Page5: 'Tableau Hygiène (12h)',
+};
+
+export function getActiveNotesForTable(
+  config: HospitalDocumentConfig,
+  tableKey: TableTargetKey
+): DocumentNoteItem[] {
+  if (config.documentNotes && config.documentNotes.length > 0) {
+    return config.documentNotes.filter(
+      (n) => n.enabled && (n.targetTables.includes('all') || n.targetTables.includes(tableKey))
+    );
+  }
+  // Fallback to legacy nbNotice
+  if (config.nbNotice) {
+    if (tableKey === 'all' || tableKey === 'pdf1Page3' || tableKey === 'pdf2Page1') {
+      return [
+        {
+          id: 'default-legacy-nb',
+          prefix: 'N.B. :',
+          text: config.nbNotice,
+          targetTables: ['all'],
+          enabled: true,
+        },
+      ];
+    }
+  }
+  return [];
 }
 
 export interface ObjectBoxDatabaseSnapshot {
@@ -541,7 +599,7 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
         dimanche: 'Service Biothérapie',
         lundi: 'DMO',
         mardi: 'Visite Générale',
-        mercredi: 'ConsultationE.P.S.P\nBenSmir',
+        mercredi: 'Consultation\nE.P.S.P BenSmir',
         jeudi: 'Journée\nPédagogique',
       },
       dailyActivity: { ...octNormal },
@@ -559,7 +617,7 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
       landscapeOrder: 2,
       weeklySchedule: {
         dimanche: 'Journée\nPédagogique',
-        lundi: 'Consultation E.P.S.P\nMers El Kebir',
+        lundi: 'Consultation\nE.P.S.P Mers El Kebir',
         mardi: 'Visite Générale',
         mercredi: 'DMO',
         jeudi: 'Service Biothérapie',
@@ -580,7 +638,7 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
       weeklySchedule: {
         dimanche: 'SERVICE',
         lundi: 'SERVICE',
-        mardi: 'ConsultationE.P.S.P\nBenSmir',
+        mardi: 'Consultation\nE.P.S.P BenSmir',
         mercredi: 'SERVICE',
         jeudi: 'SERVICE',
       },
@@ -1114,15 +1172,32 @@ export class ObjectBoxLocalStore {
             return seed;
           }
 
-          // Normalize Ben Smir in weekly schedules
+          // Normalize BenSmir and Mers El Kebir in weekly schedules per requirements
+          let hasNormalized = false;
           parsed.staffBox.forEach((staff) => {
             if (staff.weeklySchedule) {
               const days = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi'] as const;
               days.forEach((d) => {
                 if (typeof staff.weeklySchedule[d] === 'string') {
-                  staff.weeklySchedule[d] = staff.weeklySchedule[d]
-                    .replace(/Ben\s*\n\s*Smir/gi, 'Ben Smir')
-                    .replace(/Consultation\s+E\.P\.S\.P\s+Ben\s+Smir/gi, 'Consultation E.P.S.P\nBen Smir');
+                  const val = staff.weeklySchedule[d];
+                  if (
+                    /Consultation.*Ben\s*Smir/i.test(val) ||
+                    /Consultation.*BenSmir/i.test(val) ||
+                    (/BenSmir/i.test(val) && /E\.?P\.?S\.?P/i.test(val))
+                  ) {
+                    if (staff.weeklySchedule[d] !== 'Consultation\nE.P.S.P BenSmir') {
+                      staff.weeklySchedule[d] = 'Consultation\nE.P.S.P BenSmir';
+                      hasNormalized = true;
+                    }
+                  } else if (
+                    /Consultation.*Mers\s*El\s*Kebir/i.test(val) ||
+                    (/Mers\s*El\s*Kebir/i.test(val) && /E\.?P\.?S\.?P/i.test(val))
+                  ) {
+                    if (staff.weeklySchedule[d] !== 'Consultation\nE.P.S.P Mers El Kebir') {
+                      staff.weeklySchedule[d] = 'Consultation\nE.P.S.P Mers El Kebir';
+                      hasNormalized = true;
+                    }
+                  }
                 }
               });
             }
@@ -1135,6 +1210,9 @@ export class ObjectBoxLocalStore {
               staff.obsPortrait = '';
             }
           });
+          if (hasNormalized) {
+            this.persistAsync(parsed);
+          }
           return parsed;
         }
       }
@@ -1330,6 +1408,33 @@ export class ObjectBoxLocalStore {
 
   removeStaff(id: number): void {
     this.snapshot.staffBox = this.snapshot.staffBox.filter((s) => s.id !== id);
+    this.notify();
+  }
+
+  reorderStaffCategory(orderedIds: number[]): void {
+    const idToOrder = new Map<number, number>();
+    orderedIds.forEach((id, idx) => {
+      idToOrder.set(id, idx + 1);
+    });
+    const nextBox = this.snapshot.staffBox.map((s) => {
+      if (idToOrder.has(s.id)) {
+        return {
+          ...s,
+          portraitOrder: idToOrder.get(s.id)!,
+        };
+      }
+      return s;
+    });
+    this.snapshot.staffBox = nextBox;
+    this.notify();
+  }
+
+  updateStaffEntity(staff: StaffEntity): void {
+    const idx = this.snapshot.staffBox.findIndex((s) => s.id === staff.id);
+    if (idx === -1) return;
+    const nextBox = [...this.snapshot.staffBox];
+    nextBox[idx] = { ...staff };
+    this.snapshot.staffBox = nextBox;
     this.notify();
   }
 
@@ -1549,6 +1654,90 @@ export class ObjectBoxLocalStore {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Crée directement le mois suivant (+1 mois) en continuité perpétuelle
+   */
+  createNextMonth(): { year: number; monthIndex: number; monthName: string } {
+    const currentName = this.snapshot.config.guardMonthName || 'Octobre 2026';
+    let year = 2026;
+    let monthIdx = 9; // 9 = Octobre
+    const yMatch = currentName.match(/\d{4}/);
+    if (yMatch) year = parseInt(yMatch[0], 10);
+    const foundIdx = FRENCH_MONTH_NAMES.findIndex((m) =>
+      currentName.toLowerCase().includes(m.toLowerCase())
+    );
+    if (foundIdx !== -1) monthIdx = foundIdx;
+
+    let nextMonthIdx = monthIdx + 1;
+    let nextYear = year;
+    if (nextMonthIdx > 11) {
+      nextMonthIdx = 0;
+      nextYear += 1;
+    }
+    this.createNewMonth(nextYear, nextMonthIdx);
+    return {
+      year: nextYear,
+      monthIndex: nextMonthIdx,
+      monthName: `${FRENCH_MONTH_NAMES[nextMonthIdx]} ${nextYear}`,
+    };
+  }
+
+  /**
+   * Ajoute une nouvelle NB ou Note ciblant un ou plusieurs tableaux
+   */
+  addDocumentNote(note: Omit<DocumentNoteItem, 'id'>): DocumentNoteItem {
+    const newNote: DocumentNoteItem = {
+      ...note,
+      id: `nb-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      createdAt: new Date().toISOString(),
+    };
+    const currentNotes = this.snapshot.config.documentNotes || [];
+    const nextNotes = [...currentNotes, newNote];
+    this.snapshot.config = {
+      ...this.snapshot.config,
+      documentNotes: nextNotes,
+    };
+    this.notify();
+    return newNote;
+  }
+
+  /**
+   * Met à jour une NB ou Note existante
+   */
+  updateDocumentNote(id: string, updates: Partial<DocumentNoteItem>): void {
+    const currentNotes = this.snapshot.config.documentNotes || [];
+    const nextNotes = currentNotes.map((n) => (n.id === id ? { ...n, ...updates } : n));
+    this.snapshot.config = {
+      ...this.snapshot.config,
+      documentNotes: nextNotes,
+    };
+    this.notify();
+  }
+
+  /**
+   * Supprime une NB ou Note
+   */
+  deleteDocumentNote(id: string): void {
+    const currentNotes = this.snapshot.config.documentNotes || [];
+    this.snapshot.config = {
+      ...this.snapshot.config,
+      documentNotes: currentNotes.filter((n) => n.id !== id),
+    };
+    this.notify();
+  }
+
+  /**
+   * Active ou désactive une NB ou Note
+   */
+  toggleDocumentNote(id: string): void {
+    const currentNotes = this.snapshot.config.documentNotes || [];
+    this.snapshot.config = {
+      ...this.snapshot.config,
+      documentNotes: currentNotes.map((n) => (n.id === id ? { ...n, enabled: !n.enabled } : n)),
+    };
+    this.notify();
   }
 }
 

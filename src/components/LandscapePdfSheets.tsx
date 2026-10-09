@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, PaintBucket, Repeat, Tag, HeartHandshake } from 'lucide-react';
+import { Plus, Trash2, PaintBucket, Repeat, Tag, HeartHandshake, FileText } from 'lucide-react';
 import {
   HospitalDocumentConfig,
   StaffEntity,
@@ -9,6 +9,8 @@ import {
   getStaffMaternitySpan,
   TableModificatifKey,
   isTableModificatif,
+  getActiveNotesForTable,
+  TableTargetKey,
 } from '../db/objectboxEngine';
 import { EditableText } from './EditableText';
 import { OfficialHospitalStamp, OfficialHospitalQrCode } from './OfficialStampAndQr';
@@ -32,6 +34,7 @@ interface LandscapePdfSheetsProps {
   onOpenLeaveTypesModal?: () => void;
   onOpenMaternityModal?: (staff?: StaffEntity) => void;
   onToggleTableModificatif?: (key: TableModificatifKey) => void;
+  onOpenAddNoteModal?: (target?: TableTargetKey) => void;
 }
 
 const OfficialLandscapeHeader: React.FC<{
@@ -84,6 +87,8 @@ const OfficialLandscapeLegendAndFooter: React.FC<{
   showQrCode?: boolean;
   validationStatus?: ValidationStatus;
   onOpenLeaveTypesModal?: () => void;
+  tableKey?: TableTargetKey;
+  onOpenAddNoteModal?: (target?: TableTargetKey) => void;
 }> = ({
   config,
   onUpdateConfig,
@@ -94,6 +99,8 @@ const OfficialLandscapeLegendAndFooter: React.FC<{
   showQrCode = false,
   validationStatus = 'draft',
   onOpenLeaveTypesModal,
+  tableKey = 'all',
+  onOpenAddNoteModal,
 }) => {
   const sigs = config.signaturesLandscape;
   const updateSig = (idx: 0 | 1 | 2 | 3, val: string) => {
@@ -107,6 +114,8 @@ const OfficialLandscapeLegendAndFooter: React.FC<{
     next[idx] = val;
     onUpdateConfig({ legendItems: next });
   };
+
+  const activeNotes = getActiveNotesForTable(config, tableKey);
 
   return (
     <div className="font-pdf text-black mt-2">
@@ -140,6 +149,17 @@ const OfficialLandscapeLegendAndFooter: React.FC<{
               <span>Gérer les congés</span>
             </button>
           )}
+          {!readOnly && onOpenAddNoteModal && (
+            <button
+              type="button"
+              onClick={() => onOpenAddNoteModal(tableKey)}
+              title="Ajouter ou gérer une note N.B. sur ce tableau"
+              className="no-print inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-sans font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 transition-colors"
+            >
+              <FileText className="w-3 h-3 text-amber-700" />
+              <span>Ajouter N.B. / Note</span>
+            </button>
+          )}
         </div>
         <div className="shrink-0 pl-4">
           <EditableText
@@ -150,14 +170,29 @@ const OfficialLandscapeLegendAndFooter: React.FC<{
         </div>
       </div>
 
-      {/* N.B Notice placed directly under the table */}
-      {showNb && (
-        <div className="mt-1 text-[11.5px] font-medium">
-          <EditableText
-            value={config.nbNotice}
-            readOnly={readOnly}
-            onChange={(v) => onUpdateConfig({ nbNotice: v })}
-          />
+      {/* Active Document Notes for Landscape */}
+      {showNb && activeNotes.length > 0 && (
+        <div className="my-1 space-y-0.5">
+          {activeNotes.map((note) => (
+            <div
+              key={note.id}
+              className="px-2 py-0.5 bg-amber-50/80 border border-amber-300 rounded text-[10.5px] font-pdf leading-tight text-black flex items-center justify-between"
+            >
+              <div className="flex-1">
+                <strong className="font-bold underline mr-1 text-black font-pdf">{note.prefix}</strong>
+                <span>{note.text}</span>
+              </div>
+              {!readOnly && onOpenAddNoteModal && (
+                <button
+                  type="button"
+                  onClick={() => onOpenAddNoteModal(tableKey)}
+                  className="no-print text-amber-800 hover:text-black font-sans font-bold text-[9.5px] ml-2 underline shrink-0"
+                >
+                  Modifier
+                </button>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
@@ -238,31 +273,34 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
       onMouseUp={() => setIsMouseDown(false)}
       className="w-full select-none"
     >
-      <table className="w-full border-collapse border border-[#B5B5B5] text-center font-pdf">
+      <table className="w-full border-collapse border border-[#666666] text-center font-pdf">
         <thead>
-          <tr className={`${compactRows ? 'h-[24px]' : 'h-[32px]'} text-[11.5px] leading-[1.1]`}>
-            <th className={`border border-[#B5B5B5] bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black font-medium ${showTeamColumn ? 'w-[12.5%]' : 'w-[14%]'} px-1 whitespace-nowrap`}>
+          <tr className={`${compactRows ? 'h-[24px]' : 'h-[32px]'} text-[11.5px] leading-[1.1] bg-[#3D3D3D] text-white font-bold`}>
+            <th className={`border border-[#555555] bg-[#3D3D3D] text-white font-bold ${showTeamColumn ? 'w-[12.5%]' : 'w-[14%]'} px-1 whitespace-nowrap`}>
               <EditableText
                 value={config.pdf2NameColHeader}
+                darkSurface
                 readOnly={readOnly}
-                className="whitespace-nowrap"
+                className="whitespace-nowrap font-bold text-white"
                 onChange={(v) => onUpdateConfig({ pdf2NameColHeader: v })}
               />
             </th>
-            <th className={`border border-[#B5B5B5] bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black font-medium ${showTeamColumn ? 'w-[14.5%]' : 'w-[15.5%]'} px-1 whitespace-nowrap`}>
+            <th className={`border border-[#555555] bg-[#3D3D3D] text-white font-bold ${showTeamColumn ? 'w-[14.5%]' : 'w-[15.5%]'} px-1 whitespace-nowrap`}>
               <EditableText
                 value={config.pdf2GradeColHeader}
+                darkSurface
                 readOnly={readOnly}
-                className="whitespace-nowrap"
+                className="whitespace-nowrap font-bold text-white"
                 onChange={(v) => onUpdateConfig({ pdf2GradeColHeader: v })}
               />
             </th>
             {showTeamColumn && (
-              <th className="border border-[#B5B5B5] bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black font-medium w-[3.5%] px-0.5 whitespace-nowrap">
+              <th className="border border-[#555555] bg-[#3D3D3D] text-white font-bold w-[3.5%] px-0.5 whitespace-nowrap">
                 <EditableText
                   value={config.pdf2TeamColHeader}
+                  darkSurface
                   readOnly={readOnly}
-                  className="whitespace-nowrap"
+                  className="whitespace-nowrap font-bold text-white"
                   onChange={(v) => onUpdateConfig({ pdf2TeamColHeader: v })}
                 />
               </th>
@@ -270,25 +308,26 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
             {config.daysColumns.map((col) => (
               <th
                 key={col.day}
-                className={`group/th border border-[#B5B5B5] font-medium px-0.5 relative ${
+                className={`group/th border font-bold px-0.5 relative text-white ${
                   col.isBlackColumn
                     ? 'bg-black text-white border-black'
                     : col.isHoliday
-                      ? 'bg-red-200 text-red-950 border-red-400'
-                      : 'bg-gradient-to-b from-[#F5F5F5] via-[#E2E2E2] to-[#D4D4D4] text-black'
+                      ? 'bg-[#8B1E1E] text-white border-[#701515]'
+                      : 'bg-[#3D3D3D] text-white border-[#555555]'
                 }`}
               >
-                <div className="tabular-nums text-[11.5px] font-semibold leading-none">
+                <div className="tabular-nums text-[11.5px] font-bold leading-none text-white">
                   {col.day}
                 </div>
-                <div className="text-[10.5px] leading-none mt-0.5">
+                <div className="text-[10.5px] leading-none mt-0.5 text-white font-bold">
                   {col.isHoliday ? (
-                    <span className="font-bold text-red-800 tracking-tight">FÉRIÉ</span>
+                    <span className="font-bold text-yellow-300 tracking-tight">FÉRIÉ</span>
                   ) : (
                     <EditableText
                       value={col.dow}
-                      darkSurface={col.isBlackColumn}
+                      darkSurface
                       readOnly={readOnly}
+                      className="text-white font-bold"
                       onChange={(v) => updateDayDowLabel(col.day, v)}
                     />
                   )}
@@ -497,6 +536,7 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
   onOpenLeaveTypesModal,
   onOpenMaternityModal,
   onToggleTableModificatif,
+  onOpenAddNoteModal,
 }) => {
   const medicalRows = staffList
     .filter((s) => s.category === 'medical')
@@ -654,6 +694,8 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                 showQrCode={showQrCode}
                 validationStatus={validationStatus}
                 onOpenLeaveTypesModal={onOpenLeaveTypesModal}
+                tableKey="pdf2Page1"
+                onOpenAddNoteModal={onOpenAddNoteModal}
               />
             </div>
           </section>
@@ -775,6 +817,8 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                 showQrCode={showQrCode}
                 validationStatus={validationStatus}
                 onOpenLeaveTypesModal={onOpenLeaveTypesModal}
+                tableKey="pdf2Page2"
+                onOpenAddNoteModal={onOpenAddNoteModal}
               />
             </div>
           </section>
@@ -928,6 +972,8 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                 showQrCode={showQrCode}
                 validationStatus={validationStatus}
                 onOpenLeaveTypesModal={onOpenLeaveTypesModal}
+                tableKey="pdf2Page3"
+                onOpenAddNoteModal={onOpenAddNoteModal}
               />
             </div>
           </section>
@@ -1049,6 +1095,8 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                 showQrCode={showQrCode}
                 validationStatus={validationStatus}
                 onOpenLeaveTypesModal={onOpenLeaveTypesModal}
+                tableKey="pdf2Page5"
+                onOpenAddNoteModal={onOpenAddNoteModal}
               />
             </div>
           </section>

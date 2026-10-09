@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -89,6 +89,7 @@ import { StaffShareModal } from './components/StaffShareModal';
 import { DocumentValidationModal, ValidationStatus } from './components/DocumentValidationModal';
 import { MonthlyArchiveModal, MonthlyArchiveRecord } from './components/MonthlyArchiveModal';
 import { SupabaseSyncPanel } from './components/SupabaseSyncPanel';
+import { TableManagementModal, TableModalTab } from './components/TableManagementModal';
 import { exportDirectPdf } from './utils/pdfExportHelper';
 import { translations, SupportedLocale } from './i18n/translations';
 
@@ -135,7 +136,7 @@ export default function App() {
   const stageRef = useRef<HTMLDivElement>(null);
   const [printMarginMm, setPrintMarginMm] = useState<number>(12.7);
 
-  // Nouvelles fonctionnalitÃ©s avancÃ©es
+  // Nouvelles fonctionnalités avancées
   const [isGuardStatsModalOpen, setIsGuardStatsModalOpen] = useState(false);
   const [isRegulatoryAlertsModalOpen, setIsRegulatoryAlertsModalOpen] = useState(false);
   const [isStaffShareModalOpen, setIsStaffShareModalOpen] = useState(false);
@@ -149,8 +150,15 @@ export default function App() {
   const [isCreateMonthModalOpen, setIsCreateMonthModalOpen] = useState(false);
   const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>('all');
   const [showDistributionChart, setShowDistributionChart] = useState(false);
+  const [isTableManagementModalOpen, setIsTableManagementModalOpen] = useState(false);
+  const [tableManagementTab, setTableManagementTab] = useState<TableModalTab>('table1');
 
-  // Synchronise les marges d'impression physiques strictes (1.27cm des 4 cÃ´tÃ©s) pour l'export PDF
+  const handleOpenTableManagement = (tab: TableModalTab = 'table1') => {
+    setTableManagementTab(tab);
+    setIsTableManagementModalOpen(true);
+  };
+
+  // Synchronise les marges d'impression physiques strictes (1.27cm des 4 côtés) pour l'export PDF
   useEffect(() => {
     let styleEl = document.getElementById('print-margins-style') as HTMLStyleElement | null;
     if (!styleEl) {
@@ -181,7 +189,7 @@ export default function App() {
     setZoomLevel((prev) => (typeof z === 'function' ? z(prev) : z));
   };
 
-  // Affiche la page A4 verticale complÃ¨tement de haut en bas sans coupure
+  // Affiche la page A4 verticale complètement de haut en bas sans coupure
   const handleFitPageComplete = () => {
     setAutoFitWidth(false);
     if (typeof window !== 'undefined') {
@@ -212,8 +220,8 @@ export default function App() {
     setAutoFitWidth(true);
   };
 
-  // Responsive : ajuste automatiquement la largeur Ã  l'ouverture,
-  // au changement d'orientation et au redimensionnement de la fenÃªtre
+  // Responsive : ajuste automatiquement la largeur à l'ouverture,
+  // au changement d'orientation et au redimensionnement de la fenêtre
   useEffect(() => {
     if (!autoFitWidth) return;
     const apply = () => {
@@ -244,7 +252,7 @@ export default function App() {
   const handleDirectPdfDownload = async () => {
     setIsExportingPdf(true);
     setExportProgress({ current: 1, total: 1 });
-    showToast("GÃ©nÃ©ration du document PDF direct en cours...");
+    showToast("Génération du document PDF direct en cours...");
     try {
       const monthSlug = (config.guardMonthName || 'Planning_2026').replace(/\s+/g, '_');
       const filename = `EH_Ain_El_Turck_${orientation.toUpperCase()}_${monthSlug}.pdf`;
@@ -267,13 +275,13 @@ export default function App() {
     const partial: Partial<HospitalDocumentConfig> = {
       guardMonthName: nextMonthName,
       guardMonthOffsetDays: nextOffset,
-      pdf1Page1Title: `Planning des MÃ©decins Â« ${nextMonthName} Â»`,
-      pdf1Page2Title: `La liste du personnel mÃ©dical du ${nextMonthName}`,
-      pdf1Page3Title: `Planning du Personnel ParamÃ©dical du ${nextMonthName}`,
-      pdf2Page1Title: `TABLEAU D'ACTIVITÃ‰ DU ${nextMonthName.toUpperCase()} â€” 08h Ã  16h`,
-      pdf2Page2Title: `TABLEAU D'ACTIVITÃ‰ DU ${nextMonthName.toUpperCase()} â€” 08h Ã  16h`,
-      pdf2Page3Title: `TABLEAU D'ACTIVITÃ‰ DU ${nextMonthName.toUpperCase()} â€” 16h`,
-      pdf2Page5Title: `TABLEAU D'ACTIVITÃ‰ DU ${nextMonthName.toUpperCase()} â€” Agents d'hygiÃ¨ne 12h`,
+      pdf1Page1Title: `Planning des Médecins « ${nextMonthName} »`,
+      pdf1Page2Title: `La liste du personnel médical du ${nextMonthName}`,
+      pdf1Page3Title: `Planning du Personnel Paramédical du ${nextMonthName}`,
+      pdf2Page1Title: `TABLEAU D'ACTIVITÉ DU ${nextMonthName.toUpperCase()} — 08h à 16h`,
+      pdf2Page2Title: `TABLEAU D'ACTIVITÉ DU ${nextMonthName.toUpperCase()} — 08h à 16h`,
+      pdf2Page3Title: `TABLEAU D'ACTIVITÉ DU ${nextMonthName.toUpperCase()} — 16h`,
+      pdf2Page5Title: `TABLEAU D'ACTIVITÉ DU ${nextMonthName.toUpperCase()} — Agents d'hygiène 12h`,
       isModificatif: false,
     };
     handleUpdateConfig(partial);
@@ -284,14 +292,14 @@ export default function App() {
       nextPreset?.daysCount ?? 31,
       true
     );
-    showToast(`Planning dupliquÃ© et mis Ã  jour pour ${nextMonthName} !`);
+    showToast(`Planning dupliqué et mis à jour pour ${nextMonthName} !`);
   };
 
   const handleLoadArchive = (archive: MonthlyArchiveRecord) => {
     handleUpdateConfig(archive.config);
     objectBoxStore.restoreStaffList(archive.staffList);
     setSnapshot(objectBoxStore.getSnapshot());
-    showToast(`Archive "${archive.name}" restaurÃ©e avec succÃ¨s !`);
+    showToast(`Archive "${archive.name}" restaurée avec succès !`);
   };
 
   // Staff Manager View State
@@ -327,8 +335,8 @@ export default function App() {
     const updated = !isTableModificatif(config, tableKey);
     showToast(
       updated
-        ? `Mention (Modificatif) ACTIVÃ‰E sur : ${TABLE_MODIFICATIF_LABELS[tableKey]}`
-        : `Mention (Modificatif) DÃ‰SACTIVÃ‰E sur : ${TABLE_MODIFICATIF_LABELS[tableKey]}`
+        ? `Mention (Modificatif) ACTIVÉE sur : ${TABLE_MODIFICATIF_LABELS[tableKey]}`
+        : `Mention (Modificatif) DÉSACTIVÉE sur : ${TABLE_MODIFICATIF_LABELS[tableKey]}`
     );
   };
 
@@ -336,14 +344,14 @@ export default function App() {
     objectBoxStore.setAllTablesModificatif(enabled);
     showToast(
       enabled
-        ? 'Mention (Modificatif) ACTIVÃ‰E sur TOUS les 7 tableaux !'
-        : 'Mention (Modificatif) dÃ©sactivÃ©e sur tous les tableaux.'
+        ? 'Mention (Modificatif) ACTIVÉE sur TOUS les 7 tableaux !'
+        : 'Mention (Modificatif) désactivée sur tous les tableaux.'
     );
   };
 
   const handleLoadOctober2026 = () => {
     objectBoxStore.loadOctoberPreset();
-    showToast("Plannings officiels d'Octobre 2026 (Service Rhumatologie) rechargÃ©s avec succÃ¨s !");
+    showToast("Plannings officiels d'Octobre 2026 (Service Rhumatologie) rechargés avec succès !");
   };
 
   const handleLoadApril2026 = () => {
@@ -357,16 +365,16 @@ export default function App() {
         1,
         26,
         '25/11/2025 au 26/04/2026',
-        'CongÃ© de MaternitÃ©'
+        'Congé de Maternité'
       );
     }
-    showToast("Planning d'Avril 2026 chargÃ© (avec congÃ© maternitÃ© historique Bakhouche Sarra jusqu'au 26/04/2026).");
+    showToast("Planning d'Avril 2026 chargé (avec congé maternité historique Bakhouche Sarra jusqu'au 26/04/2026).");
   };
 
   const handleLoadJanuary2026 = () => {
     objectBoxStore.createNewMonth(2026, 0);
     objectBoxStore.setAllTablesModificatif(true);
-    showToast('Planning de Janvier 2026 (Modificatif) chargÃ© avec succÃ¨s !');
+    showToast('Planning de Janvier 2026 (Modificatif) chargé avec succès !');
   };
 
   const handleOpenMaternityModal = (staff?: StaffEntity) => {
@@ -382,12 +390,12 @@ export default function App() {
     label: string
   ) => {
     objectBoxStore.setMaternityLeave(staffId, startDay, endDay, datesText, label);
-    showToast('CongÃ© de maternitÃ© configurÃ© avec cellule fusionnÃ©e et mention officielle !');
+    showToast('Congé de maternité configuré avec cellule fusionnée et mention officielle !');
   };
 
   const handleRemoveMaternityLeave = (staffId: number) => {
     objectBoxStore.removeMaternityLeave(staffId);
-    showToast('CongÃ© de maternitÃ© retirÃ©.');
+    showToast('Congé de maternité retiré.');
   };
 
   const handleToggleModificatif = () => {
@@ -395,15 +403,15 @@ export default function App() {
     objectBoxStore.updateConfig({ isModificatif: nextVal });
     showToast(
       nextVal
-        ? "Mode Modificatif activÃ© : Â« (Modificatif) Â» s'affiche en gras sur les plannings."
-        : 'Mode Modificatif dÃ©sactivÃ©.'
+        ? "Mode Modificatif activé : « (Modificatif) » s'affiche en gras sur les plannings."
+        : 'Mode Modificatif désactivé.'
     );
   };
 
   const handleSelectMonth = (year: number, monthIndex: number) => {
     objectBoxStore.createNewMonth(year, monthIndex);
     const monthName = objectBoxStore.getConfig().guardMonthName;
-    showToast(`Mois de Â« ${monthName} Â» activÃ© avec continuitÃ© perpÃ©tuelle des gardes !`);
+    showToast(`Mois de « ${monthName} » activé avec continuité perpétuelle des gardes !`);
   };
 
   const handleApplyGuardRotation = (
@@ -422,24 +430,24 @@ export default function App() {
     );
     showToast(
       periodRange
-        ? `Rotation appliquÃ©e pour la pÃ©riode du jour ${periodRange.startDay} au ${periodRange.endDay} !`
-        : 'Rotation continue et perpÃ©tuelle des Ã©quipes de garde appliquÃ©e !'
+        ? `Rotation appliquée pour la période du jour ${periodRange.startDay} au ${periodRange.endDay} !`
+        : 'Rotation continue et perpétuelle des équipes de garde appliquée !'
     );
   };
 
   const handleAddLeaveType = (item: Omit<LeaveTypeItem, 'id'>) => {
     objectBoxStore.addLeaveType(item);
-    showToast(`Type de congÃ© Â« ${item.code} Â» ajoutÃ© !`);
+    showToast(`Type de congé « ${item.code} » ajouté !`);
   };
 
   const handleUpdateLeaveType = (id: string, updates: Partial<LeaveTypeItem>) => {
     objectBoxStore.updateLeaveType(id, updates);
-    showToast('Type de congÃ© mis Ã  jour !');
+    showToast('Type de congé mis à jour !');
   };
 
   const handleDeleteLeaveType = (id: string) => {
     objectBoxStore.deleteLeaveType(id);
-    showToast('Type de congÃ© supprimÃ© !');
+    showToast('Type de congé supprimé !');
   };
 
   // Reset Confirmation Modal
@@ -527,7 +535,7 @@ export default function App() {
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
-    showToast('JSON ExportÃ© avec succÃ¨s !');
+    showToast('JSON Exporté avec succès !');
   };
 
   // Import JSON Snapshot
@@ -539,9 +547,9 @@ export default function App() {
       const content = event.target?.result as string;
       const success = objectBoxStore.importJsonSnapshot(content);
       if (success) {
-        showToast('JSON importÃ© et synchronisÃ© dans ObjectBox !');
+        showToast('JSON importé et synchronisé dans ObjectBox !');
       } else {
-        alert('Erreur: Fichier JSON invalide pour le schÃ©ma ObjectBox.');
+        alert('Erreur: Fichier JSON invalide pour le schéma ObjectBox.');
       }
     };
     reader.readAsText(file);
@@ -656,7 +664,7 @@ export default function App() {
   const flutterDartCode = useMemo(() => {
     return `// ==============================================================================
 // Flutter + ObjectBox Engine: Production Architecture for Hospital Planning
-// Ã‰tablissement Hospitalier d'AÃ¯n El TÃ¼rck - Dr. Medjber Tami (Service Rhumatologie)
+// Établissement Hospitalier d'Aïn El Türck - Dr. Medjber Tami (Service Rhumatologie)
 // ==============================================================================
 
 import 'package:flutter/material.dart';
@@ -760,25 +768,25 @@ class HospitalPdfGenerator {
             crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
               pw.Text(
-                'RÃ‰PUBLIQUE ALGÃ‰RIENNE DÃ‰MOCRATIQUE ET POPULAIRE',
+                'RÉPUBLIQUE ALGÉRIENNE DÉMOCRATIQUE ET POPULAIRE',
                 style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 13),
               ),
               pw.Text(
-                'MINISTÃˆRE DE LA SANTÃ‰, DE LA POPULATION ET DE LA RÃ‰FORME HOSPITALIÃˆRE',
+                'MINISTÈRE DE LA SANTÉ, DE LA POPULATION ET DE LA RÉFORME HOSPITALIÈRE',
                 style: const pw.TextStyle(fontSize: 10),
               ),
               pw.Text(
-                "Ã‰tablissement Hospitalier d'AÃ¯n El TÃ¼rck - Dr. Medjber Tami",
+                "Établissement Hospitalier d'Aïn El Türck - Dr. Medjber Tami",
                 style: const pw.TextStyle(fontSize: 10),
               ),
               pw.SizedBox(height: 12),
               pw.Align(
                 alignment: pw.Alignment.centerLeft,
-                child: pw.Text("UnitÃ© : Service de Rhumatologie", style: const pw.TextStyle(fontSize: 10)),
+                child: pw.Text("Unité : Service de Rhumatologie", style: const pw.TextStyle(fontSize: 10)),
               ),
               pw.SizedBox(height: 16),
               pw.Text(
-                "TABLEAU D'ACTIVITÃ‰ DU MOIS D'OCTOBRE 2026",
+                "TABLEAU D'ACTIVITÉ DU MOIS D'OCTOBRE 2026",
                 style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14),
               ),
               pw.SizedBox(height: 12),
@@ -789,7 +797,7 @@ class HospitalPdfGenerator {
                   pw.TableRow(
                     decoration: const pw.BoxDecoration(color: PdfColors.grey300),
                     children: [
-                      pw.Padding(padding: const pw.EdgeInsets.all(3), child: pw.Text('Nom et PrÃ©nom', style: const pw.TextStyle(fontSize: 9))),
+                      pw.Padding(padding: const pw.EdgeInsets.all(3), child: pw.Text('Nom et Prénom', style: const pw.TextStyle(fontSize: 9))),
                       pw.Padding(padding: const pw.EdgeInsets.all(3), child: pw.Text('Grade', style: const pw.TextStyle(fontSize: 9))),
                       for (int day = 1; day <= 31; day++)
                         pw.Padding(
@@ -860,7 +868,7 @@ class HospitalPdfGenerator {
                   <button
                     type="button"
                     onClick={() => setIsCreateMonthModalOpen(true)}
-                    title="Changer de mois ou crÃ©er un nouveau mois en continuitÃ© perpÃ©tuelle"
+                    title="Changer de mois ou créer un nouveau mois en continuité perpétuelle"
                     className="hidden xs:inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800 hover:border-sky-600 transition-colors shrink-0 cursor-pointer shadow-xs"
                   >
                     <Calendar className="w-3 h-3 text-sky-400 shrink-0" />
@@ -869,7 +877,7 @@ class HospitalPdfGenerator {
                   <button
                     type="button"
                     onClick={() => setIsServiceModalOpen(true)}
-                    title="Modifier le service ou Ã©tablissement"
+                    title="Modifier le service ou établissement"
                     className="p-0.5 text-slate-400 hover:text-sky-300 rounded transition-colors shrink-0"
                   >
                     <Edit3 className="w-3 h-3" />
@@ -973,7 +981,7 @@ class HospitalPdfGenerator {
                 <select
                   value={locale}
                   onChange={(e) => setLocale(e.target.value as SupportedLocale)}
-                  aria-label="SÃ©lectionner la langue"
+                  aria-label="Sélectionner la langue"
                   className="bg-transparent text-sky-300 font-bold text-[11px] px-1 py-1 focus:outline-none cursor-pointer"
                 >
                   <option value="fr" className="bg-slate-900 text-white">FR</option>
@@ -1156,7 +1164,7 @@ class HospitalPdfGenerator {
                             : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
                         }`}
                       >
-                        {t.viewAllInGroup} (1â€“3)
+                        {t.viewAllInGroup} (1–3)
                       </button>
                       <button
                         type="button"
@@ -1203,7 +1211,7 @@ class HospitalPdfGenerator {
                             : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
                         }`}
                       >
-                        {t.viewAllInGroup} (1â€“4)
+                        {t.viewAllInGroup} (1–4)
                       </button>
                       <button
                         type="button"
@@ -1263,7 +1271,7 @@ class HospitalPdfGenerator {
                         ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-sm ring-2 ring-amber-300'
                         : 'bg-slate-900 text-slate-300 border-slate-800 hover:text-white hover:bg-slate-800'
                     }`}
-                    title="Activer ou dÃ©sactiver (Modificatif) globalement"
+                    title="Activer ou désactiver (Modificatif) globalement"
                   >
                     <span>(Modificatif)</span>
                     <span
@@ -1281,7 +1289,7 @@ class HospitalPdfGenerator {
                     type="button"
                     onClick={() => setIsModificatifModalOpen(true)}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-amber-700/80 bg-amber-950/70 hover:bg-amber-900 text-amber-200 text-xs font-bold transition-colors shadow-xs"
-                    title="GÃ©rer la mention (Modificatif) par tableau individuel au choix"
+                    title="Gérer la mention (Modificatif) par tableau individuel au choix"
                   >
                     <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400" />
                     <span>Au Choix</span>
@@ -1293,10 +1301,10 @@ class HospitalPdfGenerator {
                   type="button"
                   onClick={() => handleOpenMaternityModal()}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-800/80 bg-rose-950/60 hover:bg-rose-900 text-rose-200 text-xs font-bold transition-colors shadow-sm"
-                  title="GÃ©rer le congÃ© de maternitÃ© avec cellule fusionnÃ©e (Bakhouche Sarra)"
+                  title="Gérer le congé de maternité avec cellule fusionnée (Bakhouche Sarra)"
                 >
                   <HeartHandshake className="w-3.5 h-3.5 text-rose-400" />
-                  <span>CongÃ© MaternitÃ©</span>
+                  <span>Congé Maternité</span>
                 </button>
 
                 {/* Service & Hospital Settings Button */}
@@ -1304,10 +1312,10 @@ class HospitalPdfGenerator {
                   type="button"
                   onClick={() => setIsServiceModalOpen(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-sky-800/80 bg-sky-950/60 hover:bg-sky-900 text-sky-200 text-xs font-bold transition-colors shadow-sm"
-                  title="Modifier l'en-tÃªte, le nom de l'Ã©tablissement ou le service"
+                  title="Modifier l'en-tête, le nom de l'établissement ou le service"
                 >
                   <Building2 className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Service & HÃ´pital</span>
+                  <span>Service & Hôpital</span>
                 </button>
 
                 {/* Quick Presets (Octobre 2026, Avril 2026 & Janvier 2026) */}
@@ -1325,7 +1333,7 @@ class HospitalPdfGenerator {
                     type="button"
                     onClick={handleLoadApril2026}
                     className="px-2 py-1 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors text-[11px] font-medium"
-                    title="Charger le planning officiel d'Avril 2026 avec congÃ© de maternitÃ© Bakhouche Sarra"
+                    title="Charger le planning officiel d'Avril 2026 avec congé de maternité Bakhouche Sarra"
                   >
                     Avril 2026
                   </button>
@@ -1340,7 +1348,7 @@ class HospitalPdfGenerator {
                   </button>
                 </div>
 
-                {/* Mode Selector (Lecture Seule vs Ã‰dition) */}
+                {/* Mode Selector (Lecture Seule vs Édition) */}
                 <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs font-semibold">
                   <button
                     type="button"
@@ -1363,7 +1371,7 @@ class HospitalPdfGenerator {
                         ? 'bg-amber-600 text-white shadow-sm'
                         : 'text-slate-400 hover:text-white'
                     }`}
-                    title="Activer l'Ã©dition directe des textes et cellules"
+                    title="Activer l'édition directe des textes et cellules"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
                     <span>{t.modeEdit}</span>
@@ -1422,7 +1430,7 @@ class HospitalPdfGenerator {
                     <button
                       type="button"
                       onClick={handleFitPageComplete}
-                      title="Afficher la page complÃ¨te (A4 vertical entier visible)"
+                      title="Afficher la page complète (A4 vertical entier visible)"
                       className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-800 text-[10px] font-bold transition-colors"
                     >
                       <Eye className="w-3 h-3 shrink-0" />
@@ -1464,7 +1472,7 @@ class HospitalPdfGenerator {
                     <div className="flex items-center gap-2 text-emerald-400/90 font-medium py-1">
                       <Lock className="w-4 h-4 text-emerald-400" />
                       <span>
-                        Pinceau dÃ©sactivÃ© en mode Lecture seule. Activez le mode Ã‰dition pour peindre les roulements.
+                        Pinceau désactivé en mode Lecture seule. Activez le mode Édition pour peindre les roulements.
                       </span>
                     </div>
                   ) : (
@@ -1535,7 +1543,7 @@ class HospitalPdfGenerator {
                   onClick={() => toggleReadOnly()}
                   className="underline hover:text-white font-semibold text-[11px] shrink-0"
                 >
-                  {isReadOnly ? 'Basculer en mode Ã‰dition' : 'Verrouiller en Lecture seule'}
+                  {isReadOnly ? 'Basculer en mode Édition' : 'Verrouiller en Lecture seule'}
                 </button>
               </div>
             </div>
@@ -1579,6 +1587,7 @@ class HospitalPdfGenerator {
                       onOpenLeaveTypesModal={() => setIsLeaveTypesModalOpen(true)}
                       onOpenMaternityModal={handleOpenMaternityModal}
                       onToggleTableModificatif={handleToggleTableModificatif}
+                      onOpenTableManagementModal={handleOpenTableManagement}
                     />
                   ) : (
                     <LandscapePdfSheets
@@ -1672,6 +1681,7 @@ class HospitalPdfGenerator {
               onLoadAprilPreset={handleLoadApril2026}
               onLoadJanuaryPreset={handleLoadJanuary2026}
               onOpenSupabaseSync={() => setActiveTab('supabase')}
+              onOpenTableManagementModal={handleOpenTableManagement}
               locale={locale}
               t={t}
             />
@@ -1679,7 +1689,7 @@ class HospitalPdfGenerator {
         )}
 
         {/* ====================================================================
-            TAB 2: PERSONNEL & Ã‰QUIPES MANAGER VIEW
+            TAB 2: PERSONNEL & ÉQUIPES MANAGER VIEW
            ==================================================================== */}
         {activeTab === 'staff' && (
           <div className="space-y-6">
@@ -1692,7 +1702,7 @@ class HospitalPdfGenerator {
                     <span>{t.navStaffManager}</span>
                   </h2>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Gestion centralisÃ©e du personnel mÃ©dical, paramÃ©dical et des Ã©quipes de garde
+                    Gestion centralisée du personnel médical, paramédical et des équipes de garde
                   </p>
                 </div>
 
@@ -1701,17 +1711,17 @@ class HospitalPdfGenerator {
                     type="button"
                     onClick={() => setIsServiceModalOpen(true)}
                     className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-sky-300 border border-slate-700 rounded-lg text-xs font-semibold shadow transition-colors"
-                    title="Modifier l'intitulÃ© du service ou de l'Ã©tablissement hospitalier"
+                    title="Modifier l'intitulé du service ou de l'établissement hospitalier"
                   >
                     <Building2 className="w-3.5 h-3.5 text-sky-400" />
-                    <span>Service & HÃ´pital</span>
+                    <span>Service & Hôpital</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setIsGuardRotationModalOpen(true)}
                     className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-sky-300 border border-slate-700 rounded-lg text-xs font-semibold shadow transition-colors"
-                    title="GÃ©rer la rotation des Ã©quipes (PÃ©riode ou PerpÃ©tuelle)"
+                    title="Gérer la rotation des équipes (Période ou Perpétuelle)"
                   >
                     <Repeat className="w-3.5 h-3.5 text-sky-400" />
                     <span>Rotation des gardes</span>
@@ -1721,10 +1731,10 @@ class HospitalPdfGenerator {
                     type="button"
                     onClick={() => setIsLeaveTypesModalOpen(true)}
                     className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-amber-300 border border-slate-700 rounded-lg text-xs font-semibold shadow transition-colors"
-                    title="Ajouter, modifier ou supprimer des types de congÃ©s"
+                    title="Ajouter, modifier ou supprimer des types de congés"
                   >
                     <Tag className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Types de congÃ©s</span>
+                    <span>Types de congés</span>
                   </button>
 
                   <button
@@ -1839,12 +1849,12 @@ class HospitalPdfGenerator {
                               }`}
                             >
                               {staff.category === 'medical'
-                                ? 'MÃ©dical'
+                                ? 'Médical'
                                 : staff.category === 'paramedical_day'
-                                ? 'ParamÃ©dical Jour'
+                                ? 'Paramédical Jour'
                                 : staff.category === 'paramedical_guard'
                                 ? 'Garde 16h'
-                                : "HygiÃ¨ne"}
+                                : "Hygiène"}
                             </span>
                           </td>
                           <td className="py-3 px-4 text-slate-300">
@@ -1878,7 +1888,7 @@ class HospitalPdfGenerator {
                                 {staff.teamGroup}
                               </span>
                             ) : (
-                              <span className="text-slate-600">â€”</span>
+                              <span className="text-slate-600">—</span>
                             )}
                           </td>
                           <td className="py-3 px-4 text-center">
@@ -1968,7 +1978,7 @@ class HospitalPdfGenerator {
                     {staffList.length}
                   </div>
                   <div className="text-[11px] text-slate-500 mt-0.5">
-                    CatÃ©gories: MÃ©dical, ParamÃ©dical, HygiÃ¨ne
+                    Catégories: Médical, Paramédical, Hygiène
                   </div>
                 </div>
               </div>
@@ -2035,7 +2045,7 @@ class HospitalPdfGenerator {
                   <span>ObjectBox QueryBuilder Sandbox (Offset & Limit Pagination)</span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Simule l'exÃ©cution de requÃªtes indexÃ©es ObjectBox en Dart/C++ avec pagination
+                  Simule l'exécution de requêtes indexées ObjectBox en Dart/C++ avec pagination
                 </p>
               </div>
 
@@ -2047,8 +2057,8 @@ class HospitalPdfGenerator {
                     onChange={(e) => setQueryCategory(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:border-sky-500"
                   >
-                    <option value="all">Toutes les catÃ©gories</option>
-                    <option value="medical">medical (MÃ©decins)</option>
+                    <option value="all">Toutes les catégories</option>
+                    <option value="medical">medical (Médecins)</option>
                     <option value="paramedical_day">paramedical_day (Jour 8h-16h)</option>
                     <option value="paramedical_guard">paramedical_guard (Garde 16h)</option>
                     <option value="hygiene">hygiene (Agents 12h)</option>
@@ -2063,7 +2073,7 @@ class HospitalPdfGenerator {
                     className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:border-sky-500"
                   >
                     <option value="id">@Id() (Identifiant croissant)</option>
-                    <option value="name">@Index() fullName (AlphabÃ©tique)</option>
+                    <option value="name">@Index() fullName (Alphabétique)</option>
                     <option value="portraitOrder">@Index() portraitOrder</option>
                   </select>
                 </div>
@@ -2104,7 +2114,7 @@ class HospitalPdfGenerator {
                     staffBox.query().where(...) .offset({queryOffset}).limit({queryLimit}).find()
                   </div>
                   <div>
-                    RÃ©sultats : <span className="text-white font-bold">{queryResult.results.length}</span> sur{' '}
+                    Résultats : <span className="text-white font-bold">{queryResult.results.length}</span> sur{' '}
                     <span className="text-white font-bold">{queryResult.totalCount}</span> total
                   </div>
                 </div>
@@ -2120,7 +2130,7 @@ class HospitalPdfGenerator {
                         <span className="text-slate-500">{item.teamGroup ? `Grp ${item.teamGroup}` : ''}</span>
                       </div>
                       <div className="text-slate-400 truncate">{item.rolePortrait}</div>
-                      <div className="text-slate-500 text-[10px] truncate">{item.category} Â· {item.horaireBlock}</div>
+                      <div className="text-slate-500 text-[10px] truncate">{item.category} · {item.horaireBlock}</div>
                     </div>
                   ))}
                 </div>
@@ -2195,13 +2205,13 @@ class HospitalPdfGenerator {
 
               <div className="space-y-3 text-xs text-slate-300 leading-relaxed">
                 <p>
-                  <strong>1. HÃ©bergement et DonnÃ©es Locales :</strong> Ce systÃ¨me hospitalier fonctionne selon le principe <em>Local-First</em>. Toutes les modifications apportÃ©es aux plannings, listes de garde et tableaux d'activitÃ© sont conservÃ©es localement dans le moteur ObjectBox de votre navigateur (IndexedDB / LocalStorage). Aucune donnÃ©e nominative de santÃ© ou du personnel n'est transmise Ã  des tiers ou des serveurs publicitaires.
+                  <strong>1. Hébergement et Données Locales :</strong> Ce système hospitalier fonctionne selon le principe <em>Local-First</em>. Toutes les modifications apportées aux plannings, listes de garde et tableaux d'activité sont conservées localement dans le moteur ObjectBox de votre navigateur (IndexedDB / LocalStorage). Aucune donnée nominative de santé ou du personnel n'est transmise à des tiers ou des serveurs publicitaires.
                 </p>
                 <p>
-                  <strong>2. Respect du Secret Professionnel & Hospitalier :</strong> Conforme aux exigences administratives de l'Ã‰tablissement Hospitalier d'AÃ¯n El TÃ¼rck (Dr. Medjber Tami - Service de Rhumatologie), les tableaux Ã©ditÃ©s respectent strictement la chaÃ®ne de validation hiÃ©rarchique : MÃ©decin Chef, Surveillant MÃ©dical, Direction des ActivitÃ©s ParamÃ©dicales (DAPM) et Direction GÃ©nÃ©rale.
+                  <strong>2. Respect du Secret Professionnel & Hospitalier :</strong> Conforme aux exigences administratives de l'Établissement Hospitalier d'Aïn El Türck (Dr. Medjber Tami - Service de Rhumatologie), les tableaux édités respectent strictement la chaîne de validation hiérarchique : Médecin Chef, Surveillant Médical, Direction des Activités Paramédicales (DAPM) et Direction Générale.
                 </p>
                 <p>
-                  <strong>3. Exportation et Sauvegarde :</strong> Vous pouvez Ã  tout moment exporter une copie intÃ©grale sous format JSON ou gÃ©nÃ©rer des impressions physiques et PDF A4 certifiÃ©es.
+                  <strong>3. Exportation et Sauvegarde :</strong> Vous pouvez à tout moment exporter une copie intégrale sous format JSON ou générer des impressions physiques et PDF A4 certifiées.
                 </p>
               </div>
 
@@ -2211,7 +2221,7 @@ class HospitalPdfGenerator {
                   <span>{t.deleteAccountTitle}</span>
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Si vous souhaitez rÃ©initialiser complÃ¨tement le cache de ce poste ou effacer toutes les donnÃ©es locales ObjectBox :
+                  Si vous souhaitez réinitialiser complètement le cache de ce poste ou effacer toutes les données locales ObjectBox :
                 </p>
                 <button
                   type="button"
@@ -2272,8 +2282,8 @@ class HospitalPdfGenerator {
                     setNewStaffCategory(cat);
                     if (cat === 'medical') {
                       setNewStaffHoraire('08h-16h');
-                      setNewStaffRole('MÃ©decin GÃ©nÃ©raliste');
-                      setNewStaffGrade('MÃ©decin');
+                      setNewStaffRole('Médecin Généraliste');
+                      setNewStaffGrade('Médecin');
                     } else if (cat === 'paramedical_guard') {
                       setNewStaffHoraire('16h');
                       setNewStaffRole('ATS');
@@ -2281,8 +2291,8 @@ class HospitalPdfGenerator {
                       setNewStaffTeam('A');
                     } else if (cat === 'hygiene') {
                       setNewStaffHoraire('12h');
-                      setNewStaffRole("Agent d'hygiÃ¨ne");
-                      setNewStaffGrade("Agent d'hygiÃ¨ne");
+                      setNewStaffRole("Agent d'hygiène");
+                      setNewStaffGrade("Agent d'hygiène");
                     } else {
                       setNewStaffHoraire('08h-16h');
                       setNewStaffRole('ATS');
@@ -2291,10 +2301,10 @@ class HospitalPdfGenerator {
                   }}
                   className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500 min-h-[38px] text-xs sm:text-sm"
                 >
-                  <option value="medical">Personnel MÃ©dical (08h-16h)</option>
-                  <option value="paramedical_day">ParamÃ©dical Jour (08h-16h)</option>
-                  <option value="paramedical_guard">ParamÃ©dical Garde (16h Â· Groupes A-E)</option>
-                  <option value="hygiene">Agents d'HygiÃ¨ne (12h)</option>
+                  <option value="medical">Personnel Médical (08h-16h)</option>
+                  <option value="paramedical_day">Paramédical Jour (08h-16h)</option>
+                  <option value="paramedical_guard">Paramédical Garde (16h · Groupes A-E)</option>
+                  <option value="hygiene">Agents d'Hygiène (12h)</option>
                 </select>
               </div>
 
@@ -2307,7 +2317,7 @@ class HospitalPdfGenerator {
                     type="text"
                     value={newStaffRole}
                     onChange={(e) => setNewStaffRole(e.target.value)}
-                    placeholder="Fonction complÃ¨te"
+                    placeholder="Fonction complète"
                     className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-sky-500 min-h-[38px]"
                   />
                 </div>
@@ -2421,7 +2431,7 @@ class HospitalPdfGenerator {
               <span>{t.deleteAccountTitle}</span>
             </h3>
             <p className="text-xs text-slate-300 leading-relaxed">
-              ÃŠtes-vous sÃ»r de vouloir effacer le stockage local ObjectBox et rÃ©initialiser tous les plannings ?
+              Êtes-vous sûr de vouloir effacer le stockage local ObjectBox et réinitialiser tous les plannings ?
             </p>
             <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-2">
               <button
@@ -2499,11 +2509,23 @@ class HospitalPdfGenerator {
         onSetAll={handleSetAllTablesModificatif}
       />
 
+      {/* MODAL: GESTION & FORMULAIRES DES TABLEAUX (REORGANISER & AFFECTER) */}
+      <TableManagementModal
+        isOpen={isTableManagementModalOpen}
+        initialTab={tableManagementTab}
+        staffList={staffList}
+        onClose={() => setIsTableManagementModalOpen(false)}
+        onUpdateStaffField={handleUpdateStaffField}
+        onUpdateDoctorWeekly={handleUpdateDoctorWeekly}
+        onAddStaff={handleAddStaff}
+        onDeleteStaff={handleDeleteStaff}
+      />
+
       {/* FOOTER */}
       <footer className="no-print bg-slate-950 border-t border-slate-900 py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
           <div>
-            Ã‰tablissement Hospitalier d'AÃ¯n El TÃ¼rck â€” Dr. Medjber Tami Â· Service de Rhumatologie
+            Établissement Hospitalier d'Aïn El Türck — Dr. Medjber Tami · Service de Rhumatologie
           </div>
           <div className="flex items-center gap-4">
             <span>Moteur ObjectBox Reactive v1.0.0</span>
