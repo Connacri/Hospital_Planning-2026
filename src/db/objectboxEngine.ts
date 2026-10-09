@@ -326,6 +326,11 @@ export interface TeamThemeConfig {
   glow: string;
   pillColor: string;
   dotBg: string;
+  cardBg: string;
+  cardBorder: string;
+  rowBorder: string;
+  cycleButton: string;
+  tagBg: string;
 }
 
 export const GUARD_TEAM_THEMES: Record<string, TeamThemeConfig> = {
@@ -335,10 +340,15 @@ export const GUARD_TEAM_THEMES: Record<string, TeamThemeConfig> = {
     badgeBg: 'bg-emerald-950/80',
     badgeText: 'text-emerald-300',
     badgeBorder: 'border-emerald-600/80',
-    fullBadge: 'bg-emerald-950/80 text-emerald-300 border border-emerald-600/80 shadow-sm shadow-emerald-950/50',
-    glow: 'rgba(16, 185, 129, 0.25)',
+    fullBadge: 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/80 shadow-sm shadow-emerald-950/50',
+    glow: 'rgba(16, 185, 129, 0.35)',
     pillColor: '#10b981',
     dotBg: 'bg-emerald-400',
+    cardBg: 'bg-emerald-950/30 hover:bg-emerald-950/40',
+    cardBorder: 'border-emerald-500/40 hover:border-emerald-500/80',
+    rowBorder: 'border-l-4 border-l-emerald-500',
+    cycleButton: 'bg-emerald-900/70 hover:bg-emerald-800 text-emerald-200 border-emerald-600 shadow-sm shadow-emerald-950/30',
+    tagBg: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40',
   },
   B: {
     letter: 'B',
@@ -346,10 +356,15 @@ export const GUARD_TEAM_THEMES: Record<string, TeamThemeConfig> = {
     badgeBg: 'bg-sky-950/80',
     badgeText: 'text-sky-300',
     badgeBorder: 'border-sky-600/80',
-    fullBadge: 'bg-sky-950/80 text-sky-300 border border-sky-600/80 shadow-sm shadow-sky-950/50',
-    glow: 'rgba(14, 165, 233, 0.25)',
+    fullBadge: 'bg-sky-950/90 text-sky-300 border border-sky-500/80 shadow-sm shadow-sky-950/50',
+    glow: 'rgba(14, 165, 233, 0.35)',
     pillColor: '#0ea5e9',
     dotBg: 'bg-sky-400',
+    cardBg: 'bg-sky-950/30 hover:bg-sky-950/40',
+    cardBorder: 'border-sky-500/40 hover:border-sky-500/80',
+    rowBorder: 'border-l-4 border-l-sky-500',
+    cycleButton: 'bg-sky-900/70 hover:bg-sky-800 text-sky-200 border-sky-600 shadow-sm shadow-sky-950/30',
+    tagBg: 'bg-sky-500/15 text-sky-300 border-sky-500/40',
   },
   C: {
     letter: 'C',
@@ -357,10 +372,15 @@ export const GUARD_TEAM_THEMES: Record<string, TeamThemeConfig> = {
     badgeBg: 'bg-purple-950/80',
     badgeText: 'text-purple-300',
     badgeBorder: 'border-purple-600/80',
-    fullBadge: 'bg-purple-950/80 text-purple-300 border border-purple-600/80 shadow-sm shadow-purple-950/50',
-    glow: 'rgba(168, 85, 247, 0.25)',
+    fullBadge: 'bg-purple-950/90 text-purple-300 border border-purple-500/80 shadow-sm shadow-purple-950/50',
+    glow: 'rgba(168, 85, 247, 0.35)',
     pillColor: '#a855f7',
     dotBg: 'bg-purple-400',
+    cardBg: 'bg-purple-950/30 hover:bg-purple-950/40',
+    cardBorder: 'border-purple-500/40 hover:border-purple-500/80',
+    rowBorder: 'border-l-4 border-l-purple-500',
+    cycleButton: 'bg-purple-900/70 hover:bg-purple-800 text-purple-200 border-purple-600 shadow-sm shadow-purple-950/30',
+    tagBg: 'bg-purple-500/15 text-purple-300 border-purple-500/40',
   },
   D: {
     letter: 'D',
@@ -368,10 +388,15 @@ export const GUARD_TEAM_THEMES: Record<string, TeamThemeConfig> = {
     badgeBg: 'bg-amber-950/80',
     badgeText: 'text-amber-300',
     badgeBorder: 'border-amber-600/80',
-    fullBadge: 'bg-amber-950/80 text-amber-300 border border-amber-600/80 shadow-sm shadow-amber-950/50',
-    glow: 'rgba(245, 158, 11, 0.25)',
+    fullBadge: 'bg-amber-950/90 text-amber-300 border border-amber-500/80 shadow-sm shadow-amber-950/50',
+    glow: 'rgba(245, 158, 11, 0.35)',
     pillColor: '#f59e0b',
     dotBg: 'bg-amber-400',
+    cardBg: 'bg-amber-950/30 hover:bg-amber-950/40',
+    cardBorder: 'border-amber-500/40 hover:border-amber-500/80',
+    rowBorder: 'border-l-4 border-l-amber-500',
+    cycleButton: 'bg-amber-900/70 hover:bg-amber-800 text-amber-200 border-amber-600 shadow-sm shadow-amber-950/30',
+    tagBg: 'bg-amber-500/15 text-amber-300 border-amber-500/40',
   },
   E: {
     letter: 'E',
@@ -379,10 +404,15 @@ export const GUARD_TEAM_THEMES: Record<string, TeamThemeConfig> = {
     badgeBg: 'bg-rose-950/80',
     badgeText: 'text-rose-300',
     badgeBorder: 'border-rose-600/80',
-    fullBadge: 'bg-rose-950/80 text-rose-300 border border-rose-600/80 shadow-sm shadow-rose-950/50',
-    glow: 'rgba(244, 63, 94, 0.25)',
+    fullBadge: 'bg-rose-950/90 text-rose-300 border border-rose-500/80 shadow-sm shadow-rose-950/50',
+    glow: 'rgba(244, 63, 94, 0.35)',
     pillColor: '#f43f5e',
     dotBg: 'bg-rose-400',
+    cardBg: 'bg-rose-950/30 hover:bg-rose-950/40',
+    cardBorder: 'border-rose-500/40 hover:border-rose-500/80',
+    rowBorder: 'border-l-4 border-l-rose-500',
+    cycleButton: 'bg-rose-900/70 hover:bg-rose-800 text-rose-200 border-rose-600 shadow-sm shadow-rose-950/30',
+    tagBg: 'bg-rose-500/15 text-rose-300 border-rose-500/40',
   },
 };
 
@@ -396,14 +426,19 @@ export function getTeamTheme(team: string): TeamThemeConfig {
   return (
     GUARD_TEAM_THEMES[t] || {
       letter: t,
-      name: `Équipe ${t}`,
-      badgeBg: 'bg-slate-800',
-      badgeText: 'text-slate-200',
+      name: t ? `Équipe ${t}` : 'Non assigné',
+      badgeBg: 'bg-slate-900',
+      badgeText: 'text-slate-300',
       badgeBorder: 'border-slate-700',
-      fullBadge: 'bg-slate-800 text-slate-200 border border-slate-700',
+      fullBadge: 'bg-slate-900 text-slate-300 border border-slate-700',
       glow: 'rgba(148, 163, 184, 0.2)',
       pillColor: '#94a3b8',
       dotBg: 'bg-slate-400',
+      cardBg: 'bg-slate-900/40',
+      cardBorder: 'border-slate-800',
+      rowBorder: 'border-l-4 border-l-slate-700',
+      cycleButton: 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700',
+      tagBg: 'bg-slate-800 text-slate-300 border-slate-700',
     }
   );
 }
@@ -473,20 +508,43 @@ export function buildGuard16hActivity(team: string, specialBouazizOverride = fal
 }
 
 /**
- * 12h Hygiene Agents alternating schedule:
- * - startWithRE = true (Mohand Fatiha): Odd days = N, Even days = RE in April
+ * 12h Hygiene Agents alternating schedule with continuous monthly rollover:
+ * - Alternance Jour (N) / Récupération (RE)
+ * - startWithN = true (Mohand Fatiha): Starts on N on Oct 1st
  */
-export function buildHygiene12hActivity(startWithN: boolean, daysCount = 30): Record<number, string> {
+export function buildContinuousHygiene12hActivity(
+  startWithN: boolean,
+  cumulativeOffsetDays = 0,
+  daysCount = 30
+): Record<number, string> {
   const map: Record<number, string> = {};
   for (let d = 1; d <= daysCount; d++) {
-    const isOdd = d % 2 === 1;
+    const absoluteDay = d - 1 + cumulativeOffsetDays;
+    const isShift = absoluteDay % 2 === 0;
     if (startWithN) {
-      map[d] = isOdd ? 'N' : 'RE';
+      map[d] = isShift ? 'N' : 'RE';
     } else {
-      map[d] = isOdd ? 'RE' : 'N';
+      map[d] = isShift ? 'RE' : 'N';
     }
   }
   return map;
+}
+
+export function buildHygiene12hActivity(startWithN: boolean, daysCount = 30): Record<number, string> {
+  return buildContinuousHygiene12hActivity(startWithN, 0, daysCount);
+}
+
+export interface MonthHistoryItem {
+  id: string;
+  name: string;
+  year: number;
+  monthIndex: number;
+  daysCount: number;
+  isModificatif: boolean;
+  createdAt: string;
+  updatedAt: string;
+  config: HospitalDocumentConfig;
+  staffBox: StaffEntity[];
 }
 
 export const DEFAULT_LEAVE_TYPES: LeaveTypeItem[] = [
@@ -589,7 +647,7 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Medjadi Mohsine',
       category: 'medical',
       rolePortrait: 'Médecin Chef Rhumatologue',
-      gradeLandscape: 'Médecin Chef\nRhumatologue',
+      gradeLandscape: 'Médecin Chef Rhumatologue',
       obsPortrait: '08h-16h',
       horaireBlock: '08h-16h',
       teamGroup: '',
@@ -609,7 +667,7 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Ouadah Souad',
       category: 'medical',
       rolePortrait: 'Médecin Principal en Rhumatologie',
-      gradeLandscape: 'Médecin Principal\nen Rhumatologie',
+      gradeLandscape: 'Médecin Principal en Rhumatologie',
       obsPortrait: '08h-16h',
       horaireBlock: '08h-16h',
       teamGroup: '',
@@ -629,7 +687,7 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Tlemsani Naziha',
       category: 'medical',
       rolePortrait: 'Médecin Généraliste Principal',
-      gradeLandscape: 'Médecin\nGénéraliste',
+      gradeLandscape: 'Médecin Généraliste',
       obsPortrait: '08h-16h',
       horaireBlock: '08h-16h',
       teamGroup: '',
@@ -649,7 +707,7 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Boumazouzi Hind',
       category: 'medical',
       rolePortrait: 'Médecin Généraliste Principal',
-      gradeLandscape: 'Médecin\nGénéraliste',
+      gradeLandscape: 'Médecin Généraliste',
       obsPortrait: '08h-16h',
       horaireBlock: '08h-16h',
       teamGroup: '',
@@ -669,7 +727,7 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Benrahal Yasmina',
       category: 'medical',
       rolePortrait: 'Médecin Généraliste',
-      gradeLandscape: 'Médecin\nGénéraliste',
+      gradeLandscape: 'Médecin Généraliste',
       obsPortrait: '08h-16h',
       horaireBlock: '08h-16h',
       teamGroup: '',
@@ -683,7 +741,7 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Chouchelamane Soumia',
       category: 'medical',
       rolePortrait: 'Médecin Généraliste',
-      gradeLandscape: 'Médecin\nGénéraliste',
+      gradeLandscape: 'Médecin Généraliste',
       obsPortrait: '08h-16h',
       horaireBlock: '08h-16h',
       teamGroup: '',
@@ -699,7 +757,7 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Kerarma Djelloul',
       category: 'paramedical_day',
       rolePortrait: 'I.SSP Surveillant Médical',
-      gradeLandscape: 'I.SSP Surveillant\nMédical',
+      gradeLandscape: 'I.SSP Surveillant Médical',
       obsPortrait: '',
       horaireBlock: '08h-16h',
       teamGroup: '',
@@ -769,7 +827,7 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Naamoun Sarra',
       category: 'paramedical_day',
       rolePortrait: 'Chargée de pharmacie',
-      gradeLandscape: 'Chargée de\npharmacie',
+      gradeLandscape: 'Chargée de pharmacie',
       obsPortrait: '',
       horaireBlock: '08h-16h',
       teamGroup: '',
@@ -783,7 +841,7 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
       fullName: 'Djaziri Cherifa',
       category: 'paramedical_day',
       rolePortrait: 'Chargé de pharmacie',
-      gradeLandscape: 'Chargé de\npharmacie',
+      gradeLandscape: 'Chargé de pharmacie',
       obsPortrait: '',
       horaireBlock: '08h-16h',
       teamGroup: '',
@@ -1201,6 +1259,11 @@ export class ObjectBoxLocalStore {
                 }
               });
             }
+            // Ensure gradeLandscape has no newlines
+            if (staff.gradeLandscape && /\r?\n/.test(staff.gradeLandscape)) {
+              staff.gradeLandscape = staff.gradeLandscape.replace(/\r?\n+/g, ' ').trim();
+              hasNormalized = true;
+            }
             // If currently October 2026, ensure maternity leave is removed for Bakhouche Sarra per official PDF
             if (
               staff.fullName.toLowerCase().includes('bakhouche') &&
@@ -1558,19 +1621,196 @@ export class ObjectBoxLocalStore {
 
   resetToOriginalPdfs(): void {
     this.snapshot = createOctober2026Snapshot();
+    this.persistAsync(this.snapshot);
+    this.saveCurrentToHistory('Octobre 2026', false);
     this.notify();
   }
 
   loadOctoberPreset(): void {
     this.snapshot = createOctober2026Snapshot();
+    this.persistAsync(this.snapshot);
+    this.saveCurrentToHistory('Octobre 2026', false);
     this.notify();
+  }
+
+  private monthHistory: MonthHistoryItem[] = [];
+
+  private loadHistoryFromStorage(): MonthHistoryItem[] {
+    const STORAGE_HISTORY_KEY = 'eh_ain_el_turck_month_history_v3';
+    try {
+      const raw = localStorage.getItem(STORAGE_HISTORY_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    const seed = createOctober2026Snapshot();
+    const initialItem: MonthHistoryItem = {
+      id: 'month_2026_9_normal',
+      name: 'Octobre 2026',
+      year: 2026,
+      monthIndex: 9,
+      daysCount: 31,
+      isModificatif: false,
+      createdAt: new Date().toLocaleDateString('fr-FR'),
+      updatedAt: new Date().toLocaleDateString('fr-FR'),
+      config: seed.config,
+      staffBox: seed.staffBox,
+    };
+    this.persistHistoryAsync([initialItem]);
+    return [initialItem];
+  }
+
+  private persistHistoryAsync(items: MonthHistoryItem[]): void {
+    this.monthHistory = items;
+    queueMicrotask(() => {
+      try {
+        localStorage.setItem('eh_ain_el_turck_month_history_v3', JSON.stringify(items));
+      } catch {
+        // storage quota
+      }
+    });
+  }
+
+  getMonthHistory(): MonthHistoryItem[] {
+    if (!this.monthHistory || this.monthHistory.length === 0) {
+      this.monthHistory = this.loadHistoryFromStorage();
+    }
+    return [...this.monthHistory];
+  }
+
+  saveCurrentToHistory(customName?: string, isModificatifOverride?: boolean): MonthHistoryItem {
+    const isModif =
+      typeof isModificatifOverride === 'boolean'
+        ? isModificatifOverride
+        : !!this.snapshot.config.isModificatif;
+    const baseMonthName = this.snapshot.config.guardMonthName || 'Octobre 2026';
+    const finalName =
+      customName ||
+      (isModif && !baseMonthName.toLowerCase().includes('modificatif')
+        ? `${baseMonthName} (Modificatif)`
+        : baseMonthName);
+
+    const yMatch = baseMonthName.match(/\d{4}/);
+    const year = yMatch ? parseInt(yMatch[0], 10) : 2026;
+    const mIdx = FRENCH_MONTH_NAMES.findIndex((m) =>
+      baseMonthName.toLowerCase().includes(m.toLowerCase())
+    );
+    const monthIndex = mIdx !== -1 ? mIdx : 9;
+
+    const record: MonthHistoryItem = {
+      id: `month_${year}_${monthIndex}_${isModif ? 'modif' : 'normal'}_${Date.now()}`,
+      name: finalName,
+      year,
+      monthIndex,
+      daysCount: this.snapshot.config.daysColumns.length,
+      isModificatif: isModif,
+      createdAt:
+        new Date().toLocaleDateString('fr-FR') +
+        ' ' +
+        new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+      updatedAt:
+        new Date().toLocaleDateString('fr-FR') +
+        ' ' +
+        new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+      config: JSON.parse(JSON.stringify(this.snapshot.config)),
+      staffBox: JSON.parse(JSON.stringify(this.snapshot.staffBox)),
+    };
+
+    const current = this.getMonthHistory();
+    const existingIdx = current.findIndex(
+      (h) => h.year === year && h.monthIndex === monthIndex && h.isModificatif === isModif
+    );
+    let next: MonthHistoryItem[];
+    if (existingIdx !== -1) {
+      next = [...current];
+      next[existingIdx] = record;
+    } else {
+      next = [record, ...current];
+    }
+    this.persistHistoryAsync(next);
+    return record;
+  }
+
+  loadMonthFromHistory(id: string): boolean {
+    const item = this.getMonthHistory().find((h) => h.id === id);
+    if (!item) return false;
+    this.snapshot = {
+      version: 7,
+      updatedAt: new Date().toISOString(),
+      config: JSON.parse(JSON.stringify(item.config)),
+      staffBox: JSON.parse(JSON.stringify(item.staffBox)),
+    };
+    this.persistAsync(this.snapshot);
+    this.notify();
+    return true;
+  }
+
+  deleteMonthFromHistory(id: string): boolean {
+    const current = this.getMonthHistory();
+    if (current.length <= 1) return false;
+    const updated = current.filter((h) => h.id !== id);
+    this.persistHistoryAsync(updated);
+    this.notify();
+    return true;
+  }
+
+  duplicateMonthAsModificatif(id: string): MonthHistoryItem | null {
+    const item = this.getMonthHistory().find((h) => h.id === id);
+    if (!item) return null;
+    const newConfig: HospitalDocumentConfig = {
+      ...JSON.parse(JSON.stringify(item.config)),
+      isModificatif: true,
+      modificatifOverrides: {
+        pdf1Page1: true,
+        pdf1Page2: true,
+        pdf1Page3: true,
+        pdf2Page1: true,
+        pdf2Page2: true,
+        pdf2Page3: true,
+        pdf2Page5: true,
+      },
+    };
+    const modifRecord: MonthHistoryItem = {
+      id: `month_${item.year}_${item.monthIndex}_modif_${Date.now()}`,
+      name: `${item.name.replace(/\(Modificatif\)/i, '').trim()} (Modificatif)`,
+      year: item.year,
+      monthIndex: item.monthIndex,
+      daysCount: item.daysCount,
+      isModificatif: true,
+      createdAt:
+        new Date().toLocaleDateString('fr-FR') +
+        ' ' +
+        new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+      updatedAt:
+        new Date().toLocaleDateString('fr-FR') +
+        ' ' +
+        new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+      config: newConfig,
+      staffBox: JSON.parse(JSON.stringify(item.staffBox)),
+    };
+    const nextHistory = [modifRecord, ...this.getMonthHistory()];
+    this.persistHistoryAsync(nextHistory);
+    this.snapshot = {
+      version: 7,
+      updatedAt: new Date().toISOString(),
+      config: newConfig,
+      staffBox: JSON.parse(JSON.stringify(item.staffBox)),
+    };
+    this.persistAsync(this.snapshot);
+    this.notify();
+    return modifRecord;
   }
 
   /**
    * Crée un mois donné (ex: Novembre 2026, Décembre 2026, Janvier 2027...) en préservant
    * la continuité mathématique parfaite des gardes et du personnel à partir d'Octobre 2026.
    */
-  createNewMonth(year: number, monthIndex: number): void {
+  createNewMonth(year: number, monthIndex: number, isModificatif = false): void {
     const monthName = `${FRENCH_MONTH_NAMES[monthIndex]} ${year}`;
     const daysColumns = buildDaysColumnsForMonth(year, monthIndex);
     const daysInMonth = daysColumns.length;
@@ -1583,9 +1823,11 @@ export class ObjectBoxLocalStore {
 
     const order = this.snapshot.config.guardRotationOrder || DEFAULT_GUARD_ROTATION_ORDER;
 
+    const modifSuffix = isModificatif ? ' (Modificatif)' : '';
+
     const updatedConfig: HospitalDocumentConfig = {
       ...this.snapshot.config,
-      guardMonthName: monthName,
+      guardMonthName: `${monthName}${modifSuffix}`,
       guardMonthOffsetDays: ((cumulativeOffsetDays % 5) + 5) % 5,
       daysColumns,
       pdf1Page1Title: `Planning des Médecins « Mois de ${monthName} »`,
@@ -1597,7 +1839,16 @@ export class ObjectBoxLocalStore {
       pdf2Page5Title: `TABLEAU D'ACTIVITÉ DU MOIS DE ${monthName.toUpperCase()} Agents d'Hygiène — 12h`,
       cityDateLandscape: `Fait à Aïn el Türck le : 01/${String(monthIndex + 1).padStart(2, '0')}/${year}`,
       cityDatePortrait: `fait à Aïn el Türck le : 01/${String(monthIndex + 1).padStart(2, '0')}/${year}`,
-      isModificatif: false,
+      isModificatif: isModificatif,
+      modificatifOverrides: {
+        pdf1Page1: isModificatif,
+        pdf1Page2: isModificatif,
+        pdf1Page3: isModificatif,
+        pdf2Page1: isModificatif,
+        pdf2Page2: isModificatif,
+        pdf2Page3: isModificatif,
+        pdf2Page5: isModificatif,
+      },
     };
 
     const nextStaff = this.snapshot.staffBox.map((staff) => {
@@ -1622,12 +1873,12 @@ export class ObjectBoxLocalStore {
           dailyActivity: buildStandard08h16hActivity(daysInMonth, daysColumns),
         };
       }
-      // Hygiene (12h)
+      // Hygiene (12h) continue sans double garde
       if (staff.category === 'hygiene') {
         const isOdd = (staff.landscapeOrder || 1) % 2 === 1;
         return {
           ...staff,
-          dailyActivity: buildHygiene12hActivity(isOdd, daysInMonth),
+          dailyActivity: buildContinuousHygiene12hActivity(isOdd, cumulativeOffsetDays, daysInMonth),
         };
       }
       return staff;
@@ -1639,6 +1890,8 @@ export class ObjectBoxLocalStore {
       config: updatedConfig,
       staffBox: nextStaff,
     };
+    this.persistAsync(this.snapshot);
+    this.saveCurrentToHistory(`${monthName}${modifSuffix}`, isModificatif);
     this.notify();
   }
 
@@ -1659,7 +1912,7 @@ export class ObjectBoxLocalStore {
   /**
    * Crée directement le mois suivant (+1 mois) en continuité perpétuelle
    */
-  createNextMonth(): { year: number; monthIndex: number; monthName: string } {
+  createNextMonth(isModificatif = false): { year: number; monthIndex: number; monthName: string } {
     const currentName = this.snapshot.config.guardMonthName || 'Octobre 2026';
     let year = 2026;
     let monthIdx = 9; // 9 = Octobre
@@ -1676,7 +1929,7 @@ export class ObjectBoxLocalStore {
       nextMonthIdx = 0;
       nextYear += 1;
     }
-    this.createNewMonth(nextYear, nextMonthIdx);
+    this.createNewMonth(nextYear, nextMonthIdx, isModificatif);
     return {
       year: nextYear,
       monthIndex: nextMonthIdx,

@@ -77,6 +77,164 @@ const OfficialLandscapeHeader: React.FC<{
   </div>
 );
 
+export const OfficialLandscapeTableUnderbar: React.FC<{
+  config: HospitalDocumentConfig;
+  onUpdateConfig: (partial: Partial<HospitalDocumentConfig>) => void;
+  showNb?: boolean;
+  readOnly?: boolean;
+  showQrCode?: boolean;
+  validationStatus?: ValidationStatus;
+  onOpenLeaveTypesModal?: () => void;
+  tableKey?: TableTargetKey;
+  onOpenAddNoteModal?: (target?: TableTargetKey) => void;
+}> = ({
+  config,
+  onUpdateConfig,
+  showNb = true,
+  readOnly = false,
+  showQrCode = false,
+  validationStatus = 'draft',
+  onOpenLeaveTypesModal,
+  tableKey = 'all',
+  onOpenAddNoteModal,
+}) => {
+  const updateLegendItem = (idx: number, val: string) => {
+    const next = [...config.legendItems];
+    next[idx] = val;
+    onUpdateConfig({ legendItems: next });
+  };
+
+  const activeNotes = getActiveNotesForTable(config, tableKey);
+
+  return (
+    <div className="font-pdf text-black mt-1.5 pt-0.5">
+      {/* Legend Row + QR Code + Fait à Aïn el Türck (placé JUSTE sous le tableau) */}
+      <div className="flex items-center justify-between text-[11.5px] sm:text-[12px] font-medium">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+          {showQrCode && (
+            <div className="mr-1.5">
+              <OfficialHospitalQrCode
+                status={validationStatus}
+                monthName={config.guardMonthName || "Mois d'Octobre 2026"}
+              />
+            </div>
+          )}
+          {config.legendItems.map((item, idx) => (
+            <EditableText
+              key={idx}
+              value={item}
+              readOnly={readOnly}
+              onChange={(v) => updateLegendItem(idx, v)}
+            />
+          ))}
+          {!readOnly && onOpenLeaveTypesModal && (
+            <button
+              type="button"
+              onClick={onOpenLeaveTypesModal}
+              title="Ajouter, modifier ou supprimer des types de congés"
+              className="no-print inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10.5px] font-sans font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 transition-colors"
+            >
+              <Tag className="w-3 h-3 text-amber-700" />
+              <span>Gérer les congés</span>
+            </button>
+          )}
+          {!readOnly && onOpenAddNoteModal && (
+            <button
+              type="button"
+              onClick={() => onOpenAddNoteModal(tableKey)}
+              title="Ajouter ou gérer une note N.B. sur ce tableau"
+              className="no-print inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10.5px] font-sans font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 transition-colors"
+            >
+              <FileText className="w-3 h-3 text-amber-700" />
+              <span>Ajouter N.B. / Note</span>
+            </button>
+          )}
+        </div>
+        <div className="shrink-0 pl-3 text-right font-semibold text-[12px]">
+          <EditableText
+            value={config.cityDateLandscape}
+            readOnly={readOnly}
+            onChange={(v) => onUpdateConfig({ cityDateLandscape: v })}
+          />
+        </div>
+      </div>
+
+      {/* Active Document Notes for Landscape */}
+      {showNb && activeNotes.length > 0 && (
+        <div className="my-1 space-y-0.5">
+          {activeNotes.map((note) => (
+            <div
+              key={note.id}
+              className="px-2 py-0.5 bg-amber-50/80 border border-amber-300 rounded text-[10px] font-pdf leading-tight text-black flex items-center justify-between"
+            >
+              <div className="flex-1">
+                <strong className="font-bold underline mr-1 text-black font-pdf">{note.prefix}</strong>
+                <span>{note.text}</span>
+              </div>
+              {!readOnly && onOpenAddNoteModal && (
+                <button
+                  type="button"
+                  onClick={() => onOpenAddNoteModal(tableKey)}
+                  className="no-print text-amber-800 hover:text-black font-sans font-bold text-[9px] ml-2 underline shrink-0"
+                >
+                  Modifier
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export const OfficialLandscapeSignaturesFooter: React.FC<{
+  config: HospitalDocumentConfig;
+  onUpdateConfig: (partial: Partial<HospitalDocumentConfig>) => void;
+  readOnly?: boolean;
+  showOfficialStamp?: boolean;
+}> = ({
+  config,
+  onUpdateConfig,
+  readOnly = false,
+  showOfficialStamp = false,
+}) => {
+  const sigs = config.signaturesLandscape;
+  const updateSig = (idx: 0 | 1 | 2 | 3, val: string) => {
+    const next: [string, string, string, string] = [...sigs] as [string, string, string, string];
+    next[idx] = val;
+    onUpdateConfig({ signaturesLandscape: next });
+  };
+
+  return (
+    <div className="font-pdf text-black mt-auto pt-3 pb-1 shrink-0">
+      {/* Signatures Row à la fin de la page paysage */}
+      <div className="grid grid-cols-4 text-center text-[12.5px] sm:text-[13px] font-bold">
+        <div>
+          <EditableText value={sigs[0]} readOnly={readOnly} onChange={(v) => updateSig(0, v)} />
+        </div>
+        <div>
+          <EditableText value={sigs[1]} readOnly={readOnly} onChange={(v) => updateSig(1, v)} />
+        </div>
+        <div>
+          <EditableText value={sigs[2]} readOnly={readOnly} onChange={(v) => updateSig(2, v)} />
+        </div>
+        <div className="relative flex flex-col items-center">
+          <EditableText value={sigs[3]} readOnly={readOnly} onChange={(v) => updateSig(3, v)} />
+          {showOfficialStamp && (
+            <div className="absolute top-2 right-1 z-10 pointer-events-none">
+              <OfficialHospitalStamp />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Emplacement de dégagement pour apposition du cachet rond et de la griffe tampon */}
+      <div className="h-12 sm:h-14 w-full" aria-label="Zone pour cachet et griffe tampon" />
+    </div>
+  );
+};
+
 const OfficialLandscapeLegendAndFooter: React.FC<{
   config: HospitalDocumentConfig;
   onUpdateConfig: (partial: Partial<HospitalDocumentConfig>) => void;
@@ -102,123 +260,28 @@ const OfficialLandscapeLegendAndFooter: React.FC<{
   tableKey = 'all',
   onOpenAddNoteModal,
 }) => {
-  const sigs = config.signaturesLandscape;
-  const updateSig = (idx: 0 | 1 | 2 | 3, val: string) => {
-    const next: [string, string, string, string] = [...sigs] as [string, string, string, string];
-    next[idx] = val;
-    onUpdateConfig({ signaturesLandscape: next });
-  };
-
-  const updateLegendItem = (idx: number, val: string) => {
-    const next = [...config.legendItems];
-    next[idx] = val;
-    onUpdateConfig({ legendItems: next });
-  };
-
-  const activeNotes = getActiveNotesForTable(config, tableKey);
-
   return (
-    <div className="font-pdf text-black mt-2">
-      {/* Legend Row + QR Code + Fait à Aïn el Türck */}
-      <div className="flex items-center justify-between text-[13.5px] font-medium">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          {showQrCode && (
-            <div className="mr-2">
-              <OfficialHospitalQrCode
-                status={validationStatus}
-                monthName={config.guardMonthName || "Mois d'Octobre 2026"}
-              />
-            </div>
-          )}
-          {config.legendItems.map((item, idx) => (
-            <EditableText
-              key={idx}
-              value={item}
-              readOnly={readOnly}
-              onChange={(v) => updateLegendItem(idx, v)}
-            />
-          ))}
-          {!readOnly && onOpenLeaveTypesModal && (
-            <button
-              type="button"
-              onClick={onOpenLeaveTypesModal}
-              title="Ajouter, modifier ou supprimer des types de congés"
-              className="no-print inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-sans font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 transition-colors"
-            >
-              <Tag className="w-3 h-3 text-amber-700" />
-              <span>Gérer les congés</span>
-            </button>
-          )}
-          {!readOnly && onOpenAddNoteModal && (
-            <button
-              type="button"
-              onClick={() => onOpenAddNoteModal(tableKey)}
-              title="Ajouter ou gérer une note N.B. sur ce tableau"
-              className="no-print inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-sans font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 transition-colors"
-            >
-              <FileText className="w-3 h-3 text-amber-700" />
-              <span>Ajouter N.B. / Note</span>
-            </button>
-          )}
-        </div>
-        <div className="shrink-0 pl-4">
-          <EditableText
-            value={config.cityDateLandscape}
-            readOnly={readOnly}
-            onChange={(v) => onUpdateConfig({ cityDateLandscape: v })}
-          />
-        </div>
-      </div>
-
-      {/* Active Document Notes for Landscape */}
-      {showNb && activeNotes.length > 0 && (
-        <div className="my-1 space-y-0.5">
-          {activeNotes.map((note) => (
-            <div
-              key={note.id}
-              className="px-2 py-0.5 bg-amber-50/80 border border-amber-300 rounded text-[10.5px] font-pdf leading-tight text-black flex items-center justify-between"
-            >
-              <div className="flex-1">
-                <strong className="font-bold underline mr-1 text-black font-pdf">{note.prefix}</strong>
-                <span>{note.text}</span>
-              </div>
-              {!readOnly && onOpenAddNoteModal && (
-                <button
-                  type="button"
-                  onClick={() => onOpenAddNoteModal(tableKey)}
-                  className="no-print text-amber-800 hover:text-black font-sans font-bold text-[9.5px] ml-2 underline shrink-0"
-                >
-                  Modifier
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Signatures Row */}
+    <>
+      <OfficialLandscapeTableUnderbar
+        config={config}
+        onUpdateConfig={onUpdateConfig}
+        showNb={showNb}
+        readOnly={readOnly}
+        showQrCode={showQrCode}
+        validationStatus={validationStatus}
+        onOpenLeaveTypesModal={onOpenLeaveTypesModal}
+        tableKey={tableKey}
+        onOpenAddNoteModal={onOpenAddNoteModal}
+      />
       {showSignatures && (
-        <div className="grid grid-cols-4 text-center text-[13px] font-medium mt-2 pb-0.5">
-          <div>
-            <EditableText value={sigs[0]} readOnly={readOnly} onChange={(v) => updateSig(0, v)} />
-          </div>
-          <div>
-            <EditableText value={sigs[1]} readOnly={readOnly} onChange={(v) => updateSig(1, v)} />
-          </div>
-          <div>
-            <EditableText value={sigs[2]} readOnly={readOnly} onChange={(v) => updateSig(2, v)} />
-          </div>
-          <div className="relative flex flex-col items-center">
-            <EditableText value={sigs[3]} readOnly={readOnly} onChange={(v) => updateSig(3, v)} />
-            {showOfficialStamp && (
-              <div className="absolute top-2 right-1 z-10 pointer-events-none">
-                <OfficialHospitalStamp />
-              </div>
-            )}
-          </div>
-        </div>
+        <OfficialLandscapeSignaturesFooter
+          config={config}
+          onUpdateConfig={onUpdateConfig}
+          readOnly={readOnly}
+          showOfficialStamp={showOfficialStamp}
+        />
       )}
-    </div>
+    </>
   );
 };
 
@@ -273,10 +336,10 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
       onMouseUp={() => setIsMouseDown(false)}
       className="w-full select-none"
     >
-      <table className="w-full border-collapse border border-[#666666] text-center font-pdf">
+      <table className="w-full border-collapse border border-[#666666] text-center font-pdf table-fixed">
         <thead>
-          <tr className={`${compactRows ? 'h-[24px]' : 'h-[32px]'} text-[11.5px] leading-[1.1] bg-[#3D3D3D] text-white font-bold`}>
-            <th className={`border border-[#555555] bg-[#3D3D3D] text-white font-bold ${showTeamColumn ? 'w-[12.5%]' : 'w-[14%]'} px-1 whitespace-nowrap`}>
+          <tr className={`${compactRows ? 'h-[24px]' : 'h-[30px]'} text-[11.5px] leading-[1.1] bg-[#3D3D3D] text-white font-bold`}>
+            <th className={`border border-[#555555] bg-[#3D3D3D] text-white font-bold ${showTeamColumn ? 'w-[11.5%]' : 'w-[12%]'} px-1 whitespace-nowrap text-left pl-1.5`}>
               <EditableText
                 value={config.pdf2NameColHeader}
                 darkSurface
@@ -285,7 +348,7 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
                 onChange={(v) => onUpdateConfig({ pdf2NameColHeader: v })}
               />
             </th>
-            <th className={`border border-[#555555] bg-[#3D3D3D] text-white font-bold ${showTeamColumn ? 'w-[14.5%]' : 'w-[15.5%]'} px-1 whitespace-nowrap`}>
+            <th className={`border border-[#555555] bg-[#3D3D3D] text-white font-bold ${showTeamColumn ? 'w-[13%]' : 'w-[15.5%]'} px-1 whitespace-nowrap text-center`}>
               <EditableText
                 value={config.pdf2GradeColHeader}
                 darkSurface
@@ -295,7 +358,7 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
               />
             </th>
             {showTeamColumn && (
-              <th className="border border-[#555555] bg-[#3D3D3D] text-white font-bold w-[3.5%] px-0.5 whitespace-nowrap">
+              <th className="border border-[#555555] bg-[#3D3D3D] text-white font-bold w-[2.5%] px-0.5 whitespace-nowrap text-center">
                 <EditableText
                   value={config.pdf2TeamColHeader}
                   darkSurface
@@ -347,51 +410,57 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
           </tr>
         </thead>
         <tbody>
-          {rows.map((staff) => (
-            <tr
-              key={staff.id}
-              className={`group ${rowHeightClass} font-medium transition-colors`}
-            >
-              {/* Nom et Prénom */}
-              <td className="border border-[#CCCCCC] bg-white text-black px-1.5 relative whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
-                <EditableText
-                  value={staff.fullName}
-                  readOnly={readOnly}
-                  className="whitespace-nowrap"
-                  onChange={(v) => onUpdateStaffField(staff.id, 'fullName', v)}
-                />
-                {!readOnly && (
-                  <button
-                    type="button"
-                    onClick={() => onDeleteStaff(staff.id)}
-                    title="Supprimer cette ligne"
-                    className="no-print opacity-0 group-hover:opacity-100 absolute left-0.5 top-1/2 -translate-y-1/2 p-0.5 text-red-600 hover:bg-red-100 rounded"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                )}
-              </td>
-
-              {/* Grade */}
-              <td className="border border-[#CCCCCC] bg-white text-black px-1 leading-[1.1] text-[11px] align-middle whitespace-nowrap overflow-hidden text-ellipsis max-w-0">
-                <EditableText
-                  value={staff.gradeLandscape}
-                  readOnly={readOnly}
-                  className="whitespace-nowrap"
-                  onChange={(v) => onUpdateStaffField(staff.id, 'gradeLandscape', v)}
-                />
-              </td>
-
-              {/* Équipe (only on Page 3 - 16h) */}
-              {showTeamColumn && (
-                <td className="border border-[#CCCCCC] bg-white text-black px-0.5 font-semibold">
+          {rows.map((staff) => {
+            const cleanGrade = (staff.gradeLandscape || '').replace(/\r?\n+/g, ' ').trim();
+            return (
+              <tr
+                key={staff.id}
+                className={`group ${rowHeightClass} font-medium transition-colors`}
+              >
+                {/* Nom et Prénom - largeur réduite pour libérer la place au grade et aux jours */}
+                <td className="border border-[#CCCCCC] bg-white text-black px-1.5 text-left relative whitespace-nowrap align-middle">
                   <EditableText
-                    value={staff.teamGroup}
+                    value={staff.fullName}
                     readOnly={readOnly}
-                    onChange={(v) => onUpdateStaffField(staff.id, 'teamGroup', v)}
+                    className={`whitespace-nowrap font-semibold tracking-tight block overflow-visible ${
+                      compactRows ? 'text-[10px] sm:text-[10.5px]' : 'text-[11px] sm:text-[11.5px]'
+                    }`}
+                    onChange={(v) => onUpdateStaffField(staff.id, 'fullName', v)}
+                  />
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteStaff(staff.id)}
+                      title="Supprimer cette ligne"
+                      className="no-print opacity-0 group-hover:opacity-100 absolute left-0.5 top-1/2 -translate-y-1/2 p-0.5 text-red-600 hover:bg-red-100 rounded"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </td>
+
+                {/* Grade - Texte en une seule ligne avec l'ancien font size */}
+                <td className={`border border-[#CCCCCC] bg-white text-black px-1 leading-tight align-middle whitespace-nowrap text-center ${
+                  compactRows ? 'text-[10.5px] sm:text-[11px]' : 'text-[11px] sm:text-[11.5px]'
+                }`}>
+                  <EditableText
+                    value={cleanGrade}
+                    readOnly={readOnly}
+                    className="whitespace-nowrap font-medium block overflow-visible text-center"
+                    onChange={(v) => onUpdateStaffField(staff.id, 'gradeLandscape', v.replace(/\r?\n+/g, ' ').trim())}
                   />
                 </td>
-              )}
+
+                {/* Équipe (only on Page 3 - 16h) */}
+                {showTeamColumn && (
+                  <td className="border border-[#CCCCCC] bg-white text-black px-0.5 font-bold text-center align-middle text-[10.5px]">
+                    <EditableText
+                      value={staff.teamGroup}
+                      readOnly={readOnly}
+                      onChange={(v) => onUpdateStaffField(staff.id, 'teamGroup', v)}
+                    />
+                  </td>
+                )}
 
               {/* 30/31 Days Cells with Horizontally Merged Cells for Maternity Leave */}
               {(() => {
@@ -510,8 +579,9 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
 
                 return cells;
               })()}
-            </tr>
-          ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -591,14 +661,14 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
             }`}
             className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
           >
-            <div>
+            <div className="flex flex-col">
               <OfficialLandscapeHeader
                 config={config}
                 onUpdateConfig={onUpdateConfig}
                 readOnly={readOnly}
               />
 
-              <div className="mt-12 mb-2.5 text-center">
+              <div className="mt-4 mb-2 text-center">
                 <h2 className="text-[20px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
                   <EditableText
                     value={
@@ -684,13 +754,12 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                 </div>
               )}
 
-              <OfficialLandscapeLegendAndFooter
+              {/* Juste sous le tableau : Légende, Notes N.B. et Fait à Aïn el Türck */}
+              <OfficialLandscapeTableUnderbar
                 config={config}
                 onUpdateConfig={onUpdateConfig}
                 showNb
-                showSignatures
                 readOnly={readOnly}
-                showOfficialStamp={showOfficialStamp}
                 showQrCode={showQrCode}
                 validationStatus={validationStatus}
                 onOpenLeaveTypesModal={onOpenLeaveTypesModal}
@@ -698,6 +767,14 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                 onOpenAddNoteModal={onOpenAddNoteModal}
               />
             </div>
+
+            {/* En bas de la page paysage : Signatures officielles et zone cachets / griffe tampon */}
+            <OfficialLandscapeSignaturesFooter
+              config={config}
+              onUpdateConfig={onUpdateConfig}
+              readOnly={readOnly}
+              showOfficialStamp={showOfficialStamp}
+            />
           </section>
         ))}
 
@@ -714,14 +791,14 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
             }`}
             className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
           >
-            <div>
+            <div className="flex flex-col">
               <OfficialLandscapeHeader
                 config={config}
                 onUpdateConfig={onUpdateConfig}
                 readOnly={readOnly}
               />
 
-              <div className="mt-12 mb-2.5 text-center">
+              <div className="mt-4 mb-2 text-center">
                 <h2 className="text-[20px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
                   <EditableText
                     value={
@@ -807,13 +884,12 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                 </div>
               )}
 
-              <OfficialLandscapeLegendAndFooter
+              {/* Juste sous le tableau : Légende, Notes N.B. et Fait à Aïn el Türck */}
+              <OfficialLandscapeTableUnderbar
                 config={config}
                 onUpdateConfig={onUpdateConfig}
                 showNb
-                showSignatures
                 readOnly={readOnly}
-                showOfficialStamp={showOfficialStamp}
                 showQrCode={showQrCode}
                 validationStatus={validationStatus}
                 onOpenLeaveTypesModal={onOpenLeaveTypesModal}
@@ -821,6 +897,14 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                 onOpenAddNoteModal={onOpenAddNoteModal}
               />
             </div>
+
+            {/* En bas de la page paysage : Signatures officielles et zone cachets / griffe tampon */}
+            <OfficialLandscapeSignaturesFooter
+              config={config}
+              onUpdateConfig={onUpdateConfig}
+              readOnly={readOnly}
+              showOfficialStamp={showOfficialStamp}
+            />
           </section>
         ))}
 
@@ -837,7 +921,7 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
             }`}
             className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
           >
-            <div>
+            <div className="flex flex-col">
               <OfficialLandscapeHeader
                 config={config}
                 onUpdateConfig={onUpdateConfig}
@@ -962,13 +1046,12 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                 </div>
               )}
 
-              <OfficialLandscapeLegendAndFooter
+              {/* Juste sous le tableau : Légende, Notes N.B. et Fait à Aïn el Türck */}
+              <OfficialLandscapeTableUnderbar
                 config={config}
                 onUpdateConfig={onUpdateConfig}
                 showNb={true}
-                showSignatures
                 readOnly={readOnly}
-                showOfficialStamp={showOfficialStamp}
                 showQrCode={showQrCode}
                 validationStatus={validationStatus}
                 onOpenLeaveTypesModal={onOpenLeaveTypesModal}
@@ -976,6 +1059,14 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                 onOpenAddNoteModal={onOpenAddNoteModal}
               />
             </div>
+
+            {/* En bas de la page paysage : Signatures officielles et zone cachets / griffe tampon */}
+            <OfficialLandscapeSignaturesFooter
+              config={config}
+              onUpdateConfig={onUpdateConfig}
+              readOnly={readOnly}
+              showOfficialStamp={showOfficialStamp}
+            />
           </section>
         ))}
 
@@ -992,14 +1083,14 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
             }`}
             className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
           >
-            <div>
+            <div className="flex flex-col">
               <OfficialLandscapeHeader
                 config={config}
                 onUpdateConfig={onUpdateConfig}
                 readOnly={readOnly}
               />
 
-              <div className="mt-24 mb-3 text-center">
+              <div className="mt-5 mb-2 text-center">
                 <h2 className="text-[20px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
                   <EditableText
                     value={
@@ -1085,13 +1176,12 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                 </div>
               )}
 
-              <OfficialLandscapeLegendAndFooter
+              {/* Juste sous le tableau : Légende, Notes N.B. et Fait à Aïn el Türck */}
+              <OfficialLandscapeTableUnderbar
                 config={config}
                 onUpdateConfig={onUpdateConfig}
                 showNb
-                showSignatures
                 readOnly={readOnly}
-                showOfficialStamp={showOfficialStamp}
                 showQrCode={showQrCode}
                 validationStatus={validationStatus}
                 onOpenLeaveTypesModal={onOpenLeaveTypesModal}
@@ -1099,6 +1189,14 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                 onOpenAddNoteModal={onOpenAddNoteModal}
               />
             </div>
+
+            {/* En bas de la page paysage : Signatures officielles et zone cachets / griffe tampon */}
+            <OfficialLandscapeSignaturesFooter
+              config={config}
+              onUpdateConfig={onUpdateConfig}
+              readOnly={readOnly}
+              showOfficialStamp={showOfficialStamp}
+            />
           </section>
         ))}
     </div>

@@ -19,7 +19,7 @@ interface CreateMonthModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentMonthName: string;
-  onSelectMonth: (year: number, monthIndex: number) => void;
+  onSelectMonth: (year: number, monthIndex: number, isModificatif?: boolean) => void;
 }
 
 export const CreateMonthModal: React.FC<CreateMonthModalProps> = ({
@@ -43,11 +43,12 @@ export const CreateMonthModal: React.FC<CreateMonthModalProps> = ({
 
   const [selectedYear, setSelectedYear] = useState<number>(initialYear);
   const [selectedMonthIdx, setSelectedMonthIdx] = useState<number>(initialMonthIdx);
+  const [isModificatif, setIsModificatif] = useState<boolean>(false);
   const [confirmDialog, setConfirmDialog] = useState<'discard' | 'create' | null>(null);
 
   const isDirty = useMemo(() => {
-    return selectedYear !== initialYear || selectedMonthIdx !== initialMonthIdx;
-  }, [selectedYear, selectedMonthIdx, initialYear, initialMonthIdx]);
+    return selectedYear !== initialYear || selectedMonthIdx !== initialMonthIdx || isModificatif;
+  }, [selectedYear, selectedMonthIdx, isModificatif, initialYear, initialMonthIdx]);
 
   // Calculate live preview metrics for the selected month
   const preview = useMemo(() => {
@@ -88,7 +89,7 @@ export const CreateMonthModal: React.FC<CreateMonthModalProps> = ({
   };
 
   const handleConfirmCreate = () => {
-    onSelectMonth(selectedYear, selectedMonthIdx);
+    onSelectMonth(selectedYear, selectedMonthIdx, isModificatif);
     setConfirmDialog(null);
     onClose();
   };
@@ -293,6 +294,33 @@ export const CreateMonthModal: React.FC<CreateMonthModalProps> = ({
                 (A &rarr; D &rarr; B &rarr; E &rarr; C) avec <strong>Jour</strong>, <strong>Nuit</strong> et <strong>RE</strong> s'enchaîne mathématiquement sans rupture.
               </span>
             </div>
+          </div>
+
+          {/* Option Planning Modificatif */}
+          <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 bg-amber-500/20 text-amber-800 rounded-lg">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <label htmlFor="is-modif-toggle" className="text-xs font-bold text-slate-900 cursor-pointer">
+                  Créer en version « (Modificatif) »
+                </label>
+                <p className="text-[11px] text-slate-600">
+                  Ajoute la mention (Modificatif) en gras sur les 7 tableaux officiels.
+                </p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <input
+                id="is-modif-toggle"
+                type="checkbox"
+                checked={isModificatif}
+                onChange={(e) => setIsModificatif(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
+            </label>
           </div>
         </div>
 

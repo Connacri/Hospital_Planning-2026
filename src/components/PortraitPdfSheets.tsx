@@ -272,7 +272,7 @@ const OfficialPortraitFooter: React.FC<{
   };
 
   return (
-    <div className={`font-pdf text-black mt-auto ${compact ? 'pt-1' : 'pt-2'}`}>
+    <div className={`font-pdf text-black ${compact ? 'mt-1 pt-0.5' : 'mt-2 pt-0.5'}`}>
       {/* N.B Notice placed directly under the table if enabled */}
       {showNb && config.nbNotice && (
         <div className="mb-1 text-[11.5px] font-medium text-left">
@@ -284,8 +284,8 @@ const OfficialPortraitFooter: React.FC<{
         </div>
       )}
 
-      {/* Date row with QR Code */}
-      <div className={`flex items-end justify-between ${compact ? 'mb-1' : 'mb-2'}`}>
+      {/* Date row with QR Code placed directly under the table */}
+      <div className={`flex items-end justify-between ${compact ? 'mb-0.5' : 'mb-1'}`}>
         <div>
           {showQrCode && (
             <OfficialHospitalQrCode
@@ -294,7 +294,7 @@ const OfficialPortraitFooter: React.FC<{
             />
           )}
         </div>
-        <div className="text-right text-[12.5px] font-medium pr-2">
+        <div className="text-right text-[12.5px] font-semibold pr-2">
           <EditableText
             value={config.cityDatePortrait}
             readOnly={readOnly}
@@ -303,8 +303,11 @@ const OfficialPortraitFooter: React.FC<{
         </div>
       </div>
 
+      {/* Espace vertical entre la date (Fait à Aïn el Türck le : ...) et les signatures officielles */}
+      <div className={compact ? 'h-6 sm:h-7' : 'h-8 sm:h-10'} aria-hidden="true" />
+
       {/* Signatures Row */}
-      <div className={`grid grid-cols-4 text-center text-[12.5px] font-medium ${compact ? 'pb-0.5' : 'pb-1'}`}>
+      <div className={`grid grid-cols-4 text-center text-[12.5px] sm:text-[13px] font-bold text-black ${compact ? 'pb-0.5' : 'pb-1'}`}>
         <div>
           <EditableText value={sigs[0]} readOnly={readOnly} onChange={(v) => updateSig(0, v)} />
         </div>
@@ -323,6 +326,9 @@ const OfficialPortraitFooter: React.FC<{
           )}
         </div>
       </div>
+
+      {/* Zone pour apposition du cachet rond et de la griffe tampon */}
+      <div className={compact ? 'h-10 sm:h-12 w-full' : 'h-14 sm:h-16 w-full'} aria-label="Zone pour cachet et griffe tampon" />
     </div>
   );
 };
@@ -486,7 +492,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
             aria-label={`PDF 1 Page 1 - Planning des Médecins ${
               chunkIdx > 0 ? `(Suite ${chunkIdx + 1})` : ''
             }`}
-            className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
+            className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-start font-pdf scroll-mt-20"
           >
             <div>
               <OfficialPortraitHeader
@@ -582,8 +588,8 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                     {config.pdf1Page1Columns.map((col, idx) => (
                       <th
                         key={idx}
-                        className={`border border-[#666666] px-1 py-1.5 font-bold whitespace-nowrap overflow-hidden text-ellipsis ${
-                          idx === 0 ? 'w-[15%]' : 'w-[17%]'
+                        className={`border border-[#666666] px-1.5 py-1.5 font-bold whitespace-nowrap ${
+                          idx === 0 ? 'w-[32%] text-left pl-2.5 overflow-visible' : 'w-[13.6%] text-center overflow-hidden text-ellipsis'
                         }`}
                       >
                         <EditableText
@@ -622,12 +628,12 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                         }`}
                       >
                         <td
-                          className={`border border-[#7F7F7F] px-1.5 py-1 text-[13px] sm:text-[13.5px] font-semibold relative whitespace-nowrap overflow-hidden text-ellipsis ${rowBgClass}`}
+                          className={`border border-[#7F7F7F] px-2 py-1 text-[12.5px] sm:text-[13px] font-semibold text-left relative whitespace-nowrap ${rowBgClass}`}
                         >
                           <EditableText
                             value={doc.fullName}
                             readOnly={readOnly}
-                            className="whitespace-nowrap font-semibold"
+                            className="whitespace-nowrap font-semibold tracking-tight block overflow-visible"
                             onChange={(v) => onUpdateStaffField(doc.id, 'fullName', v)}
                           />
                           {!readOnly && (
@@ -648,7 +654,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                         ).map((dayKey) => (
                           <td
                             key={dayKey}
-                            className={`border border-[#7F7F7F] px-1 py-1 text-[12px] sm:text-[12.5px] leading-[1.15] font-medium align-middle overflow-hidden text-center max-h-[50px] ${rowBgClass}`}
+                            className={`border border-[#7F7F7F] px-0.5 py-1 text-[11px] sm:text-[11.5px] leading-tight font-semibold align-middle overflow-hidden text-center max-h-[50px] ${rowBgClass}`}
                           >
                             <EditableText
                               value={doc.weeklySchedule[dayKey]}
@@ -745,7 +751,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
             aria-label={`PDF 1 Page 2 - Liste du personnel médical ${
               chunkIdx > 0 ? `(Suite ${chunkIdx + 1})` : ''
             }`}
-            className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
+            className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-start font-pdf scroll-mt-20"
           >
             <div>
               <OfficialPortraitHeader
@@ -984,7 +990,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
         <section
           id="doc-sheet-p3"
           aria-label="PDF 1 Page 3 - Planning du Personnel Paramédical"
-          className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
+          className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-start font-pdf scroll-mt-20"
         >
           <div>
             <OfficialPortraitHeader config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} compact={true} />

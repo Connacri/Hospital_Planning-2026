@@ -88,6 +88,7 @@ import { RegulatoryAlertsModal } from './components/RegulatoryAlertsModal';
 import { StaffShareModal } from './components/StaffShareModal';
 import { DocumentValidationModal, ValidationStatus } from './components/DocumentValidationModal';
 import { MonthlyArchiveModal, MonthlyArchiveRecord } from './components/MonthlyArchiveModal';
+import { MonthHistoryModal } from './components/MonthHistoryModal';
 import { SupabaseSyncPanel } from './components/SupabaseSyncPanel';
 import { TableManagementModal, TableModalTab } from './components/TableManagementModal';
 import { exportDirectPdf } from './utils/pdfExportHelper';
@@ -148,6 +149,7 @@ export default function App() {
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [exportProgress, setExportProgress] = useState({ current: 0, total: 0 });
   const [isCreateMonthModalOpen, setIsCreateMonthModalOpen] = useState(false);
+  const [isMonthHistoryModalOpen, setIsMonthHistoryModalOpen] = useState(false);
   const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>('all');
   const [showDistributionChart, setShowDistributionChart] = useState(false);
   const [isTableManagementModalOpen, setIsTableManagementModalOpen] = useState(false);
@@ -351,30 +353,12 @@ export default function App() {
 
   const handleLoadOctober2026 = () => {
     objectBoxStore.loadOctoberPreset();
-    showToast("Plannings officiels d'Octobre 2026 (Service Rhumatologie) rechargés avec succès !");
+    showToast("Planning officiel d'Octobre 2026 (Base) rechargé avec succès !");
   };
 
-  const handleLoadApril2026 = () => {
-    objectBoxStore.createNewMonth(2026, 3);
-    const bakhouche = objectBoxStore.getSnapshot().staffBox.find((s) =>
-      s.fullName.toLowerCase().includes('bakhouche')
-    );
-    if (bakhouche) {
-      objectBoxStore.setMaternityLeave(
-        bakhouche.id,
-        1,
-        26,
-        '25/11/2025 au 26/04/2026',
-        'Congé de Maternité'
-      );
-    }
-    showToast("Planning d'Avril 2026 chargé (avec congé maternité historique Bakhouche Sarra jusqu'au 26/04/2026).");
-  };
-
-  const handleLoadJanuary2026 = () => {
-    objectBoxStore.createNewMonth(2026, 0);
-    objectBoxStore.setAllTablesModificatif(true);
-    showToast('Planning de Janvier 2026 (Modificatif) chargé avec succès !');
+  const handleCreateNextMonth = (isModificatif = false) => {
+    const next = objectBoxStore.createNextMonth(isModificatif);
+    showToast(`Planning du mois de ${next.monthName} créé avec succès en continuité perpétuelle des équipes !`);
   };
 
   const handleOpenMaternityModal = (staff?: StaffEntity) => {
@@ -1318,33 +1302,33 @@ class HospitalPdfGenerator {
                   <span>Service & Hôpital</span>
                 </button>
 
-                {/* Quick Presets (Octobre 2026, Avril 2026 & Janvier 2026) */}
-                <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs">
+                {/* Mois & Continuité des Rotations */}
+                <div className="flex items-center gap-1.5 bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs">
                   <button
                     type="button"
                     onClick={handleLoadOctober2026}
                     className="px-2 py-1 rounded bg-indigo-900/60 hover:bg-indigo-800 text-indigo-200 hover:text-white transition-colors text-[11px] font-bold border border-indigo-700/60"
-                    title="Recharger le planning officiel d'Octobre 2026"
+                    title="Recharger le planning officiel d'Octobre 2026 (Base)"
                   >
-                    ðŸ Octobre 2026
+                    Octobre 2026
                   </button>
-                  <span className="text-slate-600">|</span>
                   <button
                     type="button"
-                    onClick={handleLoadApril2026}
-                    className="px-2 py-1 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors text-[11px] font-medium"
-                    title="Charger le planning officiel d'Avril 2026 avec congé de maternité Bakhouche Sarra"
+                    onClick={() => handleCreateNextMonth(false)}
+                    className="px-2 py-1 rounded bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 hover:text-white transition-colors text-[11px] font-bold border border-emerald-700/70 flex items-center gap-1"
+                    title="Créer le mois suivant en appliquant la continuité de rotation des équipes (+1 mois)"
                   >
-                    Avril 2026
+                    <Plus className="w-3 h-3 text-emerald-400" />
+                    <span>Mois Suivant (+1)</span>
                   </button>
-                  <span className="text-slate-600">|</span>
                   <button
                     type="button"
-                    onClick={handleLoadJanuary2026}
-                    className="px-2 py-1 rounded hover:bg-slate-800 text-amber-300 hover:text-amber-200 transition-colors text-[11px] font-medium"
-                    title="Charger le planning Janvier 2026 avec mention (Modificatif)"
+                    onClick={() => setIsMonthHistoryModalOpen(true)}
+                    className="px-2.5 py-1 rounded bg-amber-950/60 hover:bg-amber-900 text-amber-300 hover:text-white transition-colors text-[11px] font-bold border border-amber-700/60 flex items-center gap-1"
+                    title="Ouvrir la liste d'historique des mois créés (filtrable par Modificatif ou Standard)"
                   >
-                    Janvier (Modif)
+                    <Calendar className="w-3 h-3 text-amber-400" />
+                    <span>Historique Mois</span>
                   </button>
                 </div>
 
@@ -1678,8 +1662,9 @@ class HospitalPdfGenerator {
               onToggleModificatif={handleToggleModificatif}
               onOpenModificatifModal={() => setIsModificatifModalOpen(true)}
               onLoadOctoberPreset={handleLoadOctober2026}
-              onLoadAprilPreset={handleLoadApril2026}
-              onLoadJanuaryPreset={handleLoadJanuary2026}
+              onCreateNextMonth={() => handleCreateNextMonth(false)}
+              onOpenMonthHistory={() => setIsMonthHistoryModalOpen(true)}
+              onOpenCreateMonthModal={() => setIsCreateMonthModalOpen(true)}
               onOpenSupabaseSync={() => setActiveTab('supabase')}
               onOpenTableManagementModal={handleOpenTableManagement}
               locale={locale}
@@ -1794,6 +1779,114 @@ class HospitalPdfGenerator {
                   )}
                 </div>
               </div>
+
+              {/* Team Filter Pills with Distinct Colors */}
+              <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-900">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  Équipes de Garde :
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedTeamFilter('all')}
+                  className={`px-2.5 py-1 rounded-lg border text-xs font-semibold transition-colors ${
+                    selectedTeamFilter === 'all'
+                      ? 'bg-sky-600 border-sky-500 text-white shadow-sm'
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Toutes les équipes
+                </button>
+                {(['A', 'B', 'C', 'D', 'E'] as const).map((letter) => {
+                  const tTheme = getTeamTheme(letter);
+                  const isSelected = selectedTeamFilter.toUpperCase() === letter;
+                  const memberCount = staffList.filter(
+                    (s) => s.category === 'paramedical_guard' && s.teamGroup.toUpperCase() === letter
+                  ).length;
+
+                  return (
+                    <button
+                      key={letter}
+                      type="button"
+                      onClick={() =>
+                        setSelectedTeamFilter(isSelected ? 'all' : letter)
+                      }
+                      className={`px-2.5 py-1 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        isSelected
+                          ? `${tTheme.fullBadge} ring-2 ring-white/30 scale-105 shadow-md`
+                          : `${tTheme.badgeBg} ${tTheme.badgeText} ${tTheme.badgeBorder} hover:brightness-125`
+                      }`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${tTheme.dotBg}`} />
+                      <span>{tTheme.name}</span>
+                      <span className="text-[10px] opacity-75 font-mono">({memberCount})</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Team Showcase Cards with Distinct Team Colors */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              {(['A', 'B', 'C', 'D', 'E'] as const).map((letter) => {
+                const tTheme = getTeamTheme(letter);
+                const teamMembers = staffList.filter(
+                  (s) => s.category === 'paramedical_guard' && s.teamGroup.toUpperCase() === letter
+                );
+                const isSelected = selectedTeamFilter.toUpperCase() === letter;
+
+                return (
+                  <div
+                    key={letter}
+                    onClick={() =>
+                      setSelectedTeamFilter(isSelected ? 'all' : letter)
+                    }
+                    className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                      tTheme.cardBg
+                    } ${
+                      isSelected
+                        ? `${tTheme.cardBorder} ring-2 ring-indigo-500/50 shadow-md`
+                        : `${tTheme.cardBorder}`
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2.5 h-2.5 rounded-full ${tTheme.dotBg}`} />
+                        <span className={`text-xs font-bold ${tTheme.badgeText}`}>
+                          {tTheme.name}
+                        </span>
+                      </div>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${tTheme.tagBg}`}>
+                        {teamMembers.length} agents
+                      </span>
+                    </div>
+
+                    <div className="mt-2 space-y-1">
+                      {teamMembers.slice(0, 2).map((m) => (
+                        <div key={m.id} className="text-[11px] text-slate-300 truncate font-medium">
+                          • {m.fullName}
+                        </div>
+                      ))}
+                      {teamMembers.length === 0 && (
+                        <div className="text-[10px] text-slate-500 italic">Aucun agent</div>
+                      )}
+                      {teamMembers.length > 2 && (
+                        <div className="text-[10px] text-slate-400">
+                          +{teamMembers.length - 2} autre(s)
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
+                      <span className="text-slate-400 font-medium">
+                        {isSelected ? '✓ Sélectionné' : 'Cliquer pour filtrer'}
+                      </span>
+                      <span className={`font-bold ${isSelected ? 'text-white underline' : tTheme.badgeText}`}>
+                        {isSelected ? 'Tous' : 'Filtrer'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Staff Table */}
@@ -1821,122 +1914,153 @@ class HospitalPdfGenerator {
                         </td>
                       </tr>
                     ) : (
-                      filteredStaff.map((staff) => (
-                        <tr key={staff.id} className="hover:bg-slate-900/40 transition-colors">
-                          <td className="py-3 px-4 text-center font-mono text-slate-500">
-                            {staff.id}
-                          </td>
-                          <td className="py-3 px-4 font-semibold text-white">
-                            <input
-                              type="text"
-                              value={staff.fullName}
-                              onChange={(e) =>
-                                handleUpdateStaffField(staff.id, 'fullName', e.target.value)
-                              }
-                              className="bg-transparent border-b border-transparent hover:border-slate-700 focus:border-sky-500 focus:bg-slate-900 rounded px-1 py-0.5 outline-none font-medium w-full"
-                            />
-                          </td>
-                          <td className="py-3 px-4">
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
-                                staff.category === 'medical'
-                                  ? 'bg-blue-950 text-blue-300 border border-blue-800'
+                      filteredStaff.map((staff) => {
+                        const sTheme = getTeamTheme(staff.teamGroup);
+                        return (
+                          <tr
+                            key={staff.id}
+                            className={`hover:bg-slate-900/40 transition-colors ${
+                              staff.category === 'paramedical_guard' && staff.teamGroup ? sTheme.rowBorder : ''
+                            }`}
+                          >
+                            <td className="py-3 px-4 text-center font-mono text-slate-500">
+                              {staff.id}
+                            </td>
+                            <td className="py-3 px-4 font-semibold text-white">
+                              <input
+                                type="text"
+                                value={staff.fullName}
+                                onChange={(e) =>
+                                  handleUpdateStaffField(staff.id, 'fullName', e.target.value)
+                                }
+                                className="bg-transparent border-b border-transparent hover:border-slate-700 focus:border-sky-500 focus:bg-slate-900 rounded px-1 py-0.5 outline-none font-medium w-full"
+                              />
+                            </td>
+                            <td className="py-3 px-4">
+                              <span
+                                className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
+                                  staff.category === 'medical'
+                                    ? 'bg-blue-950 text-blue-300 border border-blue-800'
+                                    : staff.category === 'paramedical_day'
+                                    ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                                    : staff.category === 'paramedical_guard'
+                                    ? 'bg-purple-950 text-purple-300 border border-purple-800'
+                                    : 'bg-amber-950 text-amber-300 border border-amber-800'
+                                }`}
+                              >
+                                {staff.category === 'medical'
+                                  ? 'Médical'
                                   : staff.category === 'paramedical_day'
-                                  ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                                  ? 'Paramédical Jour'
                                   : staff.category === 'paramedical_guard'
-                                  ? 'bg-purple-950 text-purple-300 border border-purple-800'
-                                  : 'bg-amber-950 text-amber-300 border border-amber-800'
-                              }`}
-                            >
-                              {staff.category === 'medical'
-                                ? 'Médical'
-                                : staff.category === 'paramedical_day'
-                                ? 'Paramédical Jour'
-                                : staff.category === 'paramedical_guard'
-                                ? 'Garde 16h'
-                                : "Hygiène"}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-slate-300">
-                            <input
-                              type="text"
-                              value={staff.rolePortrait}
-                              onChange={(e) =>
-                                handleUpdateStaffField(staff.id, 'rolePortrait', e.target.value)
-                              }
-                              className="bg-transparent border-b border-transparent hover:border-slate-700 focus:border-sky-500 focus:bg-slate-900 rounded px-1 py-0.5 outline-none w-full"
-                            />
-                          </td>
-                          <td className="py-3 px-4 text-slate-300">
-                            <input
-                              type="text"
-                              value={staff.gradeLandscape}
-                              onChange={(e) =>
-                                handleUpdateStaffField(staff.id, 'gradeLandscape', e.target.value)
-                              }
-                              className="bg-transparent border-b border-transparent hover:border-slate-700 focus:border-sky-500 focus:bg-slate-900 rounded px-1 py-0.5 outline-none w-full"
-                            />
-                          </td>
-                          <td className="py-3 px-4 text-center font-mono text-slate-400">
-                            <span className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
-                              {staff.horaireBlock || '08h-16h'}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-center font-mono">
-                            {staff.teamGroup ? (
-                              <span className="font-bold text-purple-400 bg-purple-950/60 px-2 py-0.5 rounded border border-purple-800">
-                                {staff.teamGroup}
+                                  ? 'Garde 16h'
+                                  : "Hygiène"}
                               </span>
-                            ) : (
-                              <span className="text-slate-600">—</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <div className="flex items-center justify-center gap-1">
+                            </td>
+                            <td className="py-3 px-4 text-slate-300">
+                              <input
+                                type="text"
+                                value={staff.rolePortrait}
+                                onChange={(e) =>
+                                  handleUpdateStaffField(staff.id, 'rolePortrait', e.target.value)
+                                }
+                                className="bg-transparent border-b border-transparent hover:border-slate-700 focus:border-sky-500 focus:bg-slate-900 rounded px-1 py-0.5 outline-none w-full"
+                              />
+                            </td>
+                            <td className="py-3 px-4 text-slate-300">
+                              <input
+                                type="text"
+                                value={staff.gradeLandscape}
+                                onChange={(e) =>
+                                  handleUpdateStaffField(staff.id, 'gradeLandscape', e.target.value)
+                                }
+                                className="bg-transparent border-b border-transparent hover:border-slate-700 focus:border-sky-500 focus:bg-slate-900 rounded px-1 py-0.5 outline-none w-full"
+                              />
+                            </td>
+                            <td className="py-3 px-4 text-center font-mono text-slate-400">
+                              <span className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                                {staff.horaireBlock || '08h-16h'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-center">
                               {staff.category === 'paramedical_guard' ? (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleApplyCycle(staff.id, 'guard16h', staff.teamGroup || 'A')
-                                  }
-                                  title="Appliquer cycle 5j (Jour/Nuit/RE/RE/RE)"
-                                  className="px-2 py-1 bg-purple-900/60 hover:bg-purple-800 text-purple-200 border border-purple-700 rounded text-[10px] font-medium transition-colors"
+                                <div className="inline-flex items-center gap-1.5 justify-center">
+                                  <select
+                                    value={staff.teamGroup}
+                                    onChange={(e) =>
+                                      handleUpdateStaffField(staff.id, 'teamGroup', e.target.value)
+                                    }
+                                    className={`font-bold px-2 py-1 rounded-md text-xs border outline-none cursor-pointer ${sTheme.fullBadge}`}
+                                  >
+                                    {['A', 'B', 'C', 'D', 'E'].map((letter) => (
+                                      <option
+                                        key={letter}
+                                        value={letter}
+                                        className="bg-slate-950 text-white font-bold"
+                                      >
+                                        Équipe {letter}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              ) : staff.teamGroup ? (
+                                <span
+                                  className={`font-bold px-2 py-0.5 rounded text-xs border inline-flex items-center gap-1.5 ${sTheme.fullBadge}`}
                                 >
-                                  Cycle 16h ({staff.teamGroup || 'A'})
-                                </button>
-                              ) : staff.category === 'hygiene' ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handleApplyCycle(staff.id, 'hygiene12h', '')}
-                                  title="Appliquer alternance (N / RE)"
-                                  className="px-2 py-1 bg-amber-900/60 hover:bg-amber-800 text-amber-200 border border-amber-700 rounded text-[10px] font-medium transition-colors"
-                                >
-                                  Alternance 12h
-                                </button>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${sTheme.dotBg}`} />
+                                  <span>{staff.teamGroup}</span>
+                                </span>
                               ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => handleApplyCycle(staff.id, 'workday', '')}
-                                  title="Appliquer standard (Semaine N / Ven-Sam RE)"
-                                  className="px-2 py-1 bg-sky-900/60 hover:bg-sky-800 text-sky-200 border border-sky-700 rounded text-[10px] font-medium transition-colors"
-                                >
-                                  Semaine standard
-                                </button>
+                                <span className="text-slate-600">—</span>
                               )}
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteStaff(staff.id)}
-                              title={t.deleteRow}
-                              className="p-1 text-slate-500 hover:text-red-400 hover:bg-red-950/40 rounded transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                {staff.category === 'paramedical_guard' ? (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleApplyCycle(staff.id, 'guard16h', staff.teamGroup || 'A')
+                                    }
+                                    title="Appliquer cycle 5j (Jour/Nuit/RE/RE/RE)"
+                                    className={`px-2.5 py-1 rounded text-[10.5px] font-bold border transition-colors ${sTheme.cycleButton}`}
+                                  >
+                                    Cycle 16h ({staff.teamGroup || 'A'})
+                                  </button>
+                                ) : staff.category === 'hygiene' ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleApplyCycle(staff.id, 'hygiene12h', '')}
+                                    title="Appliquer alternance (N / RE)"
+                                    className="px-2 py-1 bg-amber-900/60 hover:bg-amber-800 text-amber-200 border border-amber-700 rounded text-[10px] font-medium transition-colors"
+                                  >
+                                    Alternance 12h
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleApplyCycle(staff.id, 'workday', '')}
+                                    title="Appliquer standard (Semaine N / Ven-Sam RE)"
+                                    className="px-2 py-1 bg-sky-900/60 hover:bg-sky-800 text-sky-200 border border-sky-700 rounded text-[10px] font-medium transition-colors"
+                                  >
+                                    Semaine standard
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteStaff(staff.id)}
+                                title={t.deleteRow}
+                                className="p-1 text-slate-500 hover:text-red-400 hover:bg-red-950/40 rounded transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
@@ -2519,6 +2643,26 @@ class HospitalPdfGenerator {
         onUpdateDoctorWeekly={handleUpdateDoctorWeekly}
         onAddStaff={handleAddStaff}
         onDeleteStaff={handleDeleteStaff}
+      />
+
+      {/* MODAL: HISTORIQUE DES MOIS (FILTRAGE PAR MODIFICATIF / NON-MODIFICATIF) */}
+      <MonthHistoryModal
+        isOpen={isMonthHistoryModalOpen}
+        onClose={() => setIsMonthHistoryModalOpen(false)}
+        currentConfig={config}
+        onMonthChanged={(name) => showToast(`Planning du mois de ${name} activé avec succès !`)}
+        onOpenCreateCustomMonth={() => setIsCreateMonthModalOpen(true)}
+      />
+
+      {/* MODAL: CRÉER UN MOIS PERSONNALISÉ (CONTINUITÉ PERPÉTUELLE) */}
+      <CreateMonthModal
+        isOpen={isCreateMonthModalOpen}
+        onClose={() => setIsCreateMonthModalOpen(false)}
+        currentMonthName={config.guardMonthName || 'Octobre 2026'}
+        onSelectMonth={(year, monthIndex, isModif) => {
+          objectBoxStore.createNewMonth(year, monthIndex, !!isModif);
+          showToast(`Nouveau mois créé avec succès en continuité perpétuelle !`);
+        }}
       />
 
       {/* FOOTER */}

@@ -54,9 +54,8 @@ interface QuickActionsFloatingMenuProps {
   onToggleModificatif?: () => void;
   onOpenModificatifModal?: () => void;
   onLoadOctoberPreset?: () => void;
-  onLoadAprilPreset?: () => void;
-  onLoadJanuaryPreset?: () => void;
   onOpenCreateMonthModal?: () => void;
+  onOpenMonthHistory?: () => void;
   onDirectPdfDownload?: () => void;
   onOpenGuardStats?: () => void;
   onOpenRegulatoryAlerts?: () => void;
@@ -91,9 +90,8 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
   onToggleModificatif,
   onOpenModificatifModal,
   onLoadOctoberPreset,
-  onLoadAprilPreset,
-  onLoadJanuaryPreset,
   onOpenCreateMonthModal,
+  onOpenMonthHistory,
   onDirectPdfDownload,
   onOpenGuardStats,
   onOpenRegulatoryAlerts,
@@ -102,6 +100,7 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
   onOpenMonthlyArchive,
   onOpenSupabaseSync,
   onOpenTableManagementModal,
+  onCreateNextMonth,
   locale,
   t,
 }) => {
@@ -523,11 +522,11 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
             </div>
 
             {/* MONTH / PDF PRESETS */}
-            {(onLoadOctoberPreset || onLoadAprilPreset || onLoadJanuaryPreset || onOpenCreateMonthModal) && (
+            {(onLoadOctoberPreset || onCreateNextMonth || onOpenMonthHistory || onOpenCreateMonthModal) && (
               <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
                 <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider flex items-center justify-between">
                   <span>Mois &amp; Continuité</span>
-                  <span className="text-[9px] text-sky-400 font-mono">100% Automatique</span>
+                  <span className="text-[9px] text-sky-400 font-mono">Roulement Continu</span>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
                   {onLoadOctoberPreset && (
@@ -535,43 +534,43 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
                       type="button"
                       onClick={onLoadOctoberPreset}
                       className="px-2 py-1.5 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700 text-indigo-200 rounded-lg text-[10.5px] font-bold text-left truncate transition-colors flex items-center justify-between"
-                      title="Recharger le modèle officiel d'Octobre 2026 (Actuel)"
+                      title="Recharger le modèle officiel d'Octobre 2026 (Base)"
                     >
                       <span className="truncate">🍁 Octobre 2026</span>
-                      <span className="text-[9px] bg-indigo-500/30 text-indigo-300 px-1 py-0.2 rounded font-mono shrink-0 ml-1">31j</span>
+                      <span className="text-[9px] bg-indigo-500/30 text-indigo-300 px-1 py-0.2 rounded font-mono shrink-0 ml-1">Base</span>
+                    </button>
+                  )}
+                  {onCreateNextMonth && (
+                    <button
+                      type="button"
+                      onClick={onCreateNextMonth}
+                      className="px-2 py-1.5 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700 text-emerald-200 rounded-lg text-[10.5px] font-bold text-left truncate transition-colors flex items-center justify-between"
+                      title="Créer le mois suivant en continuité perpétuelle (+1 mois)"
+                    >
+                      <span className="truncate">➕ Mois Suivant</span>
+                      <span className="text-[9px] bg-emerald-500/30 text-emerald-300 px-1 py-0.2 rounded font-mono shrink-0 ml-1">+1m</span>
+                    </button>
+                  )}
+                  {onOpenMonthHistory && (
+                    <button
+                      type="button"
+                      onClick={onOpenMonthHistory}
+                      className="px-2 py-1.5 bg-amber-950/80 hover:bg-amber-900 border border-amber-700 text-amber-200 rounded-lg text-[10.5px] font-medium text-left truncate transition-colors flex items-center justify-between col-span-2"
+                      title="Ouvrir l'historique des mois créés (filtrable par Modificatif)"
+                    >
+                      <span className="truncate">📋 Historique des Mois Créés</span>
+                      <span className="text-[9px] bg-amber-500/30 text-amber-300 px-1.5 py-0.2 rounded font-mono shrink-0 ml-1">Filtre Modif</span>
                     </button>
                   )}
                   {onOpenCreateMonthModal && (
                     <button
                       type="button"
                       onClick={onOpenCreateMonthModal}
-                      className="px-2 py-1.5 bg-sky-950/80 hover:bg-sky-900 border border-sky-700 text-sky-200 rounded-lg text-[10.5px] font-bold text-left truncate transition-colors flex items-center justify-between"
-                      title="Créer ou choisir un mois suivant en continuité perpétuelle"
+                      className="px-2 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 rounded-lg text-[10.5px] font-medium text-left truncate transition-colors flex items-center justify-between col-span-2"
+                      title="Créer ou choisir un mois spécifique dans le calendrier"
                     >
-                      <span className="truncate">🗓️ Mois Suivant...</span>
-                      <span className="text-[9px] bg-sky-500/30 text-sky-300 px-1 py-0.2 rounded font-mono shrink-0 ml-1">+1</span>
-                    </button>
-                  )}
-                  {onLoadAprilPreset && (
-                    <button
-                      type="button"
-                      onClick={onLoadAprilPreset}
-                      className="px-2 py-1.5 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700 text-emerald-200 rounded-lg text-[10.5px] font-medium text-left truncate transition-colors flex items-center justify-between"
-                      title="Charger le modèle d'Avril 2026"
-                    >
-                      <span className="truncate">🌸 Avril 2026</span>
-                      <span className="text-[9px] bg-emerald-500/30 text-emerald-300 px-1 py-0.2 rounded font-mono shrink-0 ml-1">30j</span>
-                    </button>
-                  )}
-                  {onLoadJanuaryPreset && (
-                    <button
-                      type="button"
-                      onClick={onLoadJanuaryPreset}
-                      className="px-2 py-1.5 bg-amber-950/80 hover:bg-amber-900 border border-amber-700 text-amber-200 rounded-lg text-[10.5px] font-medium text-left truncate transition-colors flex items-center justify-between"
-                      title="Charger Janvier 2026 avec mention (Modificatif)"
-                    >
-                      <span className="truncate">❄️ Janvier (Modif)</span>
-                      <span className="text-[9px] bg-amber-500/30 text-amber-300 px-1 py-0.2 rounded font-mono shrink-0 ml-1">31j</span>
+                      <span className="truncate">🗓️ Choisir Mois Personnalisé...</span>
+                      <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
                     </button>
                   )}
                 </div>
