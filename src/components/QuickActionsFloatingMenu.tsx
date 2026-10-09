@@ -32,6 +32,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { TranslationDictionary, SupportedLocale } from '../i18n/translations';
+import { TableTargetKey } from '../db/objectboxEngine';
 
 interface QuickActionsFloatingMenuProps {
   isReadOnly: boolean;

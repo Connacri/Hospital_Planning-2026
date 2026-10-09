@@ -122,7 +122,7 @@ export const AddNoteModal: React.FC<AddNoteModalProps> = ({
     const trimmed = noteText.trim();
     if (!trimmed) return;
 
-    const targets = selectedTargets.length === 0 ? ['all'] : selectedTargets;
+    const targets: TableTargetKey[] = selectedTargets.length === 0 ? ['all'] : selectedTargets;
 
     objectBoxStore.addDocumentNote({
       prefix: selectedPrefix,
