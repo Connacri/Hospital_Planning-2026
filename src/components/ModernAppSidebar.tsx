@@ -17,8 +17,11 @@ import {
   Plus,
 } from 'lucide-react';
 import { SupportedLocale } from '../i18n/translations';
+import avatarChief from '../assets/images/doctor_chief_avatar_1791546807017.jpg';
 
-const AVATAR_CHIEF = '/src/assets/images/doctor_chief_avatar_1791546807017.jpg';
+const AVATAR_CHIEF = avatarChief;
+const FALLBACK_AVATAR =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='32' fill='%230F172A'/%3E%3Cpath d='M32 16a10 10 0 100 20 10 10 0 000-20zm0 24c-11 0-20 6.7-20 15v1h40v-1c0-8.3-9-15-20-15z' fill='%2394A3B8'/%3E%3C/svg%3E";
 
 export type ActiveTab = 'dashboard' | 'documents' | 'staff' | 'objectbox' | 'supabase' | 'flutter' | 'privacy';
 
@@ -216,6 +219,10 @@ export const ModernAppSidebar: React.FC<ModernAppSidebarProps> = ({
             alt="Dr. Medjber Tami"
             className="w-full h-full object-cover"
             referrerPolicy="no-referrer"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = FALLBACK_AVATAR;
+            }}
           />
           <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 rounded-full ring-2 ring-[#1A1C29]" />
         </div>

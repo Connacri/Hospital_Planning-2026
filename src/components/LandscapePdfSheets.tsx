@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, PaintBucket, Repeat, Tag, HeartHandshake, FileText } from 'lucide-react';
+import { Plus, Trash2, PaintBucket, Repeat, Tag, HeartHandshake, FileText, Download, ArrowUpDown, GripVertical } from 'lucide-react';
 import {
   HospitalDocumentConfig,
   StaffEntity,
+  StaffCategory,
+  objectBoxStore,
   buildStandard08h16hActivity,
   buildGuard16hActivity,
   buildHygiene12hActivity,
@@ -37,7 +39,97 @@ interface LandscapePdfSheetsProps {
   onOpenMaternityModal?: (staff?: StaffEntity) => void;
   onToggleTableModificatif?: (key: TableModificatifKey) => void;
   onOpenAddNoteModal?: (target?: TableTargetKey) => void;
+  onOpenOrganizer?: (category: StaffCategory) => void;
+  onExportSingleTable?: (sheetId: string, title: string, filename: string, orientation: 'portrait' | 'landscape') => void;
 }
+
+const TableQuickActionToolbar: React.FC<{
+  title: string;
+  category: StaffCategory;
+  sheetId: string;
+  filename: string;
+  orientation: 'portrait' | 'landscape';
+  readOnly?: boolean;
+  onOpenOrganizer?: (category: StaffCategory) => void;
+  onExportSingleTable?: (sheetId: string, title: string, filename: string, orientation: 'portrait' | 'landscape') => void;
+  showTeamSort?: boolean;
+}> = ({
+  title,
+  category,
+  sheetId,
+  filename,
+  orientation,
+  readOnly,
+  onOpenOrganizer,
+  onExportSingleTable,
+  showTeamSort = true,
+}) => {
+  return (
+    <div className="no-print mb-2.5 mt-0.5 px-3 py-1.5 bg-slate-100/95 hover:bg-slate-100 rounded-2xl border border-slate-300 flex flex-wrap items-center justify-between gap-2 text-xs font-sans shadow-xs">
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="font-bold text-slate-700 flex items-center gap-1 mr-1">
+          <ArrowUpDown className="w-3.5 h-3.5 text-sky-600" />
+          <span>Trier ce tableau :</span>
+        </span>
+
+        {showTeamSort && (
+          <button
+            type="button"
+            onClick={() => objectBoxStore.sortStaffByCategory(category, 'team', 'asc', 'both')}
+            title="Trier par groupe d'équipe (A, B, C, D, E)"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white hover:bg-sky-50 text-sky-700 border border-sky-200 font-semibold shadow-2xs transition-all hover:scale-105 active:scale-95"
+          >
+            <span>🛡️ Équipe (A-E)</span>
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={() => objectBoxStore.sortStaffByCategory(category, 'name', 'asc', 'both')}
+          title="Trier par ordre alphabétique des noms (A à Z)"
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold shadow-2xs transition-all hover:scale-105 active:scale-95"
+        >
+          <span>🔤 Nom (A-Z)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => objectBoxStore.sortStaffByCategory(category, 'grade', 'asc', 'both')}
+          title="Trier par hiérarchie officielle hospitalière"
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold shadow-2xs transition-all hover:scale-105 active:scale-95"
+        >
+          <span>🎖️ Grade</span>
+        </button>
+
+        {onOpenOrganizer && (
+          <button
+            type="button"
+            onClick={() => onOpenOrganizer(category)}
+            title="Ouvrir l'organiseur complet avec glisser-déposer"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-100 hover:bg-sky-200 text-sky-900 border border-sky-300 font-bold shadow-2xs transition-all hover:scale-105 active:scale-95"
+          >
+            <GripVertical className="w-3.5 h-3.5 text-sky-700" />
+            <span>Glisser-Déposer...</span>
+          </button>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        {onExportSingleTable && (
+          <button
+            type="button"
+            onClick={() => onExportSingleTable(sheetId, title, filename, orientation)}
+            title="Télécharger immédiatement UNIQUEMENT ce tableau en PDF A4"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm transition-all hover:scale-105 active:scale-95"
+          >
+            <Download className="w-3.5 h-3.5 text-amber-300" />
+            <span>Exporter ce tableau en PDF</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const OfficialLandscapeHeader: React.FC<{
   config: HospitalDocumentConfig;
@@ -47,21 +139,21 @@ const OfficialLandscapeHeader: React.FC<{
 }> = ({ config, onUpdateConfig, compact = false, readOnly = false }) => (
   <div className="font-pdf text-black">
     <div className="text-center leading-tight">
-      <div className={`${compact ? 'text-[17px]' : 'text-[19px]'} font-semibold tracking-tight`}>
+      <div className={`${compact ? 'text-[18px]' : 'text-[20px]'} font-semibold tracking-tight`}>
         <EditableText
           value={config.republicHeader}
           readOnly={readOnly}
           onChange={(v) => onUpdateConfig({ republicHeader: v })}
         />
       </div>
-      <div className={`${compact ? 'text-[13px]' : 'text-[14.5px]'} font-medium tracking-tight mt-0.5`}>
+      <div className={`${compact ? 'text-[14px]' : 'text-[15.5px]'} font-medium tracking-tight mt-0.5`}>
         <EditableText
           value={config.ministryHeader}
           readOnly={readOnly}
           onChange={(v) => onUpdateConfig({ ministryHeader: v })}
         />
       </div>
-      <div className={`${compact ? 'text-[13px]' : 'text-[14.5px]'} font-medium mt-0.5`}>
+      <div className={`${compact ? 'text-[14px]' : 'text-[15.5px]'} font-medium mt-0.5`}>
         <EditableText
           value={config.hospitalHeader}
           readOnly={readOnly}
@@ -69,7 +161,7 @@ const OfficialLandscapeHeader: React.FC<{
         />
       </div>
     </div>
-    <div className={`${compact ? 'mt-2 text-[14px]' : 'mt-6 text-[15.5px]'} font-medium`}>
+    <div className={`${compact ? 'mt-2 text-[15px]' : 'mt-6 text-[16.5px]'} font-medium`}>
       <EditableText
         value={config.unitTitle}
         readOnly={readOnly}
@@ -336,7 +428,7 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
     onUpdateConfig({ daysColumns: nextCols });
   };
 
-  const rowHeightClass = compactRows ? 'h-[17px] text-[11px] leading-tight' : 'h-[25px] text-[12.5px]';
+  const rowHeightClass = compactRows ? 'h-[19px] text-[13px] leading-tight' : 'h-[27px] text-[14.5px]';
 
   const formatWidth = (w?: number | string, fallback = 10): string => {
     if (typeof w === 'number') return `${w}%`;
@@ -359,7 +451,7 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
     >
       <table className="w-full border-collapse border border-[#666666] text-center font-pdf table-fixed">
         <thead>
-          <tr className={`${compactRows ? 'h-[24px]' : 'h-[30px]'} text-[11.5px] leading-[1.1] bg-[#3D3D3D] text-white font-bold`}>
+          <tr className={`${compactRows ? 'h-[24px]' : 'h-[30px]'} text-[13px] leading-[1.1] bg-[#3D3D3D] text-white font-bold`}>
             <th
               style={{ width: effectiveNameWidth }}
               className="border border-[#555555] bg-[#3D3D3D] text-white font-bold px-1 whitespace-nowrap text-left pl-1.5"
@@ -368,7 +460,7 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
                 value={config.pdf2NameColHeader}
                 darkSurface
                 readOnly={readOnly}
-                className="whitespace-nowrap font-bold text-white text-[11px]"
+                className="whitespace-nowrap font-bold text-white text-[13px]"
                 onChange={(v) => onUpdateConfig({ pdf2NameColHeader: v })}
               />
             </th>
@@ -380,7 +472,7 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
                 value={config.pdf2GradeColHeader}
                 darkSurface
                 readOnly={readOnly}
-                className="whitespace-nowrap font-bold text-white text-[11px]"
+                className="whitespace-nowrap font-bold text-white text-[13px]"
                 onChange={(v) => onUpdateConfig({ pdf2GradeColHeader: v })}
               />
             </th>
@@ -393,7 +485,7 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
                   value={config.pdf2TeamColHeader}
                   darkSurface
                   readOnly={readOnly}
-                  className="whitespace-nowrap font-bold text-white text-[10.5px]"
+                  className="whitespace-nowrap font-bold text-white text-[12.5px]"
                   onChange={(v) => onUpdateConfig({ pdf2TeamColHeader: v })}
                 />
               </th>
@@ -445,33 +537,60 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
             return (
               <tr
                 key={staff.id}
-                className={`group ${rowHeightClass} font-medium transition-colors`}
+                draggable={!readOnly}
+                onDragStart={(e) => {
+                  if (readOnly) return;
+                  e.dataTransfer.setData('text/plain', String(staff.id));
+                  e.dataTransfer.effectAllowed = 'move';
+                }}
+                onDragOver={(e) => {
+                  if (!readOnly) e.preventDefault();
+                }}
+                onDrop={(e) => {
+                  if (readOnly) return;
+                  e.preventDefault();
+                  const sourceId = Number(e.dataTransfer.getData('text/plain'));
+                  if (sourceId && sourceId !== staff.id) {
+                    objectBoxStore.moveStaffItem(staff.category, sourceId, staff.id, 'both');
+                  }
+                }}
+                className={`group ${rowHeightClass} font-medium transition-colors hover:bg-slate-50`}
               >
                 {/* Nom et Prénom */}
-                <td className="border border-[#CCCCCC] bg-white text-black px-1.5 text-left relative whitespace-nowrap align-middle">
-                  <EditableText
-                    value={staff.fullName}
-                    readOnly={readOnly}
-                    className={`whitespace-nowrap font-semibold tracking-tight block overflow-visible ${
-                      compactRows ? 'text-[10px] sm:text-[10.5px]' : 'text-[10.5px] sm:text-[11px]'
-                    }`}
-                    onChange={(v) => onUpdateStaffField(staff.id, 'fullName', v)}
-                  />
+                <td className="border border-[#CCCCCC] bg-white text-black px-1 text-left relative whitespace-nowrap align-middle">
+                  <div className="flex items-center gap-1">
+                    {!readOnly && (
+                      <span
+                        className="no-print opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-800 transition-opacity"
+                        title="Attrapez pour glisser-déposer"
+                      >
+                        <GripVertical className="w-3 h-3 inline-block" />
+                      </span>
+                    )}
+                    <EditableText
+                      value={staff.fullName}
+                      readOnly={readOnly}
+                      className={`whitespace-nowrap font-semibold tracking-tight block overflow-visible ${
+                        compactRows ? 'text-[12px] sm:text-[12.5px]' : 'text-[12.5px] sm:text-[13px]'
+                      }`}
+                      onChange={(v) => onUpdateStaffField(staff.id, 'fullName', v)}
+                    />
+                  </div>
                   {!readOnly && (
                     <button
                       type="button"
                       onClick={() => onDeleteStaff(staff.id)}
                       title="Supprimer cette ligne"
-                      className="no-print opacity-0 group-hover:opacity-100 absolute left-0.5 top-1/2 -translate-y-1/2 p-0.5 text-red-600 hover:bg-red-100 rounded"
+                      className="no-print opacity-0 group-hover:opacity-100 absolute right-0.5 top-1/2 -translate-y-1/2 p-0.5 text-red-600 hover:bg-red-100 rounded"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
                   )}
                 </td>
 
-                {/* Grade - Texte en une seule ligne avec espacement soigné pour éviter tout dépassement */}
+                {/* Grade */}
                 <td className={`border border-[#CCCCCC] bg-white text-black px-1 leading-tight align-middle whitespace-nowrap text-center ${
-                  compactRows ? 'text-[10px] sm:text-[10.5px]' : 'text-[10.5px] sm:text-[11px]'
+                  compactRows ? 'text-[12px] sm:text-[12.5px]' : 'text-[12.5px] sm:text-[13px]'
                 }`}>
                   <EditableText
                     value={cleanGrade}
@@ -483,7 +602,7 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
 
                 {/* Équipe (only on Page 3 - 16h) */}
                 {showTeamColumn && (
-                  <td className="border border-[#CCCCCC] bg-white text-black px-0.5 font-bold text-center align-middle text-[10.5px]">
+                  <td className="border border-[#CCCCCC] bg-white text-black px-0.5 font-bold text-center align-middle text-[12.5px]">
                     <EditableText
                       value={staff.teamGroup}
                       readOnly={readOnly}
@@ -637,6 +756,8 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
   onOpenMaternityModal,
   onToggleTableModificatif,
   onOpenAddNoteModal,
+  onOpenOrganizer,
+  onExportSingleTable,
 }) => {
   const medicalRows = staffList
     .filter((s) => s.category === 'medical')
@@ -693,14 +814,25 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
             className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
           >
             <div className="flex flex-col">
+              <TableQuickActionToolbar
+                title="Tableau d'Activité Médicale (08h-16h)"
+                category="medical"
+                sheetId={`doc-sheet-l1-${chunkIdx}`}
+                filename="EH_AinElTurck_Tableau_Activite_Medical_08h-16h.pdf"
+                orientation="landscape"
+                readOnly={readOnly}
+                showTeamSort={false}
+                onOpenOrganizer={onOpenOrganizer}
+                onExportSingleTable={onExportSingleTable}
+              />
               <OfficialLandscapeHeader
                 config={config}
                 onUpdateConfig={onUpdateConfig}
                 readOnly={readOnly}
               />
 
-              <div className="mt-4 mb-2 text-center">
-                <h2 className="text-[20px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
+              <div className="mt-3 mb-2 text-center">
+                <h2 className="text-[21px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
                   <EditableText
                     value={
                       chunkIdx === 0
@@ -825,14 +957,25 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
             className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
           >
             <div className="flex flex-col">
+              <TableQuickActionToolbar
+                title="Tableau d'Activité Paramédicale Jour (08h-16h)"
+                category="paramedical_day"
+                sheetId={`doc-sheet-l2-${chunkIdx}`}
+                filename="EH_AinElTurck_Tableau_Activite_Paramedical_Jour_08h-16h.pdf"
+                orientation="landscape"
+                readOnly={readOnly}
+                showTeamSort={false}
+                onOpenOrganizer={onOpenOrganizer}
+                onExportSingleTable={onExportSingleTable}
+              />
               <OfficialLandscapeHeader
                 config={config}
                 onUpdateConfig={onUpdateConfig}
                 readOnly={readOnly}
               />
 
-              <div className="mt-4 mb-2 text-center">
-                <h2 className="text-[20px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
+              <div className="mt-3 mb-2 text-center">
+                <h2 className="text-[21px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
                   <EditableText
                     value={
                       chunkIdx === 0

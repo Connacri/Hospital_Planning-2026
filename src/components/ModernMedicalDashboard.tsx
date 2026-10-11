@@ -35,10 +35,16 @@ import {
   TableColumnWidthSettings,
 } from '../db/objectboxEngine';
 
-// Images d'avatars de médecins générées
-const AVATAR_CHIEF = '/src/assets/images/doctor_chief_avatar_1791546807017.jpg';
-const AVATAR_SPECIALIST = '/src/assets/images/doctor_specialist_avatar_1791546817441.jpg';
-const AVATAR_RESIDENT = '/src/assets/images/doctor_resident_avatar_1791546827755.jpg';
+import avatarChief from '../assets/images/doctor_chief_avatar_1791546807017.jpg';
+import avatarSpecialist from '../assets/images/doctor_specialist_avatar_1791546817441.jpg';
+import avatarResident from '../assets/images/doctor_resident_avatar_1791546827755.jpg';
+
+// Images d'avatars de médecins avec repli garanti
+const AVATAR_CHIEF = avatarChief;
+const AVATAR_SPECIALIST = avatarSpecialist;
+const AVATAR_RESIDENT = avatarResident;
+const FALLBACK_AVATAR =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='32' fill='%230F172A'/%3E%3Cpath d='M32 16a10 10 0 100 20 10 10 0 000-20zm0 24c-11 0-20 6.7-20 15v1h40v-1c0-8.3-9-15-20-15z' fill='%2394A3B8'/%3E%3C/svg%3E";
 
 interface ModernMedicalDashboardProps {
   config: HospitalDocumentConfig;
@@ -339,6 +345,10 @@ export const ModernMedicalDashboard: React.FC<ModernMedicalDashboardProps> = ({
                   alt="Dr. Medjber Tami"
                   className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
                   referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = FALLBACK_AVATAR;
+                  }}
                 />
                 <div className="leading-tight">
                   <div className="text-[11.5px] font-bold text-[#881337] truncate max-w-[130px]">
@@ -431,6 +441,10 @@ export const ModernMedicalDashboard: React.FC<ModernMedicalDashboardProps> = ({
                     alt="Dr. Medjber Tami"
                     className="w-12 h-12 rounded-full object-cover border-2 border-slate-100 shadow-sm"
                     referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = FALLBACK_AVATAR;
+                    }}
                   />
                   <div>
                     <h3 className="text-xs font-extrabold text-slate-900">
@@ -498,6 +512,10 @@ export const ModernMedicalDashboard: React.FC<ModernMedicalDashboardProps> = ({
                     alt="Dr. Bakhouche"
                     className="w-12 h-12 rounded-full object-cover border-2 border-slate-100 shadow-sm"
                     referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = FALLBACK_AVATAR;
+                    }}
                   />
                   <div>
                     <h3 className="text-xs font-extrabold text-slate-900">

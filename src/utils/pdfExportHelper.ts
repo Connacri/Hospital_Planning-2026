@@ -5,6 +5,9 @@ export interface DirectPdfExportOptions {
   orientation: 'portrait' | 'landscape';
   filename?: string;
   onProgress?: (current: number, total: number) => void;
+  targetSheetId?: string;
+  targetSheetIndices?: number[];
+  customElements?: HTMLElement[];
 }
 
 async function captureSheet(
@@ -25,10 +28,39 @@ export async function exportDirectPdf({
   orientation,
   filename = 'EH_Ain_El_Turck_Planning.pdf',
   onProgress,
+  targetSheetId,
+  targetSheetIndices,
+  customElements,
 }: DirectPdfExportOptions): Promise<void> {
   const isLandscape = orientation === 'landscape';
-  const selector = isLandscape ? '.a4-landscape-sheet' : '.a4-portrait-sheet';
-  const elements = Array.from(document.querySelectorAll<HTMLElement>(selector));
+  let elements: HTMLElement[] = [];
+
+  if (customElements && customElements.length > 0) {
+    elements = customElements;
+  } else if (targetSheetId) {
+    const exact = document.getElementById(targetSheetId);
+    if (exact) {
+      elements = [exact];
+    } else {
+      const matched = Array.from(
+        document.querySelectorAll<HTMLElement>(`[id^="${targetSheetId}"]`)
+      );
+      if (matched.length > 0) {
+        elements = matched;
+      } else {
+        const queried = document.querySelector<HTMLElement>(`#${targetSheetId}`);
+        if (queried) elements = [queried];
+      }
+    }
+  } else {
+    const selector = isLandscape ? '.a4-landscape-sheet' : '.a4-portrait-sheet';
+    elements = Array.from(document.querySelectorAll<HTMLElement>(selector));
+    if (targetSheetIndices && targetSheetIndices.length > 0) {
+      elements = targetSheetIndices
+        .map((idx) => elements[idx])
+        .filter((el): el is HTMLElement => Boolean(el));
+    }
+  }
 
   if (elements.length === 0) {
     throw new Error('Aucune feuille A4 trouvée pour la génération du PDF.');

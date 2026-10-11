@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Tag, Repeat, Check, HeartHandshake, Layers, Sparkles, FileText } from 'lucide-react';
+import { Plus, Trash2, Tag, Repeat, Check, HeartHandshake, Layers, Sparkles, FileText, Download, ArrowUpDown, GripVertical } from 'lucide-react';
 import {
   HospitalDocumentConfig,
   StaffEntity,
+  StaffCategory,
+  objectBoxStore,
   DoctorWeeklySchedule,
   buildStandard08h16hActivity,
   buildGuard16hActivity,
@@ -39,6 +41,8 @@ interface PortraitPdfSheetsProps {
   onToggleTableModificatif?: (key: TableModificatifKey) => void;
   onOpenTableManagementModal?: (tab: 'table1' | 'table2' | 'table3') => void;
   onOpenAddNoteModal?: (target?: TableTargetKey) => void;
+  onOpenOrganizer?: (category: StaffCategory) => void;
+  onExportSingleTable?: (sheetId: string, title: string, filename: string, orientation: 'portrait' | 'landscape') => void;
 }
 
 const LeavePickerButton: React.FC<{
@@ -207,6 +211,94 @@ const LeavePickerButton: React.FC<{
   );
 };
 
+const TableQuickActionToolbar: React.FC<{
+  title: string;
+  category: StaffCategory;
+  sheetId: string;
+  filename: string;
+  orientation: 'portrait' | 'landscape';
+  readOnly?: boolean;
+  onOpenOrganizer?: (category: StaffCategory) => void;
+  onExportSingleTable?: (sheetId: string, title: string, filename: string, orientation: 'portrait' | 'landscape') => void;
+  showTeamSort?: boolean;
+}> = ({
+  title,
+  category,
+  sheetId,
+  filename,
+  orientation,
+  readOnly,
+  onOpenOrganizer,
+  onExportSingleTable,
+  showTeamSort = true,
+}) => {
+  return (
+    <div className="no-print mb-2.5 mt-0.5 px-3 py-1.5 bg-slate-100/95 hover:bg-slate-100 rounded-2xl border border-slate-300 flex flex-wrap items-center justify-between gap-2 text-xs font-sans shadow-xs">
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="font-bold text-slate-700 flex items-center gap-1 mr-1">
+          <ArrowUpDown className="w-3.5 h-3.5 text-sky-600" />
+          <span>Trier ce tableau :</span>
+        </span>
+
+        {showTeamSort && (
+          <button
+            type="button"
+            onClick={() => objectBoxStore.sortStaffByCategory(category, 'team', 'asc', 'both')}
+            title="Trier par groupe d'équipe (A, B, C, D, E)"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white hover:bg-sky-50 text-sky-700 border border-sky-200 font-semibold shadow-2xs transition-all hover:scale-105 active:scale-95"
+          >
+            <span>🛡️ Équipe (A-E)</span>
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={() => objectBoxStore.sortStaffByCategory(category, 'name', 'asc', 'both')}
+          title="Trier par ordre alphabétique des noms (A à Z)"
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold shadow-2xs transition-all hover:scale-105 active:scale-95"
+        >
+          <span>🔤 Nom (A-Z)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => objectBoxStore.sortStaffByCategory(category, 'grade', 'asc', 'both')}
+          title="Trier par hiérarchie officielle hospitalière"
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold shadow-2xs transition-all hover:scale-105 active:scale-95"
+        >
+          <span>🎖️ Grade</span>
+        </button>
+
+        {onOpenOrganizer && (
+          <button
+            type="button"
+            onClick={() => onOpenOrganizer(category)}
+            title="Ouvrir l'organiseur complet avec glisser-déposer"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-100 hover:bg-sky-200 text-sky-900 border border-sky-300 font-bold shadow-2xs transition-all hover:scale-105 active:scale-95"
+          >
+            <GripVertical className="w-3.5 h-3.5 text-sky-700" />
+            <span>Glisser-Déposer...</span>
+          </button>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        {onExportSingleTable && (
+          <button
+            type="button"
+            onClick={() => onExportSingleTable(sheetId, title, filename, orientation)}
+            title="Télécharger immédiatement UNIQUEMENT ce tableau en PDF A4"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm transition-all hover:scale-105 active:scale-95"
+          >
+            <Download className="w-3.5 h-3.5 text-amber-300" />
+            <span>Exporter ce tableau en PDF</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const OfficialPortraitHeader: React.FC<{
   config: HospitalDocumentConfig;
   onUpdateConfig: (partial: Partial<HospitalDocumentConfig>) => void;
@@ -215,21 +307,21 @@ const OfficialPortraitHeader: React.FC<{
 }> = ({ config, onUpdateConfig, readOnly = false, compact = false }) => (
   <div className="font-pdf text-black">
     <div className="text-center leading-tight">
-      <div className="text-[15px] font-semibold tracking-tight">
+      <div className="text-[16px] font-semibold tracking-tight">
         <EditableText
           value={config.republicHeader}
           readOnly={readOnly}
           onChange={(v) => onUpdateConfig({ republicHeader: v })}
         />
       </div>
-      <div className="text-[13px] font-medium tracking-tight mt-0.5">
+      <div className="text-[14px] font-medium tracking-tight mt-0.5">
         <EditableText
           value={config.ministryHeader}
           readOnly={readOnly}
           onChange={(v) => onUpdateConfig({ ministryHeader: v })}
         />
       </div>
-      <div className="text-[13px] font-medium mt-1">
+      <div className="text-[14px] font-medium mt-1">
         <EditableText
           value={config.hospitalHeader}
           readOnly={readOnly}
@@ -237,7 +329,7 @@ const OfficialPortraitHeader: React.FC<{
         />
       </div>
     </div>
-    <div className={`${compact ? 'mt-3' : 'mt-6'} text-[13px] font-medium`}>
+    <div className={`${compact ? 'mt-3' : 'mt-6'} text-[14px] font-medium`}>
       <EditableText
         value={config.unitTitle}
         readOnly={readOnly}
@@ -354,6 +446,8 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
   onToggleTableModificatif,
   onOpenTableManagementModal,
   onOpenAddNoteModal,
+  onOpenOrganizer,
+  onExportSingleTable,
 }) => {
   const doctors = staffList
     .filter((s) => s.category === 'medical')
@@ -501,6 +595,17 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
             className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-start font-pdf scroll-mt-20"
           >
             <div>
+              <TableQuickActionToolbar
+                title="Planning Hebdomadaire des Médecins"
+                category="medical"
+                sheetId={`doc-sheet-p1-${chunkIdx}`}
+                filename="EH_AinElTurck_Planning_Hebdomadaire_Medecins.pdf"
+                orientation="portrait"
+                readOnly={readOnly}
+                showTeamSort={false}
+                onOpenOrganizer={onOpenOrganizer}
+                onExportSingleTable={onExportSingleTable}
+              />
               <OfficialPortraitHeader
                 config={config}
                 onUpdateConfig={onUpdateConfig}
@@ -508,8 +613,8 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
               />
 
               {/* Title Block */}
-              <div className="mt-8 mb-4 text-center">
-                <h2 className="text-[18px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
+              <div className="mt-6 mb-3 text-center">
+                <h2 className="text-[19px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
                   <EditableText
                     value={
                       chunkIdx === 0
@@ -552,7 +657,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                     </button>
                   </div>
                 )}
-                <div className="text-[15px] font-medium text-black mt-1">
+                <div className="text-[16px] font-medium text-black mt-1">
                   <EditableText
                     value={config.pdf1Page1Subtitle}
                     readOnly={readOnly}
@@ -590,7 +695,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
               {/* Doctors Weekly Table */}
               <table className="w-full border-collapse border border-[#666666] text-center table-fixed">
                 <thead>
-                  <tr className="bg-[#3D3D3D] text-white text-[14.5px] font-bold h-[42px] leading-tight text-center">
+                  <tr className="bg-[#3D3D3D] text-white text-[16px] font-bold h-[42px] leading-tight text-center">
                     {config.pdf1Page1Columns.map((col, idx) => (
                       <th
                         key={idx}
@@ -603,7 +708,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                           value={col}
                           darkSurface
                           readOnly={readOnly}
-                          className="whitespace-nowrap font-bold text-white"
+                          className={`whitespace-nowrap font-bold text-white ${idx === 0 ? 'text-[15.5px]' : 'text-[14.5px]'}`}
                           onChange={(v) => {
                             const next = [...config.pdf1Page1Columns] as [
                               string,
@@ -628,6 +733,23 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                     return (
                       <tr
                         key={doc.id}
+                        draggable={!readOnly}
+                        onDragStart={(e) => {
+                          if (readOnly) return;
+                          e.dataTransfer.setData('text/plain', String(doc.id));
+                          e.dataTransfer.effectAllowed = 'move';
+                        }}
+                        onDragOver={(e) => {
+                          if (!readOnly) e.preventDefault();
+                        }}
+                        onDrop={(e) => {
+                          if (readOnly) return;
+                          e.preventDefault();
+                          const sourceId = Number(e.dataTransfer.getData('text/plain'));
+                          if (sourceId && sourceId !== doc.id) {
+                            objectBoxStore.moveStaffItem('medical', sourceId, doc.id, 'both');
+                          }
+                        }}
                         className={`group text-black h-[54px] transition-colors ${
                           isEvenRow
                             ? 'bg-[#FFFFFF] hover:bg-[#F3F7FB]'
@@ -635,20 +757,30 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                         }`}
                       >
                         <td
-                          className={`border border-[#7F7F7F] px-2 py-1 text-[12.5px] sm:text-[13px] font-semibold text-left relative whitespace-nowrap ${rowBgClass}`}
+                          className={`border border-[#7F7F7F] px-2 py-1 text-[14.5px] sm:text-[15px] font-semibold text-left relative whitespace-nowrap ${rowBgClass}`}
                         >
-                          <EditableText
-                            value={doc.fullName}
-                            readOnly={readOnly}
-                            className="whitespace-nowrap font-semibold tracking-tight block overflow-visible"
-                            onChange={(v) => onUpdateStaffField(doc.id, 'fullName', v)}
-                          />
+                          <div className="flex items-center gap-1.5">
+                            {!readOnly && (
+                              <span
+                                className="no-print opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-800 transition-opacity"
+                                title="Attrapez pour glisser-déposer"
+                              >
+                                <GripVertical className="w-3.5 h-3.5 inline-block" />
+                              </span>
+                            )}
+                            <EditableText
+                              value={doc.fullName}
+                              readOnly={readOnly}
+                              className="whitespace-nowrap font-semibold tracking-tight block overflow-visible"
+                              onChange={(v) => onUpdateStaffField(doc.id, 'fullName', v)}
+                            />
+                          </div>
                           {!readOnly && (
                             <button
                               type="button"
                               onClick={() => onDeleteStaff(doc.id)}
                               title="Supprimer cette ligne"
-                              className="no-print opacity-0 group-hover:opacity-100 focus:opacity-100 absolute left-1 top-1/2 -translate-y-1/2 p-1 text-red-600 hover:bg-red-100 rounded transition-opacity"
+                              className="no-print opacity-0 group-hover:opacity-100 focus:opacity-100 absolute right-1 top-1/2 -translate-y-1/2 p-1 text-red-600 hover:bg-red-100 rounded transition-opacity"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -661,7 +793,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                         ).map((dayKey) => (
                           <td
                             key={dayKey}
-                            className={`border border-[#7F7F7F] px-0.5 py-1 text-[11px] sm:text-[11.5px] leading-tight font-semibold align-middle overflow-hidden text-center max-h-[50px] ${rowBgClass}`}
+                            className={`border border-[#7F7F7F] px-0.5 py-1 text-[13px] sm:text-[13.5px] leading-tight font-semibold align-middle overflow-hidden text-center max-h-[50px] ${rowBgClass}`}
                           >
                             <EditableText
                               value={doc.weeklySchedule[dayKey]}
@@ -761,6 +893,17 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
             className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-start font-pdf scroll-mt-20"
           >
             <div>
+              <TableQuickActionToolbar
+                title="Liste Nominative du Personnel Médical & OBS"
+                category="medical"
+                sheetId={`doc-sheet-p2-${chunkIdx}`}
+                filename="EH_AinElTurck_Liste_Personnel_Medical_OBS.pdf"
+                orientation="portrait"
+                readOnly={readOnly}
+                showTeamSort={false}
+                onOpenOrganizer={onOpenOrganizer}
+                onExportSingleTable={onExportSingleTable}
+              />
               <OfficialPortraitHeader
                 config={config}
                 onUpdateConfig={onUpdateConfig}
@@ -771,8 +914,8 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
               {(() => {
                 const activeNotesP2 = getActiveNotesForTable(config, 'pdf1Page2');
                 return (
-                  <div className={`${activeNotesP2.length > 0 ? 'mt-5 mb-2' : 'mt-10 mb-4'} text-center`}>
-                    <h2 className="text-[16.5px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
+                  <div className={`${activeNotesP2.length > 0 ? 'mt-4 mb-2' : 'mt-6 mb-3'} text-center`}>
+                    <h2 className="text-[17.5px] font-semibold tracking-tight text-black inline-flex items-center justify-center flex-wrap gap-1.5">
                       <EditableText
                         value={
                           chunkIdx === 0
@@ -815,7 +958,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                         </button>
                       </div>
                     )}
-                    <div className="text-[14px] font-medium text-black mt-1.5">
+                    <div className="text-[15px] font-medium text-black mt-1.5">
                       <EditableText
                         value={config.pdf1Page2Subtitle}
                         readOnly={readOnly}
@@ -855,7 +998,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
               {/* Medical Staff List Table */}
               <table className="w-full border-collapse border border-[#666666] text-center table-fixed">
                 <thead>
-                  <tr className="bg-[#3D3D3D] text-white text-[14.5px] font-bold h-[42px]">
+                  <tr className="bg-[#3D3D3D] text-white text-[16.5px] font-bold h-[42px]">
                     {config.pdf1Page2Columns.map((col, idx) => (
                       <th
                         key={idx}
@@ -866,7 +1009,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                           value={col}
                           darkSurface
                           readOnly={readOnly}
-                          className="whitespace-nowrap font-bold text-white"
+                          className="whitespace-nowrap font-bold text-white text-[15.5px]"
                           onChange={(v) => {
                             const next = [...config.pdf1Page2Columns] as [
                               string,
@@ -888,19 +1031,46 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                     return (
                       <tr
                         key={doc.id}
-                        className={`group text-black h-[36px] text-[13.5px] font-medium transition-colors ${
+                        draggable={!readOnly}
+                        onDragStart={(e) => {
+                          if (readOnly) return;
+                          e.dataTransfer.setData('text/plain', String(doc.id));
+                          e.dataTransfer.effectAllowed = 'move';
+                        }}
+                        onDragOver={(e) => {
+                          if (!readOnly) e.preventDefault();
+                        }}
+                        onDrop={(e) => {
+                          if (readOnly) return;
+                          e.preventDefault();
+                          const sourceId = Number(e.dataTransfer.getData('text/plain'));
+                          if (sourceId && sourceId !== doc.id) {
+                            objectBoxStore.moveStaffItem('medical', sourceId, doc.id, 'both');
+                          }
+                        }}
+                        className={`group text-black h-[38px] text-[15.5px] font-medium transition-colors ${
                           isEvenRow
                             ? 'bg-[#FFFFFF] hover:bg-[#F3F7FB]'
                             : 'bg-[#E2EDF8] hover:bg-[#D5E3F2]'
                         }`}
                       >
                         <td className={`border border-[#7F7F7F] px-2 py-1 relative whitespace-nowrap overflow-hidden text-ellipsis align-middle ${rowBgClass}`}>
-                          <EditableText
-                            value={doc.fullName}
-                            readOnly={readOnly}
-                            className="whitespace-nowrap"
-                            onChange={(v) => onUpdateStaffField(doc.id, 'fullName', v)}
-                          />
+                          <div className="flex items-center gap-1.5">
+                            {!readOnly && (
+                              <span
+                                className="no-print opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-800 transition-opacity"
+                                title="Attrapez pour glisser-déposer"
+                              >
+                                <GripVertical className="w-3.5 h-3.5 inline-block" />
+                              </span>
+                            )}
+                            <EditableText
+                              value={doc.fullName}
+                              readOnly={readOnly}
+                              className="whitespace-nowrap"
+                              onChange={(v) => onUpdateStaffField(doc.id, 'fullName', v)}
+                            />
+                          </div>
                           {!readOnly && (
                             <button
                               type="button"
@@ -1098,15 +1268,15 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
             )}
 
             {/* Paramedical Complete Table (08h-16h, 16h Groupes A-E, 12h) */}
-            <table className="w-full border-collapse border border-black text-black text-[13.5px] table-fixed">
+            <table className="w-full border-collapse border border-black text-black text-[14.5px] table-fixed">
               <thead>
-                <tr className="bg-[#3D3D3D] text-white text-[14px] font-bold h-[36px] text-center border-b border-black">
+                <tr className="bg-[#3D3D3D] text-white text-[15px] font-bold h-[36px] text-center border-b border-black">
                   <th style={{ width: `${cw.portraitTable3.num}%` }} className="border border-black px-1 whitespace-nowrap font-bold">
                     <EditableText
                       value={config.pdf1Page3Columns[0]}
                       darkSurface
                       readOnly={readOnly}
-                      className="whitespace-nowrap font-bold text-white"
+                      className="whitespace-nowrap font-bold text-white text-[15px]"
                       onChange={(v) => {
                         const next = [...config.pdf1Page3Columns] as [
                           string,
@@ -1124,7 +1294,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                       value={config.pdf1Page3Columns[1]}
                       darkSurface
                       readOnly={readOnly}
-                      className="whitespace-nowrap font-bold text-white"
+                      className="whitespace-nowrap font-bold text-white text-[15px]"
                       onChange={(v) => {
                         const next = [...config.pdf1Page3Columns] as [
                           string,
@@ -1142,7 +1312,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                       value={config.pdf1Page3Columns[2]}
                       darkSurface
                       readOnly={readOnly}
-                      className="whitespace-nowrap font-bold text-white"
+                      className="whitespace-nowrap font-bold text-white text-[15px]"
                       onChange={(v) => {
                         const next = [...config.pdf1Page3Columns] as [
                           string,
@@ -1160,7 +1330,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                       value={config.pdf1Page3Columns[3]}
                       darkSurface
                       readOnly={readOnly}
-                      className="whitespace-nowrap font-bold text-white"
+                      className="whitespace-nowrap font-bold text-white text-[15px]"
                       onChange={(v) => {
                         const next = [...config.pdf1Page3Columns] as [
                           string,
@@ -1180,12 +1350,12 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                 {paramedicalDay.map((staff, idx) => (
                   <tr
                     key={staff.id}
-                    className="group h-[19px] leading-tight hover:bg-amber-50/40"
+                    className="group h-[20px] leading-tight hover:bg-amber-50/40"
                   >
                     {idx === 0 && (
                       <td
                         rowSpan={Math.max(1, paramedicalDay.length)}
-                        className="border border-black text-center align-middle font-medium text-[14px] relative"
+                        className="border border-black text-center align-middle font-medium text-[15px] relative"
                       >
                         <span>08h-16h</span>
                         {!readOnly && (
@@ -1270,7 +1440,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                         {isFirst16hRow && (
                           <td
                             rowSpan={Math.max(1, total16hRows)}
-                            className="border border-black text-center align-middle font-medium text-[14px]"
+                            className="border border-black text-center align-middle font-medium text-[15px]"
                           >
                             <span>16h</span>
                             {!readOnly && onOpenGuardRotationModal && (
@@ -1285,7 +1455,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                             )}
                           </td>
                         )}
-                        <td className="bg-black text-white text-center font-medium py-[1px] px-1.5 border border-black relative">
+                        <td className="bg-black text-white text-center font-medium py-[1px] px-1.5 border border-black relative text-[14.5px]">
                           <span>Groupe {groupLetter}</span>
                           {!readOnly && (
                             <button
@@ -1394,7 +1564,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                     {idx === 0 && (
                       <td
                         rowSpan={Math.max(1, hygieneStaff.length)}
-                        className="border border-black text-center align-middle font-medium text-[14px]"
+                        className="border border-black text-center align-middle font-medium text-[15px]"
                       >
                         <span>12h</span>
                         {!readOnly && (

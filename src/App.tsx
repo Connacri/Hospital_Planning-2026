@@ -93,6 +93,8 @@ import { MonthHistoryModal } from './components/MonthHistoryModal';
 import { SupabaseSyncPanel } from './components/SupabaseSyncPanel';
 import { TableManagementModal, TableModalTab } from './components/TableManagementModal';
 import { ColumnWidthsFloatingModal } from './components/ColumnWidthsFloatingModal';
+import { ExportSelectionModal, ExportTableOption } from './components/ExportSelectionModal';
+import { TableOrganizerModal } from './components/TableOrganizerModal';
 import { exportDirectPdf } from './utils/pdfExportHelper';
 import { translations, SupportedLocale } from './i18n/translations';
 import { ModernMedicalDashboard } from './components/ModernMedicalDashboard';
@@ -157,6 +159,74 @@ export default function App() {
   const [isTableManagementModalOpen, setIsTableManagementModalOpen] = useState(false);
   const [tableManagementTab, setTableManagementTab] = useState<TableModalTab>('table1');
   const [isColumnWidthsModalOpen, setIsColumnWidthsModalOpen] = useState(false);
+  const [isTableOrganizerModalOpen, setIsTableOrganizerModalOpen] = useState(false);
+  const [organizerInitialCategory, setOrganizerInitialCategory] = useState<StaffCategory>('medical');
+  const [isExportSelectionModalOpen, setIsExportSelectionModalOpen] = useState(false);
+
+  const handleOpenOrganizer = (category: StaffCategory = 'medical') => {
+    setOrganizerInitialCategory(category);
+    setIsTableOrganizerModalOpen(true);
+  };
+
+  const handleExportSingleTable = async (
+    sheetId: string,
+    title: string,
+    filename: string,
+    targetOrientation: 'portrait' | 'landscape'
+  ) => {
+    setIsExportingPdf(true);
+    setExportProgress({ current: 1, total: 1 });
+    showToast(`Génération du document PDF pour : ${title}...`);
+    try {
+      if (orientation !== targetOrientation) {
+        setOrientation(targetOrientation);
+        await new Promise((r) => setTimeout(r, 220));
+      }
+      await exportDirectPdf({
+        orientation: targetOrientation,
+        filename,
+        targetSheetId: sheetId,
+        onProgress: (c, t) => setExportProgress({ current: c, total: t }),
+      });
+      showToast(`Fichier PDF téléchargé : ${filename}`);
+    } catch (err) {
+      console.error(err);
+      showToast("Erreur lors de l'export du tableau en PDF.");
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const handleExportSingleFromModal = async (opt: ExportTableOption) => {
+    await handleExportSingleTable(opt.sheetId, opt.title, opt.filename, opt.orientation);
+  };
+
+  const handleExportSelectedFromModal = async (options: ExportTableOption[]) => {
+    setIsExportingPdf(true);
+    showToast(`Génération de ${options.length} tableau(x) sélectionné(s)...`);
+    try {
+      for (let i = 0; i < options.length; i++) {
+        const opt = options[i];
+        setExportProgress({ current: i + 1, total: options.length });
+        if (orientation !== opt.orientation) {
+          setOrientation(opt.orientation);
+          await new Promise((r) => setTimeout(r, 250));
+        }
+        await exportDirectPdf({
+          orientation: opt.orientation,
+          filename: opt.filename,
+          targetSheetId: opt.sheetId,
+        });
+      }
+      showToast(`Exportation groupée terminée avec succès (${options.length} PDF téléchargés) !`);
+      setIsExportSelectionModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      showToast("Erreur lors de l'exportation des tableaux sélectionnés.");
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
 
   const handleOpenTableManagement = (tab: TableModalTab = 'table1') => {
     setTableManagementTab(tab);
@@ -960,6 +1030,28 @@ class HospitalPdfGenerator {
                 </span>
               </button>
 
+              {/* Exporter les tableaux au choix */}
+              <button
+                type="button"
+                onClick={() => setIsExportSelectionModalOpen(true)}
+                title="Exporter les tableaux au choix en PDF individuellement ou en lot"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-semibold shadow-xs transition-colors shrink-0"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-amber-700" />
+                <span className="hidden sm:inline">Exporter au Choix...</span>
+              </button>
+
+              {/* Organiser Tableaux */}
+              <button
+                type="button"
+                onClick={() => handleOpenOrganizer('medical')}
+                title="Organiser et trier les tableaux (Équipe, Nom, Grade, Glisser-Déposer)"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-300 rounded-xl text-xs font-semibold shadow-xs transition-colors shrink-0"
+              >
+                <Layers className="w-3.5 h-3.5 text-sky-700" />
+                <span className="hidden sm:inline">Organiser</span>
+              </button>
+
               {/* Restore Seed */}
               <button
                 type="button"
@@ -1469,6 +1561,8 @@ class HospitalPdfGenerator {
                       onOpenMaternityModal={handleOpenMaternityModal}
                       onToggleTableModificatif={handleToggleTableModificatif}
                       onOpenTableManagementModal={handleOpenTableManagement}
+                      onOpenOrganizer={handleOpenOrganizer}
+                      onExportSingleTable={handleExportSingleTable}
                     />
                   ) : (
                     <LandscapePdfSheets
@@ -1486,6 +1580,8 @@ class HospitalPdfGenerator {
                       onOpenLeaveTypesModal={() => setIsLeaveTypesModalOpen(true)}
                       onOpenMaternityModal={handleOpenMaternityModal}
                       onToggleTableModificatif={handleToggleTableModificatif}
+                      onOpenOrganizer={handleOpenOrganizer}
+                      onExportSingleTable={handleExportSingleTable}
                     />
                   )}
                 </div>
@@ -1738,8 +1834,8 @@ class HospitalPdfGenerator {
               </div>
             </div>
 
-            {/* Team Showcase Cards with Distinct Team Colors */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            {/* Team Showcase Cards with Distinct Team Colors & Enhanced Medical Design */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
               {(['A', 'B', 'C', 'D', 'E'] as const).map((letter) => {
                 const tTheme = getTeamTheme(letter);
                 const teamMembers = staffList.filter(
@@ -1750,52 +1846,104 @@ class HospitalPdfGenerator {
                 return (
                   <div
                     key={letter}
-                    onClick={() =>
-                      setSelectedTeamFilter(isSelected ? 'all' : letter)
-                    }
-                    className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
-                      tTheme.cardBg
-                    } ${
+                    onClick={() => setSelectedTeamFilter(isSelected ? 'all' : letter)}
+                    className={`relative p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between group overflow-hidden ${
                       isSelected
-                        ? `${tTheme.cardBorder} ring-2 ring-indigo-500/50 shadow-md`
-                        : `${tTheme.cardBorder}`
+                        ? `bg-slate-900/95 ${tTheme.cardBorder} ring-2 ring-indigo-400 shadow-xl shadow-slate-950/60 scale-[1.02]`
+                        : `bg-slate-900/70 hover:bg-slate-900/90 ${tTheme.cardBorder} hover:border-slate-600 hover:-translate-y-0.5 hover:shadow-lg`
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2.5 h-2.5 rounded-full ${tTheme.dotBg}`} />
-                        <span className={`text-xs font-bold ${tTheme.badgeText}`}>
-                          {tTheme.name}
-                        </span>
+                    {/* Top ambient color glow */}
+                    <div
+                      className="absolute -top-10 -right-10 w-24 h-24 rounded-full blur-2xl pointer-events-none opacity-30 group-hover:opacity-60 transition-opacity"
+                      style={{ backgroundColor: tTheme.pillColor }}
+                    />
+
+                    {/* Card Header */}
+                    <div className="flex items-center justify-between gap-2 relative z-10">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shadow-inner ${tTheme.badgeBg} ${tTheme.badgeText} border ${tTheme.badgeBorder}`}
+                        >
+                          {letter}
+                        </div>
+                        <div>
+                          <div className={`text-xs font-bold leading-tight ${tTheme.badgeText}`}>
+                            {tTheme.name}
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-medium">
+                            Garde 16h
+                          </div>
+                        </div>
                       </div>
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${tTheme.tagBg}`}>
-                        {teamMembers.length} agents
-                      </span>
+
+                      <div className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${tTheme.tagBg}`}>
+                        {teamMembers.length} {teamMembers.length > 1 ? 'agents' : 'agent'}
+                      </div>
                     </div>
 
-                    <div className="mt-2 space-y-1">
-                      {teamMembers.slice(0, 2).map((m) => (
-                        <div key={m.id} className="text-[11px] text-slate-300 truncate font-medium">
-                          • {m.fullName}
-                        </div>
-                      ))}
+                    {/* Team Members List */}
+                    <div className="mt-3 space-y-1.5 relative z-10 min-h-[56px]">
+                      {teamMembers.slice(0, 2).map((m) => {
+                        const initials = (m.fullName.trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2) || 'AG').toUpperCase();
+                        return (
+                          <div
+                            key={m.id}
+                            className="flex items-center gap-2 p-1 rounded-lg bg-slate-950/40 border border-slate-800/60"
+                          >
+                            <span
+                              className={`w-5 h-5 rounded-md text-[9px] font-bold flex items-center justify-center shrink-0 ${tTheme.tagBg}`}
+                            >
+                              {initials}
+                            </span>
+                            <span className="text-[11px] text-slate-200 font-medium truncate flex-1">
+                              {m.fullName}
+                            </span>
+                            {m.gradeLandscape && (
+                              <span className="text-[9px] text-slate-400 font-mono shrink-0 pr-1">
+                                {m.gradeLandscape.replace(/\r?\n+/g, ' ')}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+
                       {teamMembers.length === 0 && (
-                        <div className="text-[10px] text-slate-500 italic">Aucun agent</div>
+                        <div className="py-2 text-center text-[10.5px] text-slate-500 italic">
+                          Aucun agent affecté
+                        </div>
                       )}
+
                       {teamMembers.length > 2 && (
-                        <div className="text-[10px] text-slate-400">
-                          +{teamMembers.length - 2} autre(s)
+                        <div
+                          title={teamMembers.slice(2).map((m) => m.fullName).join(', ')}
+                          className="text-[10px] text-slate-400 font-medium pl-1 flex items-center gap-1.5"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+                          <span>+{teamMembers.length - 2} autre(s) agent(s)</span>
                         </div>
                       )}
                     </div>
 
-                    <div className="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
+                    {/* Card Footer / Action */}
+                    <div className="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] relative z-10">
                       <span className="text-slate-400 font-medium">
-                        {isSelected ? '✓ Sélectionné' : 'Cliquer pour filtrer'}
+                        {isSelected ? '✓ Filtre actif' : 'Cliquer pour filtrer'}
                       </span>
-                      <span className={`font-bold ${isSelected ? 'text-white underline' : tTheme.badgeText}`}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedTeamFilter(isSelected ? 'all' : letter);
+                        }}
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-colors ${
+                          isSelected
+                            ? 'bg-white text-slate-900 shadow-xs hover:bg-slate-200'
+                            : `bg-slate-800 hover:bg-slate-700 ${tTheme.badgeText}`
+                        }`}
+                      >
                         {isSelected ? 'Tous' : 'Filtrer'}
-                      </span>
+                      </button>
                     </div>
                   </div>
                 );
@@ -2578,6 +2726,27 @@ class HospitalPdfGenerator {
           objectBoxStore.createNewMonth(year, monthIndex, !!isModif);
           showToast(`Nouveau mois créé avec succès en continuité perpétuelle !`);
         }}
+      />
+
+      {/* MODAL: ORGANISER ET TRIER LES TABLEAUX (ÉQUIPE, NOM, GRADE, GLISSER-DÉPOSER) */}
+      <TableOrganizerModal
+        isOpen={isTableOrganizerModalOpen}
+        initialCategory={organizerInitialCategory}
+        staffList={staffList}
+        onClose={() => setIsTableOrganizerModalOpen(false)}
+        onShowToast={showToast}
+      />
+
+      {/* MODAL: EXPORTER LES TABLEAUX AU CHOIX (SUR-MESURE OU EN LOT) */}
+      <ExportSelectionModal
+        isOpen={isExportSelectionModalOpen}
+        onClose={() => setIsExportSelectionModalOpen(false)}
+        config={config}
+        currentOrientation={orientation}
+        onExportSingleTable={handleExportSingleFromModal}
+        onExportSelectedTables={handleExportSelectedFromModal}
+        isExporting={isExportingPdf}
+        exportProgress={exportProgress}
       />
 
       {/* FLOATING MODAL: RÉGLAGE EN DIRECT DES LARGEURS DE COLONNES */}

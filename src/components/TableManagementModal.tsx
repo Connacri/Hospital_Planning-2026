@@ -28,6 +28,8 @@ import {
   ListOrdered,
   Grid3X3,
   Undo2,
+  GripVertical,
+  ArrowUpDown,
 } from 'lucide-react';
 import {
   StaffEntity,
@@ -90,6 +92,8 @@ export const TableManagementModal: React.FC<TableManagementModalProps> = ({
   const [guardGroupFilter, setGuardGroupFilter] = useState<string>('all');
   const [showHelpBanner, setShowHelpBanner] = useState<boolean>(true);
   const [lastSavedNotice, setLastSavedNotice] = useState<string | null>(null);
+  const [draggedId, setDraggedId] = useState<number | null>(null);
+  const [dragOverId, setDragOverId] = useState<number | null>(null);
 
   // Sync initial tab when reopened
   React.useEffect(() => {
@@ -105,6 +109,32 @@ export const TableManagementModal: React.FC<TableManagementModalProps> = ({
     setTimeout(() => {
       setLastSavedNotice(null);
     }, 2200);
+  };
+
+  const handleSortCategory = (
+    category: StaffCategory,
+    criteria: 'team' | 'name' | 'grade',
+    direction: 'asc' | 'desc' = 'asc'
+  ) => {
+    objectBoxStore.sortStaffByCategory(category, criteria, direction, 'both');
+    const label =
+      criteria === 'team'
+        ? "par Équipe (A-E)"
+        : criteria === 'name'
+        ? direction === 'asc' ? "par Nom (A-Z)" : "par Nom (Z-A)"
+        : "par Grade & Hiérarchie";
+    notifySaved(`Tableau réorganisé ${label}`);
+  };
+
+  const handleDropReorder = (
+    category: StaffCategory,
+    sourceId: number,
+    targetId: number
+  ) => {
+    objectBoxStore.moveStaffItem(category, sourceId, targetId, 'both');
+    setDraggedId(null);
+    setDragOverId(null);
+    notifySaved(`Position déplacée avec succès`);
   };
 
   if (!isOpen) return null;
@@ -512,6 +542,40 @@ export const TableManagementModal: React.FC<TableManagementModalProps> = ({
                 </div>
               )}
 
+              {/* Quick Sorting Toolbar */}
+              <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-white rounded-xl border border-slate-200">
+                <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                  <span className="font-bold text-slate-500 mr-1 flex items-center gap-1">
+                    <ArrowUpDown className="w-3.5 h-3.5" />
+                    <span>Trier rapidement :</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleSortCategory('medical', 'name', 'asc')}
+                    className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold border border-indigo-200 transition-colors"
+                  >
+                    🔤 Nom (A-Z)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSortCategory('medical', 'name', 'desc')}
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold border border-slate-200 transition-colors"
+                  >
+                    🔤 Nom (Z-A)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSortCategory('medical', 'grade', 'asc')}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold border border-emerald-200 transition-colors"
+                  >
+                    🎖️ Par Grade
+                  </button>
+                </div>
+                <span className="text-[11px] text-slate-400 font-medium">
+                  {allDoctors.length} médecins · Glisser-déposer activé
+                </span>
+              </div>
+
               {/* Liste des cartes médecins pour le 1er Tableau */}
               <div className="space-y-3 sm:space-y-4">
                 {filteredDoctors.map((doc) => {
@@ -522,11 +586,48 @@ export const TableManagementModal: React.FC<TableManagementModalProps> = ({
                   return (
                     <div
                       key={doc.id}
-                      className="bg-white rounded-xl border border-slate-200 p-3.5 sm:p-4 shadow-xs transition-all hover:border-slate-300 hover:shadow-md space-y-3"
+                      draggable
+                      onDragStart={(e) => {
+                        setDraggedId(doc.id);
+                        e.dataTransfer.setData('text/plain', String(doc.id));
+                        e.dataTransfer.effectAllowed = 'move';
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        if (draggedId !== doc.id) setDragOverId(doc.id);
+                      }}
+                      onDragLeave={() => {
+                        if (dragOverId === doc.id) setDragOverId(null);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (draggedId !== null && draggedId !== doc.id) {
+                          handleDropReorder('medical', draggedId, doc.id);
+                        }
+                      }}
+                      onDragEnd={() => {
+                        setDraggedId(null);
+                        setDragOverId(null);
+                      }}
+                      className={`rounded-xl border p-3.5 sm:p-4 shadow-xs transition-all space-y-3 ${
+                        draggedId === doc.id
+                          ? 'opacity-40 bg-slate-50 border-dashed border-sky-400'
+                          : dragOverId === doc.id
+                          ? 'border-sky-500 bg-sky-50/50 ring-2 ring-sky-300'
+                          : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-md'
+                      }`}
                     >
                       {/* Ligne d'entête du médecin */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-100">
                         <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                          {/* Poignée Drag & Drop */}
+                          <div
+                            className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-700 p-0.5 rounded transition-colors"
+                            title="Attrapez et glissez pour changer la ligne de place"
+                          >
+                            <GripVertical className="w-4 h-4" />
+                          </div>
+
                           {/* Badge de position officielle */}
                           <div
                             className="w-7 h-7 rounded-lg bg-slate-900 text-white text-xs font-bold flex items-center justify-center shrink-0 shadow-2xs"

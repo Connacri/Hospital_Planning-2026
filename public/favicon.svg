@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <linearGradient id="plusGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+  </defs>
+  <!-- Background rounded square with border -->
+  <rect width="64" height="64" rx="16" fill="url(#bgGrad)" />
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" />
+  
+  <!-- Hospital Medical Cross -->
+  <path d="M26 12h12v14h14v12H38v14H26V38H12V26h14V12z" fill="#ffffff" />
+  
+  <!-- Pulse / Vital Beat accent -->
+  <path d="M16 32h6l3-6 4 12 3-8 3 2h7" fill="none" stroke="#e11d48" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <!-- Hospital planning badge dot -->
+  <circle cx="50" cy="14" r="4" fill="#38bdf8" />
+</svg>

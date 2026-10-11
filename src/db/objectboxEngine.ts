@@ -1299,6 +1299,25 @@ export class ObjectBoxQueryBuilder<T> {
   }
 }
 
+export function getGradeRank(roleOrGrade: string = '', category: StaffCategory): number {
+  const s = roleOrGrade.toLowerCase();
+  if (category === 'medical') {
+    if (s.includes('chef')) return 1;
+    if (s.includes('prof') || s.includes('maître') || s.includes('docent')) return 2;
+    if (s.includes('spécialiste') || s.includes('praticien')) return 3;
+    if (s.includes('résident')) return 4;
+    if (s.includes('généraliste')) return 5;
+    return 6;
+  }
+  // Paramedical & hygiene
+  if (s.includes('surveillant') || s.includes('cadre') || s.includes('chef')) return 1;
+  if (s.includes('isp') || s.includes('spécialisé') || s.includes('sage-femme')) return 2;
+  if (s.includes('ide') || s.includes('diplômé')) return 3;
+  if (s.includes('ats') || s.includes('aide-soignant') || s.includes('aide soignant')) return 4;
+  if (s.includes('hygiène') || s.includes('agent')) return 5;
+  return 6;
+}
+
 export class ObjectBoxLocalStore {
   private snapshot: ObjectBoxDatabaseSnapshot;
   private listeners: Set<() => void> = new Set();
@@ -1594,22 +1613,90 @@ export class ObjectBoxLocalStore {
     this.notify();
   }
 
-  reorderStaffCategory(orderedIds: number[]): void {
+  reorderStaffCategory(orderedIds: number[], target: 'both' | 'portrait' | 'landscape' = 'both'): void {
     const idToOrder = new Map<number, number>();
     orderedIds.forEach((id, idx) => {
       idToOrder.set(id, idx + 1);
     });
     const nextBox = this.snapshot.staffBox.map((s) => {
       if (idToOrder.has(s.id)) {
+        const orderNum = idToOrder.get(s.id)!;
         return {
           ...s,
-          portraitOrder: idToOrder.get(s.id)!,
+          portraitOrder: target === 'landscape' ? s.portraitOrder : orderNum,
+          landscapeOrder: target === 'portrait' ? s.landscapeOrder : orderNum,
         };
       }
       return s;
     });
     this.snapshot.staffBox = nextBox;
     this.notify();
+  }
+
+  sortStaffByCategory(
+    category: StaffCategory,
+    criteria: 'team' | 'name' | 'grade',
+    direction: 'asc' | 'desc' = 'asc',
+    target: 'both' | 'portrait' | 'landscape' = 'both'
+  ): void {
+    const items = this.snapshot.staffBox.filter((s) => s.category === category);
+    if (items.length <= 1) return;
+
+    const sorted = [...items].sort((a, b) => {
+      let cmp = 0;
+      if (criteria === 'team') {
+        const teamA = (a.teamGroup || '').trim();
+        const teamB = (b.teamGroup || '').trim();
+        if (teamA && !teamB) cmp = -1;
+        else if (!teamA && teamB) cmp = 1;
+        else if (teamA && teamB) {
+          cmp = teamA.localeCompare(teamB, 'fr');
+        }
+        if (cmp === 0) {
+          const rankA = getGradeRank(a.gradeLandscape || a.rolePortrait, a.category);
+          const rankB = getGradeRank(b.gradeLandscape || b.rolePortrait, b.category);
+          cmp = rankA - rankB || a.fullName.localeCompare(b.fullName, 'fr');
+        }
+      } else if (criteria === 'name') {
+        cmp = a.fullName.localeCompare(b.fullName, 'fr', { sensitivity: 'base' });
+      } else if (criteria === 'grade') {
+        const rankA = getGradeRank(a.gradeLandscape || a.rolePortrait, a.category);
+        const rankB = getGradeRank(b.gradeLandscape || b.rolePortrait, b.category);
+        cmp = rankA - rankB;
+        if (cmp === 0) {
+          const titleA = (a.gradeLandscape || a.rolePortrait || '').trim();
+          const titleB = (b.gradeLandscape || b.rolePortrait || '').trim();
+          cmp = titleA.localeCompare(titleB, 'fr') || a.fullName.localeCompare(b.fullName, 'fr');
+        }
+      }
+      return direction === 'desc' ? -cmp : cmp;
+    });
+
+    const orderedIds = sorted.map((s) => s.id);
+    this.reorderStaffCategory(orderedIds, target);
+  }
+
+  moveStaffItem(
+    category: StaffCategory,
+    sourceId: number,
+    targetId: number,
+    target: 'both' | 'portrait' | 'landscape' = 'both'
+  ): void {
+    if (sourceId === targetId) return;
+    const currentList = this.snapshot.staffBox
+      .filter((s) => s.category === category)
+      .sort((a, b) => (target === 'landscape' ? a.landscapeOrder - b.landscapeOrder : a.portraitOrder - b.portraitOrder) || a.id - b.id);
+
+    const sourceIdx = currentList.findIndex((s) => s.id === sourceId);
+    const targetIdx = currentList.findIndex((s) => s.id === targetId);
+    if (sourceIdx === -1 || targetIdx === -1) return;
+
+    const nextList = [...currentList];
+    const [moved] = nextList.splice(sourceIdx, 1);
+    nextList.splice(targetIdx, 0, moved);
+
+    const orderedIds = nextList.map((s) => s.id);
+    this.reorderStaffCategory(orderedIds, target);
   }
 
   updateStaffEntity(staff: StaffEntity): void {
