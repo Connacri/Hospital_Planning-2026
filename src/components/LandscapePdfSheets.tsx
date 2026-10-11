@@ -1100,6 +1100,17 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
             className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
           >
             <div className="flex flex-col">
+              <TableQuickActionToolbar
+                title="Tableau de Garde Paramédicale (16h — Équipes A-E)"
+                category="paramedical_guard"
+                sheetId={`doc-sheet-l3-${chunkIdx}`}
+                filename="EH_AinElTurck_Tableau_Garde_Paramedicale_16h.pdf"
+                orientation="landscape"
+                readOnly={readOnly}
+                showTeamSort={true}
+                onOpenOrganizer={onOpenOrganizer}
+                onExportSingleTable={onExportSingleTable}
+              />
               <OfficialLandscapeHeader
                 config={config}
                 onUpdateConfig={onUpdateConfig}
@@ -1265,6 +1276,17 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
             className="a4-landscape-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-between font-pdf scroll-mt-20"
           >
             <div className="flex flex-col">
+              <TableQuickActionToolbar
+                title="Tableau d'Activité Agents d'Hygiène (12h)"
+                category="hygiene"
+                sheetId={`doc-sheet-l4-${chunkIdx}`}
+                filename="EH_AinElTurck_Tableau_Activite_Hygiene.pdf"
+                orientation="landscape"
+                readOnly={readOnly}
+                showTeamSort={false}
+                onOpenOrganizer={onOpenOrganizer}
+                onExportSingleTable={onExportSingleTable}
+              />
               <OfficialLandscapeHeader
                 config={config}
                 onUpdateConfig={onUpdateConfig}

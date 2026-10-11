@@ -221,6 +221,8 @@ const TableQuickActionToolbar: React.FC<{
   onOpenOrganizer?: (category: StaffCategory) => void;
   onExportSingleTable?: (sheetId: string, title: string, filename: string, orientation: 'portrait' | 'landscape') => void;
   showTeamSort?: boolean;
+  onCustomSort?: (criteria: 'team' | 'name' | 'grade') => void;
+  onCustomOrganizer?: () => void;
 }> = ({
   title,
   category,
@@ -231,6 +233,8 @@ const TableQuickActionToolbar: React.FC<{
   onOpenOrganizer,
   onExportSingleTable,
   showTeamSort = true,
+  onCustomSort,
+  onCustomOrganizer,
 }) => {
   return (
     <div className="no-print mb-2.5 mt-0.5 px-3 py-1.5 bg-slate-100/95 hover:bg-slate-100 rounded-2xl border border-slate-300 flex flex-wrap items-center justify-between gap-2 text-xs font-sans shadow-xs">
@@ -243,7 +247,10 @@ const TableQuickActionToolbar: React.FC<{
         {showTeamSort && (
           <button
             type="button"
-            onClick={() => objectBoxStore.sortStaffByCategory(category, 'team', 'asc', 'both')}
+            onClick={() => {
+              if (onCustomSort) onCustomSort('team');
+              else objectBoxStore.sortStaffByCategory(category, 'team', 'asc', 'both');
+            }}
             title="Trier par groupe d'équipe (A, B, C, D, E)"
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white hover:bg-sky-50 text-sky-700 border border-sky-200 font-semibold shadow-2xs transition-all hover:scale-105 active:scale-95"
           >
@@ -253,7 +260,10 @@ const TableQuickActionToolbar: React.FC<{
 
         <button
           type="button"
-          onClick={() => objectBoxStore.sortStaffByCategory(category, 'name', 'asc', 'both')}
+          onClick={() => {
+            if (onCustomSort) onCustomSort('name');
+            else objectBoxStore.sortStaffByCategory(category, 'name', 'asc', 'both');
+          }}
           title="Trier par ordre alphabétique des noms (A à Z)"
           className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold shadow-2xs transition-all hover:scale-105 active:scale-95"
         >
@@ -262,17 +272,23 @@ const TableQuickActionToolbar: React.FC<{
 
         <button
           type="button"
-          onClick={() => objectBoxStore.sortStaffByCategory(category, 'grade', 'asc', 'both')}
+          onClick={() => {
+            if (onCustomSort) onCustomSort('grade');
+            else objectBoxStore.sortStaffByCategory(category, 'grade', 'asc', 'both');
+          }}
           title="Trier par hiérarchie officielle hospitalière"
           className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold shadow-2xs transition-all hover:scale-105 active:scale-95"
         >
           <span>🎖️ Grade</span>
         </button>
 
-        {onOpenOrganizer && (
+        {(onCustomOrganizer || onOpenOrganizer) && (
           <button
             type="button"
-            onClick={() => onOpenOrganizer(category)}
+            onClick={() => {
+              if (onCustomOrganizer) onCustomOrganizer();
+              else if (onOpenOrganizer) onOpenOrganizer(category);
+            }}
             title="Ouvrir l'organiseur complet avec glisser-déposer"
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-100 hover:bg-sky-200 text-sky-900 border border-sky-300 font-bold shadow-2xs transition-all hover:scale-105 active:scale-95"
           >
@@ -1169,6 +1185,28 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
           className="a4-portrait-sheet shadow-xl border border-slate-300 p-[1.27cm] flex flex-col justify-start font-pdf scroll-mt-20"
         >
           <div>
+            <TableQuickActionToolbar
+              title="Planning du Personnel Paramédical & Corps Commun"
+              category="paramedical_guard"
+              sheetId="doc-sheet-p3"
+              filename="EH_AinElTurck_Planning_Paramedical_Portrait.pdf"
+              orientation="portrait"
+              readOnly={readOnly}
+              showTeamSort={true}
+              onCustomSort={(criteria) => {
+                objectBoxStore.sortStaffByCategory('paramedical_guard', criteria, 'asc', 'both');
+                objectBoxStore.sortStaffByCategory('paramedical_day', criteria === 'team' ? 'name' : criteria, 'asc', 'both');
+                objectBoxStore.sortStaffByCategory('hygiene', criteria === 'team' ? 'name' : criteria, 'asc', 'both');
+              }}
+              onCustomOrganizer={() => {
+                if (onOpenTableManagementModal) {
+                  onOpenTableManagementModal('table3');
+                } else if (onOpenOrganizer) {
+                  onOpenOrganizer('paramedical_guard');
+                }
+              }}
+              onExportSingleTable={onExportSingleTable}
+            />
             <OfficialPortraitHeader config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} compact={true} />
 
             {/* Title Block */}

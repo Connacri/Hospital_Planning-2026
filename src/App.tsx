@@ -50,6 +50,7 @@ import {
   CheckCircle2,
   Globe,
   Cloud,
+  Filter,
 } from 'lucide-react';
 import {
   objectBoxStore,
@@ -1843,107 +1844,228 @@ class HospitalPdfGenerator {
                 );
                 const isSelected = selectedTeamFilter.toUpperCase() === letter;
 
+                const teamStyles: Record<
+                  string,
+                  {
+                    gradient: string;
+                    border: string;
+                    borderActive: string;
+                    barGradient: string;
+                    letterBadge: string;
+                    textAccent: string;
+                    pillBg: string;
+                    agentItemBg: string;
+                    agentAvatar: string;
+                    agentGradePill: string;
+                    filterBtnActive: string;
+                    filterBtnInactive: string;
+                    bulletDot: string;
+                  }
+                > = {
+                  A: {
+                    gradient: 'from-emerald-950/40 via-slate-900/90 to-slate-950',
+                    border: 'border-emerald-500/30 hover:border-emerald-400/80',
+                    borderActive: 'border-emerald-400 ring-2 ring-emerald-400/40 shadow-xl shadow-emerald-950/60',
+                    barGradient: 'from-emerald-400 to-teal-500',
+                    letterBadge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-xs',
+                    textAccent: 'text-emerald-300',
+                    pillBg: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+                    agentItemBg: 'bg-emerald-950/25 border-emerald-500/20 hover:border-emerald-500/40',
+                    agentAvatar: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+                    agentGradePill: 'bg-emerald-900/40 text-emerald-200 border-emerald-500/20',
+                    filterBtnActive: 'bg-emerald-400 text-slate-950 hover:bg-emerald-300 font-bold',
+                    filterBtnInactive: 'bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/30',
+                    bulletDot: 'bg-emerald-400',
+                  },
+                  B: {
+                    gradient: 'from-sky-950/40 via-slate-900/90 to-slate-950',
+                    border: 'border-sky-500/30 hover:border-sky-400/80',
+                    borderActive: 'border-sky-400 ring-2 ring-sky-400/40 shadow-xl shadow-sky-950/60',
+                    barGradient: 'from-sky-400 to-blue-500',
+                    letterBadge: 'bg-sky-500/20 text-sky-300 border-sky-500/40 shadow-xs',
+                    textAccent: 'text-sky-300',
+                    pillBg: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+                    agentItemBg: 'bg-sky-950/25 border-sky-500/20 hover:border-sky-500/40',
+                    agentAvatar: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+                    agentGradePill: 'bg-sky-900/40 text-sky-200 border-sky-500/20',
+                    filterBtnActive: 'bg-sky-400 text-slate-950 hover:bg-sky-300 font-bold',
+                    filterBtnInactive: 'bg-sky-500/15 hover:bg-sky-500/30 text-sky-300 border-sky-500/30',
+                    bulletDot: 'bg-sky-400',
+                  },
+                  C: {
+                    gradient: 'from-purple-950/40 via-slate-900/90 to-slate-950',
+                    border: 'border-purple-500/30 hover:border-purple-400/80',
+                    borderActive: 'border-purple-400 ring-2 ring-purple-400/40 shadow-xl shadow-purple-950/60',
+                    barGradient: 'from-purple-400 to-indigo-500',
+                    letterBadge: 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-xs',
+                    textAccent: 'text-purple-300',
+                    pillBg: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
+                    agentItemBg: 'bg-purple-950/25 border-purple-500/20 hover:border-purple-500/40',
+                    agentAvatar: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+                    agentGradePill: 'bg-purple-900/40 text-purple-200 border-purple-500/20',
+                    filterBtnActive: 'bg-purple-400 text-slate-950 hover:bg-purple-300 font-bold',
+                    filterBtnInactive: 'bg-purple-500/15 hover:bg-purple-500/30 text-purple-300 border-purple-500/30',
+                    bulletDot: 'bg-purple-400',
+                  },
+                  D: {
+                    gradient: 'from-amber-950/40 via-slate-900/90 to-slate-950',
+                    border: 'border-amber-500/30 hover:border-amber-400/80',
+                    borderActive: 'border-amber-400 ring-2 ring-amber-400/40 shadow-xl shadow-amber-950/60',
+                    barGradient: 'from-amber-400 to-orange-500',
+                    letterBadge: 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-xs',
+                    textAccent: 'text-amber-300',
+                    pillBg: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+                    agentItemBg: 'bg-amber-950/25 border-amber-500/20 hover:border-amber-500/40',
+                    agentAvatar: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+                    agentGradePill: 'bg-amber-900/40 text-amber-200 border-amber-500/20',
+                    filterBtnActive: 'bg-amber-400 text-slate-950 hover:bg-amber-300 font-bold',
+                    filterBtnInactive: 'bg-amber-500/15 hover:bg-amber-500/30 text-amber-300 border-amber-500/30',
+                    bulletDot: 'bg-amber-400',
+                  },
+                  E: {
+                    gradient: 'from-rose-950/40 via-slate-900/90 to-slate-950',
+                    border: 'border-rose-500/30 hover:border-rose-400/80',
+                    borderActive: 'border-rose-400 ring-2 ring-rose-400/40 shadow-xl shadow-rose-950/60',
+                    barGradient: 'from-rose-400 to-pink-500',
+                    letterBadge: 'bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-xs',
+                    textAccent: 'text-rose-300',
+                    pillBg: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
+                    agentItemBg: 'bg-rose-950/25 border-rose-500/20 hover:border-rose-500/40',
+                    agentAvatar: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+                    agentGradePill: 'bg-rose-900/40 text-rose-200 border-rose-500/20',
+                    filterBtnActive: 'bg-rose-400 text-slate-950 hover:bg-rose-300 font-bold',
+                    filterBtnInactive: 'bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 border-rose-500/30',
+                    bulletDot: 'bg-rose-400',
+                  },
+                };
+
+                const style = teamStyles[letter] || teamStyles.A;
+
                 return (
                   <div
                     key={letter}
                     onClick={() => setSelectedTeamFilter(isSelected ? 'all' : letter)}
-                    className={`relative p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between group overflow-hidden ${
+                    className={`relative rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between group overflow-hidden bg-gradient-to-b ${style.gradient} ${
                       isSelected
-                        ? `bg-slate-900/95 ${tTheme.cardBorder} ring-2 ring-indigo-400 shadow-xl shadow-slate-950/60 scale-[1.02]`
-                        : `bg-slate-900/70 hover:bg-slate-900/90 ${tTheme.cardBorder} hover:border-slate-600 hover:-translate-y-0.5 hover:shadow-lg`
+                        ? `${style.borderActive} scale-[1.02]`
+                        : `${style.border} hover:-translate-y-1 hover:shadow-lg`
                     }`}
                   >
-                    {/* Top ambient color glow */}
-                    <div
-                      className="absolute -top-10 -right-10 w-24 h-24 rounded-full blur-2xl pointer-events-none opacity-30 group-hover:opacity-60 transition-opacity"
-                      style={{ backgroundColor: tTheme.pillColor }}
-                    />
+                    {/* Top Accent Stripe */}
+                    <div className={`h-1 w-full bg-gradient-to-r ${style.barGradient}`} />
 
-                    {/* Card Header */}
-                    <div className="flex items-center justify-between gap-2 relative z-10">
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shadow-inner ${tTheme.badgeBg} ${tTheme.badgeText} border ${tTheme.badgeBorder}`}
-                        >
-                          {letter}
-                        </div>
-                        <div>
-                          <div className={`text-xs font-bold leading-tight ${tTheme.badgeText}`}>
-                            {tTheme.name}
-                          </div>
-                          <div className="text-[10px] text-slate-400 font-medium">
-                            Garde 16h
-                          </div>
-                        </div>
-                      </div>
+                    <div className="p-3.5 flex flex-col justify-between flex-1">
+                      {/* Top ambient color glow */}
+                      <div
+                        className="absolute -top-10 -right-10 w-24 h-24 rounded-full blur-2xl pointer-events-none opacity-30 group-hover:opacity-60 transition-opacity"
+                        style={{ backgroundColor: tTheme.pillColor }}
+                      />
 
-                      <div className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${tTheme.tagBg}`}>
-                        {teamMembers.length} {teamMembers.length > 1 ? 'agents' : 'agent'}
-                      </div>
-                    </div>
-
-                    {/* Team Members List */}
-                    <div className="mt-3 space-y-1.5 relative z-10 min-h-[56px]">
-                      {teamMembers.slice(0, 2).map((m) => {
-                        const initials = (m.fullName.trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2) || 'AG').toUpperCase();
-                        return (
+                      {/* Card Header */}
+                      <div className="flex items-center justify-between gap-2 relative z-10">
+                        <div className="flex items-center gap-2.5">
                           <div
-                            key={m.id}
-                            className="flex items-center gap-2 p-1 rounded-lg bg-slate-950/40 border border-slate-800/60"
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs border ${style.letterBadge}`}
                           >
-                            <span
-                              className={`w-5 h-5 rounded-md text-[9px] font-bold flex items-center justify-center shrink-0 ${tTheme.tagBg}`}
-                            >
-                              {initials}
-                            </span>
-                            <span className="text-[11px] text-slate-200 font-medium truncate flex-1">
-                              {m.fullName}
-                            </span>
-                            {m.gradeLandscape && (
-                              <span className="text-[9px] text-slate-400 font-mono shrink-0 pr-1">
-                                {m.gradeLandscape.replace(/\r?\n+/g, ' ')}
-                              </span>
-                            )}
+                            {letter}
                           </div>
-                        );
-                      })}
-
-                      {teamMembers.length === 0 && (
-                        <div className="py-2 text-center text-[10.5px] text-slate-500 italic">
-                          Aucun agent affecté
+                          <div>
+                            <div className="text-xs font-bold leading-tight text-white group-hover:text-white transition-colors">
+                              {tTheme.name}
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-medium">
+                              Garde 16h
+                            </div>
+                          </div>
                         </div>
-                      )}
 
-                      {teamMembers.length > 2 && (
-                        <div
-                          title={teamMembers.slice(2).map((m) => m.fullName).join(', ')}
-                          className="text-[10px] text-slate-400 font-medium pl-1 flex items-center gap-1.5"
+                        <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1.5 ${style.pillBg}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${style.bulletDot} ${isSelected ? 'animate-pulse' : ''}`} />
+                          <span>{teamMembers.length} {teamMembers.length > 1 ? 'agents' : 'agent'}</span>
+                        </div>
+                      </div>
+
+                      {/* Team Members List */}
+                      <div className="mt-3 space-y-1.5 relative z-10 min-h-[58px]">
+                        {teamMembers.slice(0, 2).map((m) => {
+                          const initials = (m.fullName.trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2) || 'AG').toUpperCase();
+                          return (
+                            <div
+                              key={m.id}
+                              className={`flex items-center gap-2 p-1.5 rounded-xl border transition-colors ${style.agentItemBg}`}
+                            >
+                              <span
+                                className={`w-5 h-5 rounded-lg text-[9px] font-bold flex items-center justify-center shrink-0 border ${style.agentAvatar}`}
+                              >
+                                {initials}
+                              </span>
+                              <span className="text-[11px] text-slate-100 font-medium truncate flex-1">
+                                {m.fullName}
+                              </span>
+                              {m.gradeLandscape && (
+                                <span className={`text-[9px] font-mono shrink-0 px-1.5 py-0.5 rounded border ${style.agentGradePill}`}>
+                                  {m.gradeLandscape.replace(/\r?\n+/g, ' ')}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        {teamMembers.length === 0 && (
+                          <div className="py-2.5 text-center text-[10.5px] text-slate-500 italic">
+                            Aucun agent affecté
+                          </div>
+                        )}
+
+                        {teamMembers.length > 2 && (
+                          <div
+                            title={teamMembers.slice(2).map((m) => m.fullName).join(', ')}
+                            className="text-[10px] text-slate-300/80 font-medium pl-1 flex items-center gap-1.5 hover:text-white transition-colors"
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${style.bulletDot}`} />
+                            <span>+{teamMembers.length - 2} autre(s)</span>
+                            <span className="text-[9.5px] text-slate-400 truncate max-w-[110px]">
+                              ({teamMembers.slice(2).map((m) => m.fullName.split(' ')[0]).join(', ')})
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Card Footer / Action */}
+                      <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[10.5px] relative z-10">
+                        <span className={`font-semibold flex items-center gap-1 ${isSelected ? style.textAccent : 'text-slate-400 group-hover:text-slate-300'}`}>
+                          {isSelected ? (
+                            <>
+                              <Check className="w-3 h-3" />
+                              <span>Filtre actif</span>
+                            </>
+                          ) : (
+                            <span>Cliquer pour filtrer</span>
+                          )}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedTeamFilter(isSelected ? 'all' : letter);
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 border ${
+                            isSelected ? style.filterBtnActive : style.filterBtnInactive
+                          }`}
                         >
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
-                          <span>+{teamMembers.length - 2} autre(s) agent(s)</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Card Footer / Action */}
-                    <div className="mt-3 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] relative z-10">
-                      <span className="text-slate-400 font-medium">
-                        {isSelected ? '✓ Filtre actif' : 'Cliquer pour filtrer'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedTeamFilter(isSelected ? 'all' : letter);
-                        }}
-                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-colors ${
-                          isSelected
-                            ? 'bg-white text-slate-900 shadow-xs hover:bg-slate-200'
-                            : `bg-slate-800 hover:bg-slate-700 ${tTheme.badgeText}`
-                        }`}
-                      >
-                        {isSelected ? 'Tous' : 'Filtrer'}
-                      </button>
+                          {isSelected ? (
+                            <>
+                              <X className="w-3 h-3" />
+                              <span>Tous</span>
+                            </>
+                          ) : (
+                            <>
+                              <Filter className="w-3 h-3" />
+                              <span>Filtrer</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
