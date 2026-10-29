@@ -21,6 +21,36 @@ async function captureSheet(
     backgroundColor: '#ffffff',
     windowWidth: el.scrollWidth,
     windowHeight: el.scrollHeight,
+    ignoreElements: (element: Element) => {
+      // 1. Masquer impérativement tout élément <button> ou descendant de bouton
+      if (element.tagName === 'BUTTON' || (element.closest && Boolean(element.closest('button')))) {
+        return true;
+      }
+      // 2. Masquer tout élément avec la classe no-print ou situé dans un ancêtre no-print
+      if (element.classList && element.classList.contains('no-print')) {
+        return true;
+      }
+      if (element.closest && Boolean(element.closest('.no-print'))) {
+        return true;
+      }
+      // 3. Masquer tout élément portant data-no-print="true"
+      if (element.getAttribute && element.getAttribute('data-no-print') === 'true') {
+        return true;
+      }
+      if (element.closest && Boolean(element.closest('[data-no-print="true"]'))) {
+        return true;
+      }
+      // 4. Masquer les barres d'outils, poignées et menus d'action
+      if (
+        element.classList &&
+        (element.classList.contains('table-action-toolbar') ||
+          element.classList.contains('quick-action-btn') ||
+          element.classList.contains('leave-picker-dropdown'))
+      ) {
+        return true;
+      }
+      return false;
+    },
   });
 }
 
@@ -106,6 +136,10 @@ export async function exportDirectPdf({
     stageEl.style.justifyContent = 'center';
   }
 
+  // Active le mode strict d'export PDF (masque immédiatement tous les boutons et contrôles)
+  document.body.classList.add('is-exporting-pdf');
+  await new Promise((r) => setTimeout(r, 60));
+
   try {
     for (let i = 0; i < elements.length; i++) {
       if (onProgress) {
@@ -142,6 +176,9 @@ export async function exportDirectPdf({
       );
     }
   } finally {
+    // Désactive le mode d'export PDF et réaffiche les contrôles UI
+    document.body.classList.remove('is-exporting-pdf');
+
     // Restaure le zoom d'écran quoi qu'il arrive
     zoomSnapshots.forEach(({ el, transform, width, minWidth, transition }) => {
       el.style.transform = transform;

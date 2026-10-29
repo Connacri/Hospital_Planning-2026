@@ -80,6 +80,19 @@
   margin-right: auto !important;
 }
 
+/* Pendant la génération / capture PDF, masque absolument TOUS les boutons et éléments d'interface */
+.is-exporting-pdf button,
+.is-exporting-pdf .no-print,
+.is-exporting-pdf [data-no-print="true"],
+.is-exporting-pdf [role="button"],
+.is-exporting-pdf .table-action-toolbar,
+.is-exporting-pdf .quick-actions-menu {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 @media print {
   @page {
     /* Marge zéro à l'imprimante pour que le padding physique strict de 1.27cm définisse les marges */
@@ -116,8 +129,16 @@
     print-color-adjust: exact !important;
   }
 
-  .no-print {
+  /* Masque tous les boutons et éléments d'interface lors de l'impression */
+  button,
+  .no-print,
+  [data-no-print="true"],
+  [role="button"],
+  .table-action-toolbar,
+  .quick-actions-menu {
     display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
   }
 
   .print-only-container {

@@ -65,7 +65,10 @@ const TableQuickActionToolbar: React.FC<{
   showTeamSort = true,
 }) => {
   return (
-    <div className="no-print mb-2.5 mt-0.5 px-3 py-1.5 bg-slate-100/95 hover:bg-slate-100 rounded-2xl border border-slate-300 flex flex-wrap items-center justify-between gap-2 text-xs font-sans shadow-xs">
+    <div
+      data-no-print="true"
+      className="no-print table-action-toolbar mb-2.5 mt-0.5 px-3 py-1.5 bg-slate-100/95 hover:bg-slate-100 rounded-2xl border border-slate-300 flex flex-wrap items-center justify-between gap-2 text-xs font-sans shadow-xs"
+    >
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className="font-bold text-slate-700 flex items-center gap-1 mr-1">
           <ArrowUpDown className="w-3.5 h-3.5 text-sky-600" />
