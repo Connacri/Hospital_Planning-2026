@@ -47,7 +47,11 @@ export const SupabaseSyncPanel: React.FC<{
   // State for config
   const [config, setConfig] = useState<SupabaseConfig>(() => {
     const envUrl = (import.meta.env?.VITE_SUPABASE_URL as string) || 'https://vjwmocxrqxdybaijhsuo.supabase.co';
-    const envAnon = (import.meta.env?.VITE_SUPABASE_ANON_KEY as string) || '';
+    const envAnon =
+      (import.meta.env?.VITE_SUPABASE_ANON_KEY as string) ||
+      (import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY as string) ||
+      (import.meta.env?.VITE_SUPABASE_PUBLISH_KEY as string) ||
+      '';
 
     try {
       const raw = localStorage.getItem(STORAGE_KEY_SUPABASE);
@@ -700,17 +704,17 @@ ON CONFLICT (id) DO UPDATE SET
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Clé API Publique (anon key) ou Clé Service
+                    Clé API Publique (anon key ou publishable key `pk_...`)
                   </label>
                   <input
                     type="password"
                     value={config.anonKey}
                     onChange={(e) => saveConfig({ anonKey: e.target.value })}
-                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... ou pk_..."
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 font-mono focus:outline-hidden focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
                   />
                   <span className="text-[11px] text-slate-500 mt-1 block">
-                    Trouvé dans Supabase Dashboard &gt; Project Settings &gt; API &gt; Project API keys &gt; `anon public`.
+                    Dans Supabase Dashboard &gt; <strong>Project Settings &gt; API</strong> (clé <code>anon public</code>) ou <strong>API Keys</strong> (Publishable Key). C'est la clé publique sécurisée pour le client web.
                   </span>
                 </div>
 

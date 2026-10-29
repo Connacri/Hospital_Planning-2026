@@ -20,7 +20,11 @@ export interface SupabaseConfig {
 
 export function getSupabaseConfig(): SupabaseConfig {
   const envUrl = (import.meta.env?.VITE_SUPABASE_URL as string) || 'https://vjwmocxrqxdybaijhsuo.supabase.co';
-  const envAnon = (import.meta.env?.VITE_SUPABASE_ANON_KEY as string) || '';
+  const envAnon =
+    (import.meta.env?.VITE_SUPABASE_ANON_KEY as string) ||
+    (import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY as string) ||
+    (import.meta.env?.VITE_SUPABASE_PUBLISH_KEY as string) ||
+    '';
 
   try {
     const raw = localStorage.getItem(STORAGE_KEY_SUPABASE);
