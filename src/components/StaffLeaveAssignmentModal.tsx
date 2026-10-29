@@ -9,16 +9,11 @@ import {
   Tag,
   Clock,
   Info,
-  Layers,
   Sparkles,
   Shield,
   HeartHandshake,
   Check,
-  ChevronLeft,
-  ChevronRight,
-  ArrowRight,
   Plus,
-  Minus,
   AlertCircle,
   CalendarCheck,
   Search,
@@ -37,6 +32,7 @@ import {
   parseCurrentMonthYear,
   calculateMonthDateOverlap,
 } from '../db/objectboxEngine';
+import { DatePicker } from './DatePicker';
 
 export interface StaffLeaveAssignmentModalProps {
   isOpen: boolean;
@@ -70,17 +66,6 @@ const COMMON_LEAVE_PRESETS = [
   { code: 'AA', label: 'Autorisation d\'Absence', color: '#0891b2', bg: 'bg-cyan-950/70 border-cyan-600 text-cyan-200' },
   { code: 'CP', label: 'Congé Paternité / Excep.', color: '#0d9488', bg: 'bg-teal-950/70 border-teal-600 text-teal-200' },
 ];
-
-const DURATION_PRESETS = [
-  { label: '1 mois (30 jours)', days: 30 },
-  { label: '1 mois (31 jours)', days: 31 },
-  { label: '15 jours (quinzaine)', days: 15 },
-  { label: '7 jours (1 semaine)', days: 7 },
-  { label: '21 jours (3 semaines)', days: 21 },
-  { label: '98 jours (Maternité)', days: 98 },
-];
-
-const DOW_LABELS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
 // Helper formatting YYYY-MM-DD
 function toIsoDate(d: Date): string {
@@ -144,13 +129,8 @@ export const StaffLeaveAssignmentModal: React.FC<StaffLeaveAssignmentModalProps>
   });
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Mode de calcul des dates: 'date_to_date' ou 'date_plus_days'
-  const [calculationMode, setCalculationMode] = useState<'date_to_date' | 'date_plus_days'>('date_plus_days');
-
-  // Dates state
-  // Exemple de l'utilisateur : 23 Octobre 2026 avec congé d'1 mois (30 ou 31 jours)
+  // Dates state (initialisé avec 23 Octobre 2026 et 31 jours / 22 Novembre 2026 comme dans le besoin exprimé)
   const [startDateStr, setStartDateStr] = useState<string>(() => {
-    // Si nous sommes dans le mois d'octobre 2026, initialiser à 2026-10-23 comme l'exemple
     if (currentMonthInfo.monthIndex === 9 && currentMonthInfo.year === 2026) {
       return '2026-10-23';
     }
@@ -167,10 +147,6 @@ export const StaffLeaveAssignmentModal: React.FC<StaffLeaveAssignmentModalProps>
     d.setUTCDate(d.getUTCDate() + 30);
     return toIsoDate(d);
   });
-
-  // Calendar visual navigator month/year
-  const [calendarViewYear, setCalendarViewYear] = useState<number>(() => currentMonthInfo.year);
-  const [calendarViewMonthIdx, setCalendarViewMonthIdx] = useState<number>(() => currentMonthInfo.monthIndex);
 
   // Leave parameters
   const [selectedCode, setSelectedCode] = useState<string>('CA');
@@ -193,40 +169,8 @@ export const StaffLeaveAssignmentModal: React.FC<StaffLeaveAssignmentModalProps>
         const match = staffList.find((s) => s.category === initialCategory);
         if (match) setSelectedStaffId(match.id);
       }
-      setCalendarViewYear(currentMonthInfo.year);
-      setCalendarViewMonthIdx(currentMonthInfo.monthIndex);
     }
-  }, [isOpen, initialStaffId, initialCategory, staffList, currentMonthInfo]);
-
-  // Recalcule endDateStr quand startDateStr ou durationDays changent en mode 'date_plus_days'
-  useEffect(() => {
-    if (calculationMode === 'date_plus_days') {
-      try {
-        const start = parseIsoDate(startDateStr);
-        const end = new Date(start.getTime());
-        end.setUTCDate(end.getUTCDate() + Math.max(1, durationDays) - 1);
-        setEndDateStr(toIsoDate(end));
-      } catch {
-        // ignore
-      }
-    }
-  }, [startDateStr, durationDays, calculationMode]);
-
-  // Recalcule durationDays quand endDateStr change en mode 'date_to_date'
-  useEffect(() => {
-    if (calculationMode === 'date_to_date') {
-      try {
-        const start = parseIsoDate(startDateStr);
-        const end = parseIsoDate(endDateStr);
-        if (end.getTime() >= start.getTime()) {
-          const diff = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
-          setDurationDays(diff);
-        }
-      } catch {
-        // ignore
-      }
-    }
-  }, [startDateStr, endDateStr, calculationMode]);
+  }, [isOpen, initialStaffId, initialCategory, staffList]);
 
   // Met à jour datesText officiel
   useEffect(() => {
@@ -280,54 +224,6 @@ export const StaffLeaveAssignmentModal: React.FC<StaffLeaveAssignmentModalProps>
     return currentMonthOverlap.endsAfterMonth || (nextMonthOverlap !== null && nextMonthOverlap.overlapDays > 0);
   }, [currentMonthOverlap, nextMonthOverlap]);
 
-  // Données du mini-calendrier visuel
-  const calendarDays = useMemo(() => {
-    const daysCount = new Date(Date.UTC(calendarViewYear, calendarViewMonthIdx + 1, 0)).getUTCDate();
-    const firstDayDate = new Date(Date.UTC(calendarViewYear, calendarViewMonthIdx, 1));
-    const firstDow = firstDayDate.getUTCDay(); // 0 = Dim, 5 = Ven, 6 = Sam
-
-    const days: Array<{
-      day: number;
-      isoDate: string;
-      dow: number;
-      isWeekend: boolean;
-      isInRange: boolean;
-      isStart: boolean;
-      isEnd: boolean;
-      isToday: boolean;
-    }> = [];
-
-    const todayIso = '2026-10-29'; // Date actuelle de l'application
-
-    for (let d = 1; d <= daysCount; d++) {
-      const iso = `${calendarViewYear}-${String(calendarViewMonthIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      const dow = (firstDow + (d - 1)) % 7;
-      const isWeekend = dow === 5 || dow === 6; // Ven & Sam en Algérie
-      const isStart = iso === startDateStr;
-      const isEnd = iso === endDateStr;
-      const isInRange = iso >= startDateStr && iso <= endDateStr;
-      const isToday = iso === todayIso;
-
-      days.push({
-        day: d,
-        isoDate: iso,
-        dow,
-        isWeekend,
-        isInRange,
-        isStart,
-        isEnd,
-        isToday,
-      });
-    }
-
-    return {
-      daysCount,
-      firstDow,
-      days,
-      monthLabel: FRENCH_MONTH_NAMES[calendarViewMonthIdx],
-    };
-  }, [calendarViewYear, calendarViewMonthIdx, startDateStr, endDateStr]);
-
   if (!isOpen) return null;
 
   const handleSelectPreset = (p: { code: string; label: string }) => {
@@ -336,38 +232,13 @@ export const StaffLeaveAssignmentModal: React.FC<StaffLeaveAssignmentModalProps>
     if (p.code === 'MAT' || /maternité|maternite/i.test(p.label)) {
       setIsMergedSpan(true);
       setDurationDays(98);
-    }
-  };
-
-  const handleSelectDurationPreset = (days: number) => {
-    setDurationDays(days);
-    if (calculationMode === 'date_to_date') {
       try {
         const start = parseIsoDate(startDateStr);
         const end = new Date(start.getTime());
-        end.setUTCDate(end.getUTCDate() + days - 1);
+        end.setUTCDate(end.getUTCDate() + 98 - 1);
         setEndDateStr(toIsoDate(end));
       } catch {
         // ignore
-      }
-    }
-  };
-
-  const handleCalendarDayClick = (iso: string) => {
-    if (calculationMode === 'date_plus_days') {
-      setStartDateStr(iso);
-    } else {
-      // Date to date logic
-      if (!startDateStr || (startDateStr && endDateStr && startDateStr !== endDateStr)) {
-        setStartDateStr(iso);
-        setEndDateStr(iso);
-      } else if (startDateStr && (!endDateStr || startDateStr === endDateStr)) {
-        if (iso < startDateStr) {
-          setEndDateStr(startDateStr);
-          setStartDateStr(iso);
-        } else {
-          setEndDateStr(iso);
-        }
       }
     }
   };
@@ -689,278 +560,18 @@ export const StaffLeaveAssignmentModal: React.FC<StaffLeaveAssignmentModalProps>
                 </div>
               </div>
 
-              {/* SECTION 3: SÉLECTION DU CALENDRIER & MODE DE CALCUL (DATE À DATE OU DATE + JOURS) */}
+              {/* SECTION 3: SÉLECTION DU CALENDRIER & MODE DE CALCUL (COMPOSANT DATEPICKER INTERACTIF) */}
               <div className="space-y-3.5 bg-slate-900/50 border border-slate-800/80 p-3.5 sm:p-4 rounded-xl">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-emerald-400" />
-                    <span className="text-slate-200 font-bold text-xs">
-                      3. Choisir les dates du congé :
-                    </span>
-                  </div>
-
-                  {/* Mode Selector Tabs (Date à Date vs Date + Jours) */}
-                  <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 gap-1 self-start sm:self-auto">
-                    <button
-                      type="button"
-                      onClick={() => setCalculationMode('date_to_date')}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                        calculationMode === 'date_to_date'
-                          ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      <CalendarIcon className="w-3.5 h-3.5" />
-                      <span>Du Date à Date</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCalculationMode('date_plus_days')}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                        calculationMode === 'date_plus_days'
-                          ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>Date + Nombre de jours</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Saisie directe des dates et de la durée */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  <div>
-                    <label className="block text-[11px] text-slate-400 font-medium mb-1">
-                      Date de début :
-                    </label>
-                    <input
-                      type="date"
-                      value={startDateStr}
-                      onChange={(e) => setStartDateStr(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono font-bold text-xs focus:outline-none focus:border-emerald-500 min-h-[38px]"
-                    />
-                  </div>
-
-                  {calculationMode === 'date_plus_days' ? (
-                    <div>
-                      <label className="block text-[11px] text-slate-400 font-medium mb-1">
-                        Nombre de jours de congé :
-                      </label>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setDurationDays((prev) => Math.max(1, prev - 1))}
-                          className="px-2.5 py-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-lg text-slate-300 hover:text-white"
-                        >
-                          <Minus className="w-3.5 h-3.5" />
-                        </button>
-                        <input
-                          type="number"
-                          min="1"
-                          max="365"
-                          value={durationDays}
-                          onChange={(e) => setDurationDays(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono font-bold text-xs text-center focus:outline-none focus:border-emerald-500 min-h-[38px]"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setDurationDays((prev) => prev + 1)}
-                          className="px-2.5 py-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-lg text-slate-300 hover:text-white"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="block text-[11px] text-slate-400 font-medium mb-1">
-                        Date de fin :
-                      </label>
-                      <input
-                        type="date"
-                        value={endDateStr}
-                        min={startDateStr}
-                        onChange={(e) => setEndDateStr(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono font-bold text-xs focus:outline-none focus:border-emerald-500 min-h-[38px]"
-                      />
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="block text-[11px] text-slate-400 font-medium mb-1">
-                      Résultat calculé :
-                    </label>
-                    <div className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 flex flex-col justify-center min-h-[38px]">
-                      <span className="text-emerald-400 font-bold font-mono text-xs">
-                        {durationDays} jour{durationDays > 1 ? 's' : ''} (jusqu'au {formatFrenchDate(endDateStr)})
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Puces de durées pré-établies */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[11px] text-slate-400 mr-1">Raccourcis de durée :</span>
-                  {DURATION_PRESETS.map((p) => (
-                    <button
-                      key={p.days}
-                      type="button"
-                      onClick={() => handleSelectDurationPreset(p.days)}
-                      className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-all ${
-                        durationDays === p.days
-                          ? 'bg-emerald-950 text-emerald-200 border-emerald-600 font-bold'
-                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
-                      }`}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* CALENDRIER INTERACTIF VISUEL */}
-                <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 sm:p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (calendarViewMonthIdx === 0) {
-                            setCalendarViewMonthIdx(11);
-                            setCalendarViewYear((y) => y - 1);
-                          } else {
-                            setCalendarViewMonthIdx((m) => m - 1);
-                          }
-                        }}
-                        className="p-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800"
-                        title="Mois précédent"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-
-                      <span className="text-xs font-bold text-white uppercase tracking-wider font-mono">
-                        {calendarDays.monthLabel} {calendarViewYear}
-                      </span>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (calendarViewMonthIdx === 11) {
-                            setCalendarViewMonthIdx(0);
-                            setCalendarViewYear((y) => y + 1);
-                          } else {
-                            setCalendarViewMonthIdx((m) => m + 1);
-                          }
-                        }}
-                        className="p-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800"
-                        title="Mois suivant"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    {/* Quick navigation to planning month or next month */}
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCalendarViewYear(currentMonthInfo.year);
-                          setCalendarViewMonthIdx(currentMonthInfo.monthIndex);
-                        }}
-                        className="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 text-[10.5px] border border-slate-800"
-                      >
-                        {currentMonthInfo.monthLabel}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCalendarViewYear(nextMonthInfo.year);
-                          setCalendarViewMonthIdx(nextMonthInfo.monthIndex);
-                        }}
-                        className="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 text-[10.5px] border border-slate-800"
-                      >
-                        {nextMonthInfo.monthLabel}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Calendar Grid */}
-                  <div className="grid grid-cols-7 gap-1 text-center font-mono">
-                    {/* Header DOW */}
-                    {DOW_LABELS.map((label, idx) => (
-                      <div
-                        key={label}
-                        className={`text-[10px] font-bold py-1 ${
-                          idx === 5 || idx === 6 ? 'text-amber-400/80' : 'text-slate-400'
-                        }`}
-                      >
-                        {label}
-                      </div>
-                    ))}
-
-                    {/* Empty placeholder cells for offset */}
-                    {Array.from({ length: calendarDays.firstDow }, (_, i) => (
-                      <div key={`empty-${i}`} className="h-8" />
-                    ))}
-
-                    {/* Day Cells */}
-                    {calendarDays.days.map((item) => {
-                      const isStart = item.isStart;
-                      const isEnd = item.isEnd;
-                      const inRange = item.isInRange;
-
-                      return (
-                        <button
-                          key={item.isoDate}
-                          type="button"
-                          onClick={() => handleCalendarDayClick(item.isoDate)}
-                          className={`h-8 sm:h-9 rounded-lg flex flex-col items-center justify-center relative transition-all text-xs font-semibold ${
-                            isStart || isEnd
-                              ? 'bg-emerald-600 text-white font-bold ring-2 ring-emerald-400 shadow-md scale-105 z-10'
-                              : inRange
-                              ? 'bg-emerald-950/80 text-emerald-200 border border-emerald-800/80 font-bold'
-                              : item.isWeekend
-                              ? 'bg-slate-900/40 text-amber-300/80 hover:bg-slate-800 border border-slate-900'
-                              : 'bg-slate-900/60 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800/60'
-                          }`}
-                          title={`${item.day} ${calendarDays.monthLabel} ${calendarViewYear}${
-                            isStart ? ' (Début du congé)' : isEnd ? ' (Fin du congé)' : ''
-                          }`}
-                        >
-                          <span>{item.day}</span>
-                          {isStart && (
-                            <span className="text-[7.5px] font-mono leading-none tracking-tight text-emerald-200 -mt-0.5">
-                              Début
-                            </span>
-                          )}
-                          {isEnd && !isStart && (
-                            <span className="text-[7.5px] font-mono leading-none tracking-tight text-emerald-200 -mt-0.5">
-                              Fin
-                            </span>
-                          )}
-                          {item.isToday && !isStart && !isEnd && (
-                            <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-sky-400" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-900">
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded bg-emerald-600 inline-block" />
-                      <span>Période sélectionnée</span>
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded bg-amber-500/20 border border-amber-500/50 inline-block" />
-                      <span>Week-ends (Ven &amp; Sam)</span>
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-sky-400 inline-block" />
-                      <span>29 Octobre (Aujourd'hui)</span>
-                    </span>
-                  </div>
-                </div>
+                <DatePicker
+                  startDate={startDateStr}
+                  endDate={endDateStr}
+                  activePlanningMonth={monthName}
+                  onChange={(s, e, d) => {
+                    setStartDateStr(s);
+                    setEndDateStr(e);
+                    setDurationDays(d);
+                  }}
+                />
 
                 {/* BANNIÈRE D'INFORMATION SUR LE CHEVAUCHEMENT MULTI-MOIS (OCTOBRE -> NOVEMBRE) */}
                 {isCrossMonth && (
