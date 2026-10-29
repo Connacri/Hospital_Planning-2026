@@ -4,21 +4,36 @@
       <stop offset="0%" stop-color="#0f172a" />
       <stop offset="100%" stop-color="#1e293b" />
     </linearGradient>
-    <linearGradient id="plusGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#38bdf8" />
-      <stop offset="100%" stop-color="#0284c7" />
+    <linearGradient id="crescentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff758f" />
+      <stop offset="100%" stop-color="#e11d48" />
     </linearGradient>
   </defs>
+
   <!-- Background rounded square with border -->
   <rect width="64" height="64" rx="16" fill="url(#bgGrad)" />
   <rect x="2" y="2" width="60" height="60" rx="14" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" />
   
-  <!-- Hospital Medical Cross -->
-  <path d="M26 12h12v14h14v12H38v14H26V38H12V26h14V12z" fill="#ffffff" />
-  
-  <!-- Pulse / Vital Beat accent -->
-  <path d="M16 32h6l3-6 4 12 3-8 3 2h7" fill="none" stroke="#e11d48" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-  
-  <!-- Hospital planning badge dot -->
-  <circle cx="50" cy="14" r="4" fill="#38bdf8" />
+  <!-- Croissant Médical Hospitalier (Crescent) -->
+  <path
+    d="M32 12c-11.05 0-20 8.95-20 20s8.95 20 20 20c7.18 0 13.48-3.8 16.98-9.48-12.02-.38-21.68-10.22-21.68-22.32 0-3.08.62-6.02 1.74-8.7A19.86 19.86 0 0 0 32 12z"
+    fill="url(#crescentGrad)"
+  />
+
+  <!-- Étoile Médicale (Star) -->
+  <polygon
+    points="44,22 46.2,26.5 51,26.8 47.3,30.2 48.4,35 44,32.4 39.6,35 40.7,30.2 37,26.8 41.8,26.5"
+    fill="#ffffff"
+  />
+
+  <!-- Vital Pulse Beat accent underneath -->
+  <path
+    d="M14 44h8l3-6 4 10 3-6 3 2h10"
+    fill="none"
+    stroke="#38bdf8"
+    stroke-width="2.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    opacity="0.85"
+  />
 </svg>
