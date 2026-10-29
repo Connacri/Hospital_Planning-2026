@@ -1,4 +1,4 @@
-﻿name: CI/CD Build & Release (Android APK/AAB Signed + Windows Inno Setup EXE + Web Deploy)
+name: CI/CD Build & Release (Android APK/AAB Signed + Windows Inno Setup EXE + Web Deploy)
 
 on:
   push:
@@ -37,6 +37,9 @@ jobs:
         run: npm run lint
 
       - name: Build Web Application
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://vjwmocxrqxdybaijhsuo.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
         run: npm run build
 
       - name: Upload Web Build Artifact
@@ -89,6 +92,9 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Build Web Assets for Mobile
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://vjwmocxrqxdybaijhsuo.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
         run: npm run build
 
       - name: Initialize Android Native Project (Capacitor)
@@ -188,6 +194,9 @@ jobs:
           npm install --legacy-peer-deps
 
       - name: Build Web Application
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://vjwmocxrqxdybaijhsuo.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
         run: npm run build
 
       - name: Install Inno Setup

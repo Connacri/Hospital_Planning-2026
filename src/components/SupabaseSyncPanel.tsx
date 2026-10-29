@@ -46,17 +46,23 @@ export const SupabaseSyncPanel: React.FC<{
 }> = ({ onShowToast }) => {
   // State for config
   const [config, setConfig] = useState<SupabaseConfig>(() => {
+    const envUrl = (import.meta.env?.VITE_SUPABASE_URL as string) || 'https://vjwmocxrqxdybaijhsuo.supabase.co';
+    const envAnon = (import.meta.env?.VITE_SUPABASE_ANON_KEY as string) || '';
+
     try {
       const raw = localStorage.getItem(STORAGE_KEY_SUPABASE);
       if (raw) {
-        return JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        if (!parsed.url && envUrl) parsed.url = envUrl;
+        if (!parsed.anonKey && envAnon) parsed.anonKey = envAnon;
+        return parsed;
       }
     } catch {
       // ignore
     }
     return {
-      url: '',
-      anonKey: '',
+      url: envUrl,
+      anonKey: envAnon,
       tableNameConfig: 'hospital_config',
       tableNameStaff: 'staff_members',
       tableNameSnapshots: 'objectbox_sync_snapshots',
