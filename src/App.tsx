@@ -102,6 +102,7 @@ import { translations, SupportedLocale } from './i18n/translations';
 import { ModernMedicalDashboard } from './components/ModernMedicalDashboard';
 import { ModernAppSidebar, ActiveTab } from './components/ModernAppSidebar';
 import { StaffLeaveAssignmentModal } from './components/StaffLeaveAssignmentModal';
+import { syncActiveMonthToSupabase } from './utils/supabaseSyncHelper';
 
 export default function App() {
   const [locale, setLocale] = useState<SupportedLocale>('fr');
@@ -509,10 +510,23 @@ export default function App() {
     );
   };
 
-  const handleSelectMonth = (year: number, monthIndex: number) => {
-    objectBoxStore.createNewMonth(year, monthIndex);
-    const monthName = objectBoxStore.getConfig().guardMonthName;
-    showToast(`Mois de « ${monthName} » activé avec continuité perpétuelle des gardes !`);
+  const handleSelectMonth = async (year: number, monthIndex: number, isModificatif = false) => {
+    const res = objectBoxStore.openOrCreateMonth(year, monthIndex, isModificatif);
+    if (res.isExisting) {
+      showToast(`Mois de « ${res.monthName} » récupéré : toutes les rotations, tous les noms et tous les ordres restaurés !`);
+    } else {
+      showToast(`Mois de « ${res.monthName} » créé et sauvegardé avec continuité perpétuelle des gardes !`);
+    }
+
+    // Sauvegarde & synchronisation automatique sur Supabase si configuré
+    try {
+      const syncRes = await syncActiveMonthToSupabase(objectBoxStore.getSnapshot());
+      if (syncRes.configured && syncRes.success) {
+        showToast(syncRes.message);
+      }
+    } catch (e) {
+      console.warn('[Supabase Sync Warning]', e);
+    }
   };
 
   const handleApplyGuardRotation = (
@@ -576,19 +590,17 @@ export default function App() {
   };
 
   const handleSetHolidays = (days: number[], holiday: boolean) => {
-    handleUpdateConfig({
-      daysColumns: config.daysColumns.map((col) =>
-        days.includes(col.day) ? { ...col, isHoliday: holiday } : col
-      ),
-    });
+    objectBoxStore.setHolidays(days, holiday);
+    showToast(
+      holiday
+        ? `Jour(s) férié(s) marqué(s) comme « F » pour le personnel de jour (08h-16h) — Équipes de garde et hygiène maintenues !`
+        : `Statut férié retiré pour les jours sélectionnés.`
+    );
   };
 
   const handleClearHolidays = () => {
-    handleUpdateConfig({
-      daysColumns: config.daysColumns.map((col) =>
-        col.isHoliday ? { ...col, isHoliday: false } : col
-      ),
-    });
+    objectBoxStore.clearAllHolidays();
+    showToast(`Tous les jours fériés ont été réinitialisés.`);
   };
 
   const handleUpdateStaffField = <K extends keyof StaffEntity>(
@@ -2898,8 +2910,7 @@ class HospitalPdfGenerator {
         onAssignLeave={handleAssignStaffLeave}
         onRemoveLeave={handleRemoveStaffLeave}
         onCreateOrSwitchMonth={(year, monthIndex) => {
-          objectBoxStore.createNewMonth(year, monthIndex, false);
-          showToast(`Planning du mois de ${FRENCH_MONTH_NAMES[monthIndex]} ${year} créé avec succès ! Les congés actifs y sont appliqués.`);
+          handleSelectMonth(year, monthIndex, false);
         }}
       />
 
@@ -2937,7 +2948,17 @@ class HospitalPdfGenerator {
         isOpen={isMonthHistoryModalOpen}
         onClose={() => setIsMonthHistoryModalOpen(false)}
         currentConfig={config}
-        onMonthChanged={(name) => showToast(`Planning du mois de ${name} activé avec succès !`)}
+        onMonthChanged={async (name) => {
+          showToast(`Planning du mois de « ${name} » récupéré et activé avec succès !`);
+          try {
+            const syncRes = await syncActiveMonthToSupabase(objectBoxStore.getSnapshot());
+            if (syncRes.configured && syncRes.success) {
+              showToast(syncRes.message);
+            }
+          } catch (e) {
+            console.warn('[Supabase Sync Warning]', e);
+          }
+        }}
         onOpenCreateCustomMonth={() => setIsCreateMonthModalOpen(true)}
       />
 
@@ -2947,8 +2968,7 @@ class HospitalPdfGenerator {
         onClose={() => setIsCreateMonthModalOpen(false)}
         currentMonthName={config.guardMonthName || 'Octobre 2026'}
         onSelectMonth={(year, monthIndex, isModif) => {
-          objectBoxStore.createNewMonth(year, monthIndex, !!isModif);
-          showToast(`Nouveau mois créé avec succès en continuité perpétuelle !`);
+          handleSelectMonth(year, monthIndex, !!isModif);
         }}
       />
 

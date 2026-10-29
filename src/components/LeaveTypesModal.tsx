@@ -12,7 +12,7 @@ interface LeaveTypesModalProps {
 }
 
 const PRESET_SUGGESTIONS = [
-  { code: 'CA', label: 'Congé Annuel', color: '#16a34a' },
+  { code: 'C', label: 'Congé Annuel', color: '#16a34a' },
   { code: 'CM', label: 'Congé Maladie', color: '#dc2626' },
   { code: 'MAT', label: 'Congé Maternité', color: '#db2777' },
   { code: 'REC', label: 'Récupération', color: '#ca8a04' },

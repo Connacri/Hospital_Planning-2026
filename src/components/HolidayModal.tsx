@@ -113,9 +113,17 @@ export const HolidayModal: React.FC<HolidayModalProps> = ({
             })}
           </div>
 
-          <p className="text-[11px] text-slate-500">
-            Les jours fériés apparaissent en rouge dans le planning (en-tête et colonne).
-          </p>
+          <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 text-[11px] text-slate-400 space-y-1">
+            <p className="font-semibold text-slate-200">
+              Règle hospitalière appliquée automatiquement :
+            </p>
+            <p>
+              • Les jours fériés sont marqués comme <strong className="text-red-300 font-mono">« F »</strong> pour le personnel médical et paramédical jour (08h-16h) sauf congés (C, CM, Maternité).
+            </p>
+            <p>
+              • <strong className="text-amber-300">Sauf</strong> les équipes de garde (16h) et agents d'hygiène (12h) qui conservent leur roulement ininterrompu.
+            </p>
+          </div>
         </div>
 
         {/* Footer Actions */}

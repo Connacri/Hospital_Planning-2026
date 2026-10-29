@@ -393,15 +393,44 @@ export const FRENCH_MONTH_NAMES = [
   'Décembre',
 ];
 
+export interface AlgerianHoliday {
+  day: number;
+  label: string;
+}
+
+export function getAlgerianHolidaysForMonth(year: number, monthIndex: number): AlgerianHoliday[] {
+  // monthIndex 0..11
+  const holidays: AlgerianHoliday[] = [];
+  if (monthIndex === 0) {
+    // Janvier
+    holidays.push({ day: 1, label: 'Nouvel An' });
+    holidays.push({ day: 12, label: 'Yennayer' });
+  } else if (monthIndex === 4) {
+    // Mai
+    holidays.push({ day: 1, label: 'Fête du Travail' });
+  } else if (monthIndex === 6) {
+    // Juillet
+    holidays.push({ day: 5, label: 'Fête de l\'Indépendance et de la Jeunesse' });
+  } else if (monthIndex === 10) {
+    // Novembre
+    holidays.push({ day: 1, label: 'Fête de la Révolution (1er Novembre)' });
+  }
+  return holidays;
+}
+
 export function buildDaysColumnsForMonth(year: number, monthIndex: number): DayColumnMeta[] {
   const daysCount = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
   const DOW_SHORT = ['DIM', 'LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM'];
+  const algerianHolidays = getAlgerianHolidaysForMonth(year, monthIndex);
+  const holidayDays = new Set(algerianHolidays.map((h) => h.day));
+
   const cols: DayColumnMeta[] = [];
   for (let d = 1; d <= daysCount; d++) {
     const date = new Date(Date.UTC(year, monthIndex, d));
     const dow = DOW_SHORT[date.getUTCDay()];
     const isBlackColumn = dow === 'VEN' || dow === 'SAM';
-    cols.push({ day: d, dow, isBlackColumn });
+    const isHoliday = holidayDays.has(d);
+    cols.push({ day: d, dow, isBlackColumn, isHoliday });
   }
   return cols;
 }
@@ -479,12 +508,16 @@ export function calculateMonthDateOverlap(
 }
 
 /**
- * Standard 08h-16h schedule: N on Dim-Jeu, RE on Ven-Sam
+ * Standard 08h-16h schedule: F on jours fériés, RE on Ven-Sam, N on Dim-Jeu (sauf équipes de garde et hygiène)
  */
 export function buildStandard08h16hActivity(daysInMonth = 31, daysColumns = buildOctober2026Days()): Record<number, string> {
   const map: Record<number, string> = {};
   for (const col of daysColumns) {
-    map[col.day] = col.isBlackColumn ? 'RE' : 'N';
+    if (col.isHoliday) {
+      map[col.day] = 'F';
+    } else {
+      map[col.day] = col.isBlackColumn ? 'RE' : 'N';
+    }
   }
   return map;
 }
@@ -729,7 +762,8 @@ export interface MonthHistoryItem {
 export const DEFAULT_LEAVE_TYPES: LeaveTypeItem[] = [
   { id: 'g', code: 'G', label: 'Garde', isSystem: true, color: '#0284c7' },
   { id: 're', code: 'RE', label: 'Récupération', isSystem: true, color: '#059669' },
-  { id: 'c', code: 'C', label: 'Congé', isSystem: false, color: '#d97706' },
+  { id: 'c', code: 'C', label: 'Congé Annuel', isSystem: false, color: '#d97706' },
+  { id: 'f', code: 'F', label: 'Férié', isSystem: true, color: '#dc2626' },
   { id: 'cm', code: 'CM', label: 'Congé Maladie', isSystem: false, color: '#e11d48' },
   { id: 'm', code: 'Congé de Maternité', label: 'Congé de Maternité (fusionné)', isSystem: false, color: '#ec4899' },
   { id: 'n', code: 'N', label: 'Normal', isSystem: true, color: '#475569' },
@@ -737,10 +771,125 @@ export const DEFAULT_LEAVE_TYPES: LeaveTypeItem[] = [
 
 export function buildLegendFromLeaveTypes(leaveTypes: LeaveTypeItem[]): string[] {
   return leaveTypes.map((item) => {
-    if (item.code === 'G' || item.code === 'RE' || item.code === 'N') return `${item.code} : ${item.label}`;
+    if (item.code === 'G' || item.code === 'RE' || item.code === 'N' || item.code === 'F') return `${item.code} : ${item.label}`;
     if (item.code === 'Congé de Maternité') return item.label;
     return `${item.code} : ${item.label}`;
   });
+}
+
+export interface GuardLeaveConflict {
+  teamGroup: string;
+  day: number;
+  conflictingStaff: { id: number; fullName: string; leaveCode: string }[];
+}
+
+export interface GuardTeamConflictsResult {
+  conflicts: GuardLeaveConflict[];
+  conflictsByStaffId: Record<number, { day: number; teamGroup: string; conflictingWith: string[] }[]>;
+  conflictsByDayAndTeam: Record<string, GuardLeaveConflict>; // key: `${teamGroup}_${day}`
+  conflictedTeamGroups: Set<string>;
+  totalConflictDays: number;
+}
+
+/**
+ * Détermine si un membre du personnel est en congé un jour donné
+ */
+export function isStaffOnLeaveOnDay(staff: StaffEntity, day: number): { onLeave: boolean; leaveCode: string } {
+  // 1. Congé de maternité fusionné
+  if (staff.maternityLeave && day >= staff.maternityLeave.startDay && day <= staff.maternityLeave.endDay) {
+    return { onLeave: true, leaveCode: staff.maternityLeave.label || 'MAT' };
+  }
+  // 2. Cellule quotidienne
+  const val = staff.dailyActivity ? staff.dailyActivity[day] : undefined;
+  if (!val) return { onLeave: false, leaveCode: '' };
+  const trimmed = val.trim();
+  // Services actifs de travail hospitalier normal ou garde
+  const workingShifts = ['Jour', 'Nuit', 'RE', 'G', 'N', 'F', ''];
+  if (workingShifts.includes(trimmed)) {
+    return { onLeave: false, leaveCode: '' };
+  }
+  // Codes de congé reconnus (C, CA, CM, MAT, REC, CSS, MIS, AT, AA, CP, etc.)
+  return { onLeave: true, leaveCode: trimmed };
+}
+
+/**
+ * Détection automatique des chevauchements de congés au sein d'une même équipe de garde
+ * (ex: deux ou plusieurs membres de l'Équipe A en congé le même jour).
+ */
+export function detectGuardTeamLeaveConflicts(
+  staffList: StaffEntity[],
+  daysColumns: DayColumnMeta[]
+): GuardTeamConflictsResult {
+  const conflicts: GuardLeaveConflict[] = [];
+  const conflictsByStaffId: Record<number, { day: number; teamGroup: string; conflictingWith: string[] }[]> = {};
+  const conflictsByDayAndTeam: Record<string, GuardLeaveConflict> = {};
+  const conflictedTeamGroups = new Set<string>();
+
+  // Filtrer le personnel de garde ayant une équipe définie (A, B, C, D, E...)
+  const guardStaff = staffList.filter(
+    (s) => (s.category === 'paramedical_guard' || !!s.teamGroup) && (s.teamGroup || '').trim() !== ''
+  );
+
+  // Regrouper par équipe
+  const teamStaffMap: Record<string, StaffEntity[]> = {};
+  for (const s of guardStaff) {
+    const tg = s.teamGroup.trim().toUpperCase();
+    if (!teamStaffMap[tg]) teamStaffMap[tg] = [];
+    teamStaffMap[tg].push(s);
+  }
+
+  // Pour chaque équipe et chaque jour du mois
+  for (const [tg, members] of Object.entries(teamStaffMap)) {
+    if (members.length < 2) continue; // Minimum 2 agents pour qu'il y ait chevauchement
+
+    for (const col of daysColumns) {
+      const d = col.day;
+      const leaveMembers: { id: number; fullName: string; leaveCode: string }[] = [];
+
+      for (const m of members) {
+        const leaveCheck = isStaffOnLeaveOnDay(m, d);
+        if (leaveCheck.onLeave) {
+          leaveMembers.push({
+            id: m.id,
+            fullName: m.fullName,
+            leaveCode: leaveCheck.leaveCode,
+          });
+        }
+      }
+
+      // Si deux ou plusieurs membres de la même équipe sont en congé simultanément ce jour
+      if (leaveMembers.length >= 2) {
+        const conflict: GuardLeaveConflict = {
+          teamGroup: tg,
+          day: d,
+          conflictingStaff: leaveMembers,
+        };
+        conflicts.push(conflict);
+        conflictedTeamGroups.add(tg);
+        conflictsByDayAndTeam[`${tg}_${d}`] = conflict;
+
+        // Indexer par id d'agent pour affichage direct d'icône d'avertissement dans le tableau
+        for (const lm of leaveMembers) {
+          if (!conflictsByStaffId[lm.id]) {
+            conflictsByStaffId[lm.id] = [];
+          }
+          conflictsByStaffId[lm.id].push({
+            day: d,
+            teamGroup: tg,
+            conflictingWith: leaveMembers.filter((o) => o.id !== lm.id).map((o) => o.fullName),
+          });
+        }
+      }
+    }
+  }
+
+  return {
+    conflicts,
+    conflictsByStaffId,
+    conflictsByDayAndTeam,
+    conflictedTeamGroups,
+    totalConflictDays: conflicts.length,
+  };
 }
 
 /**
@@ -793,7 +942,7 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
       'Jour',
       'Nuit',
       'RE : Récupération',
-      'C : Congé',
+      'C : Congé Annuel',
       'CM : Congé Maladie',
       'M : Maternité',
       'N : Normal',
@@ -1523,6 +1672,7 @@ export class ObjectBoxLocalStore {
       } catch {
         // Ignore quota errors in sandboxes
       }
+      this.updateActiveMonthInHistorySilently(snap);
     });
   }
 
@@ -2261,7 +2411,7 @@ export class ObjectBoxLocalStore {
     const monthIndex = mIdx !== -1 ? mIdx : 9;
 
     const record: MonthHistoryItem = {
-      id: `month_${year}_${monthIndex}_${isModif ? 'modif' : 'normal'}_${Date.now()}`,
+      id: `month_${year}_${monthIndex}_${isModif ? 'modif' : 'normal'}`,
       name: finalName,
       year,
       monthIndex,
@@ -2281,7 +2431,7 @@ export class ObjectBoxLocalStore {
 
     const current = this.getMonthHistory();
     const existingIdx = current.findIndex(
-      (h) => h.year === year && h.monthIndex === monthIndex && h.isModificatif === isModif
+      (h) => (h.id === record.id) || (h.year === year && h.monthIndex === monthIndex && h.isModificatif === isModif)
     );
     let next: MonthHistoryItem[];
     if (existingIdx !== -1) {
@@ -2292,6 +2442,157 @@ export class ObjectBoxLocalStore {
     }
     this.persistHistoryAsync(next);
     return record;
+  }
+
+  /**
+   * Sauvegarde silencieuse et automatique de toutes les modifications du mois actif dans l'historique
+   */
+  updateActiveMonthInHistorySilently(snap: ObjectBoxDatabaseSnapshot): void {
+    if (!snap || !snap.config) return;
+    const baseMonthName = snap.config.guardMonthName || 'Octobre 2026';
+    const isModif = !!snap.config.isModificatif;
+    const { year, monthIndex } = parseCurrentMonthYear(baseMonthName);
+    const id = `month_${year}_${monthIndex}_${isModif ? 'modif' : 'normal'}`;
+
+    const record: MonthHistoryItem = {
+      id,
+      name: baseMonthName,
+      year,
+      monthIndex,
+      daysCount: snap.config.daysColumns ? snap.config.daysColumns.length : 31,
+      isModificatif: isModif,
+      createdAt: new Date().toLocaleDateString('fr-FR'),
+      updatedAt:
+        new Date().toLocaleDateString('fr-FR') +
+        ' ' +
+        new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+      config: JSON.parse(JSON.stringify(snap.config)),
+      staffBox: JSON.parse(JSON.stringify(snap.staffBox)),
+    };
+
+    const current = this.getMonthHistory();
+    const existingIdx = current.findIndex(
+      (h) => (h.id === id) || (h.year === year && h.monthIndex === monthIndex && h.isModificatif === isModif)
+    );
+    let next: MonthHistoryItem[];
+    if (existingIdx !== -1) {
+      next = [...current];
+      next[existingIdx] = record;
+    } else {
+      next = [record, ...current];
+    }
+    this.persistHistoryAsync(next);
+  }
+
+  /**
+   * Recherche un mois dans l'historique par année, index de mois et mode modificatif
+   */
+  findMonthInHistory(year: number, monthIndex: number, isModificatif?: boolean): MonthHistoryItem | undefined {
+    const list = this.getMonthHistory();
+    return list.find((h) => {
+      if (h.year !== year || h.monthIndex !== monthIndex) return false;
+      if (typeof isModificatif === 'boolean' && h.isModificatif !== isModificatif) return false;
+      return true;
+    });
+  }
+
+  /**
+   * Ouvre un mois : s'il existe déjà dans l'historique, récupère l'intégralité des tableaux
+   * (rotations, noms, ordres, cellules, notes, entêtes...). S'il n'existe pas encore, le crée
+   * et l'enregistre immédiatement en local et prêt pour Supabase.
+   */
+  openOrCreateMonth(
+    year: number,
+    monthIndex: number,
+    isModificatif = false
+  ): { isExisting: boolean; monthName: string; recordId: string } {
+    // 1. Sauvegarder immédiatement l'état complet du mois actuel
+    this.updateActiveMonthInHistorySilently(this.snapshot);
+
+    // 2. Vérifier si ce mois cible a déjà été ouvert et sauvegardé
+    const existing = this.findMonthInHistory(year, monthIndex, isModificatif);
+    if (existing) {
+      this.loadMonthFromHistory(existing.id);
+      return {
+        isExisting: true,
+        monthName: existing.name,
+        recordId: existing.id,
+      };
+    }
+
+    // 3. Nouveau mois : créer avec continuité perpétuelle des gardes et sauvegarder
+    this.createNewMonth(year, monthIndex, isModificatif);
+    const monthName = `${FRENCH_MONTH_NAMES[monthIndex]} ${year}${isModificatif ? ' (Modificatif)' : ''}`;
+    return {
+      isExisting: false,
+      monthName,
+      recordId: `month_${year}_${monthIndex}_${isModificatif ? 'modif' : 'normal'}`,
+    };
+  }
+
+  /**
+   * Marque ou démarque les jours fériés ('F') :
+   * Appliqué comme 'F' pour le personnel médical et paramédical jour (08h-16h) sauf s'ils sont déjà en congé (C, CM, Maternité...),
+   * et SAUF pour les équipes de garde (16h) et d'hygiène (12h) qui conservent leur roulement continu de garde.
+   */
+  setHolidays(days: number[], isHoliday: boolean): void {
+    const updatedDaysColumns = this.snapshot.config.daysColumns.map((col) =>
+      days.includes(col.day) ? { ...col, isHoliday } : col
+    );
+    const leaveCodes = ['C', 'CA', 'CM', 'MAT', 'REC', 'CSS', 'MIS', 'AT', 'AA', 'CP', 'Congé de Maternité'];
+
+    const nextStaff = this.snapshot.staffBox.map((staff) => {
+      // SAUF les équipes de garde et d'hygiène !
+      if (staff.category === 'paramedical_guard' || staff.category === 'hygiene' || (staff.teamGroup && staff.teamGroup.trim() !== '')) {
+        return staff;
+      }
+
+      // Personnel médical (08h-16h) et paramédical jour (08h-16h)
+      const nextDaily = { ...staff.dailyActivity };
+      for (const day of days) {
+        const currentVal = (nextDaily[day] || '').trim();
+        const col = updatedDaysColumns.find((c) => c.day === day);
+        const isBlack = !!col?.isBlackColumn;
+
+        if (isHoliday) {
+          // Jour férié marqué comme F sauf si déjà en congé (C, CM, Maternité...)
+          const isLeave =
+            leaveCodes.includes(currentVal) ||
+            /congé|maternité/i.test(currentVal) ||
+            (staff.maternityLeave && day >= staff.maternityLeave.startDay && day <= staff.maternityLeave.endDay);
+          if (!isLeave) {
+            nextDaily[day] = 'F';
+          }
+        } else {
+          // Si on retire le statut férié, F redevient N (ou RE pour les week-ends)
+          if (currentVal === 'F') {
+            nextDaily[day] = isBlack ? 'RE' : 'N';
+          }
+        }
+      }
+
+      return {
+        ...staff,
+        dailyActivity: nextDaily,
+      };
+    });
+
+    this.snapshot = {
+      ...this.snapshot,
+      config: {
+        ...this.snapshot.config,
+        daysColumns: updatedDaysColumns,
+      },
+      staffBox: nextStaff,
+    };
+    this.notify();
+  }
+
+  clearAllHolidays(): void {
+    const holidayDays = this.snapshot.config.daysColumns.filter((c) => c.isHoliday).map((c) => c.day);
+    if (holidayDays.length > 0) {
+      this.setHolidays(holidayDays, false);
+    }
   }
 
   loadMonthFromHistory(id: string): boolean {

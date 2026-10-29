@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, PaintBucket, Repeat, Tag, HeartHandshake, FileText, Download, ArrowUpDown, GripVertical, CalendarPlus } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Plus, Trash2, PaintBucket, Repeat, Tag, HeartHandshake, FileText, Download, ArrowUpDown, GripVertical, CalendarPlus, AlertTriangle } from 'lucide-react';
 import {
   HospitalDocumentConfig,
   StaffEntity,
@@ -15,6 +15,8 @@ import {
   TableTargetKey,
   cleanNoteText,
   getColumnWidths,
+  detectGuardTeamLeaveConflicts,
+  isStaffOnLeaveOnDay,
 } from '../db/objectboxEngine';
 import { EditableText } from './EditableText';
 import { OfficialHospitalStamp, OfficialHospitalQrCode } from './OfficialStampAndQr';
@@ -461,12 +463,33 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
   const effectiveGradeWidth = formatWidth(gradeColWidth, showTeamColumn ? 10.5 : 12.0);
   const effectiveTeamWidth = formatWidth(teamColWidth, 3.4);
 
+  const guardConflicts = useMemo(() => {
+    if (!showTeamColumn) return null;
+    return detectGuardTeamLeaveConflicts(rows, config.daysColumns);
+  }, [rows, config.daysColumns, showTeamColumn]);
+
   return (
     <div
       onMouseLeave={() => setIsMouseDown(false)}
       onMouseUp={() => setIsMouseDown(false)}
       className="w-full select-none"
     >
+      {/* Alerte automatique d'aide à la planification : Chevauchement de congés au sein d'une même équipe de garde */}
+      {guardConflicts && guardConflicts.conflicts.length > 0 && (
+        <div className="no-print mb-2 px-3 py-1.5 bg-amber-50 border border-amber-300 rounded-lg flex items-center justify-between text-xs text-amber-900 shadow-2xs font-sans">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>
+              <strong>Aide à la planification :</strong> {guardConflicts.conflicts.length} chevauchement(s) de congés détecté(s) dans la même équipe de garde ({Array.from(guardConflicts.conflictedTeamGroups).map((t) => `Équipe ${t}`).join(', ')}).
+              Des icônes d'avertissement <AlertTriangle className="w-3 h-3 text-amber-600 inline mx-0.5" /> signalent les agents et les jours concernés.
+            </span>
+          </div>
+          <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-200 text-amber-900 rounded-full font-mono shrink-0">
+            {guardConflicts.conflicts.length} conflit(s)
+          </span>
+        </div>
+      )}
+
       <table className="w-full border-collapse border border-[#666666] text-center font-pdf table-fixed">
         <thead>
           <tr className={`${compactRows ? 'h-[24px]' : 'h-[30px]'} text-[13px] leading-[1.1] bg-[#3D3D3D] text-white font-bold`}>
@@ -574,60 +597,78 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
                 }}
                 className={`group ${rowHeightClass} font-medium transition-colors hover:bg-slate-50`}
               >
-                {/* Nom et Prénom */}
-                <td className="border border-[#CCCCCC] bg-white text-black px-1 text-left relative whitespace-nowrap align-middle">
-                  <div className="flex items-center gap-1">
+                  {/* Nom et Prénom */}
+                  <td className="border border-[#CCCCCC] bg-white text-black px-1 text-left relative whitespace-nowrap align-middle">
+                    <div className="flex items-center gap-1">
+                      {!readOnly && (
+                        <span
+                          className="no-print opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-800 transition-opacity"
+                          title="Attrapez pour glisser-déposer"
+                        >
+                          <GripVertical className="w-3 h-3 inline-block" />
+                        </span>
+                      )}
+                      <EditableText
+                        value={staff.fullName}
+                        readOnly={readOnly}
+                        className={`whitespace-nowrap font-semibold tracking-tight block overflow-visible ${
+                          compactRows ? 'text-[12px] sm:text-[12.5px]' : 'text-[12.5px] sm:text-[13px]'
+                        }`}
+                        onChange={(v) => onUpdateStaffField(staff.id, 'fullName', v)}
+                      />
+                      {showTeamColumn && guardConflicts?.conflictsByStaffId[staff.id] && (
+                        <span
+                          className="no-print inline-flex items-center text-amber-600 hover:text-amber-800 ml-1 shrink-0 cursor-help"
+                          title={`⚠️ Attention planification : Chevauchement de congés dans l'Équipe ${staff.teamGroup} ! Deux ou plusieurs agents ont des congés simultanés (${guardConflicts.conflictsByStaffId[staff.id].length} jour(s) : Jours ${guardConflicts.conflictsByStaffId[staff.id].map((c) => c.day).join(', ')}).`}
+                        >
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                        </span>
+                      )}
+                    </div>
                     {!readOnly && (
-                      <span
-                        className="no-print opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-800 transition-opacity"
-                        title="Attrapez pour glisser-déposer"
+                      <button
+                        type="button"
+                        onClick={() => onDeleteStaff(staff.id)}
+                        title="Supprimer cette ligne"
+                        className="no-print opacity-0 group-hover:opacity-100 absolute right-0.5 top-1/2 -translate-y-1/2 p-0.5 text-red-600 hover:bg-red-100 rounded"
                       >
-                        <GripVertical className="w-3 h-3 inline-block" />
-                      </span>
+                        <Trash2 className="w-3 h-3" />
+                      </button>
                     )}
-                    <EditableText
-                      value={staff.fullName}
-                      readOnly={readOnly}
-                      className={`whitespace-nowrap font-semibold tracking-tight block overflow-visible ${
-                        compactRows ? 'text-[12px] sm:text-[12.5px]' : 'text-[12.5px] sm:text-[13px]'
-                      }`}
-                      onChange={(v) => onUpdateStaffField(staff.id, 'fullName', v)}
-                    />
-                  </div>
-                  {!readOnly && (
-                    <button
-                      type="button"
-                      onClick={() => onDeleteStaff(staff.id)}
-                      title="Supprimer cette ligne"
-                      className="no-print opacity-0 group-hover:opacity-100 absolute right-0.5 top-1/2 -translate-y-1/2 p-0.5 text-red-600 hover:bg-red-100 rounded"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  )}
-                </td>
+                  </td>
 
-                {/* Grade */}
-                <td className={`border border-[#CCCCCC] bg-white text-black px-1 leading-tight align-middle whitespace-nowrap text-center ${
-                  compactRows ? 'text-[12px] sm:text-[12.5px]' : 'text-[12.5px] sm:text-[13px]'
-                }`}>
-                  <EditableText
-                    value={cleanGrade}
-                    readOnly={readOnly}
-                    className="whitespace-nowrap font-medium block overflow-visible text-center tracking-tight"
-                    onChange={(v) => onUpdateStaffField(staff.id, 'gradeLandscape', v.replace(/\r?\n+/g, ' ').trim())}
-                  />
-                </td>
-
-                {/* Équipe (only on Page 3 - 16h) */}
-                {showTeamColumn && (
-                  <td className="border border-[#CCCCCC] bg-white text-black px-0.5 font-bold text-center align-middle text-[12.5px]">
+                  {/* Grade */}
+                  <td className={`border border-[#CCCCCC] bg-white text-black px-1 leading-tight align-middle whitespace-nowrap text-center ${
+                    compactRows ? 'text-[12px] sm:text-[12.5px]' : 'text-[12.5px] sm:text-[13px]'
+                  }`}>
                     <EditableText
-                      value={staff.teamGroup}
+                      value={cleanGrade}
                       readOnly={readOnly}
-                      onChange={(v) => onUpdateStaffField(staff.id, 'teamGroup', v)}
+                      className="whitespace-nowrap font-medium block overflow-visible text-center tracking-tight"
+                      onChange={(v) => onUpdateStaffField(staff.id, 'gradeLandscape', v.replace(/\r?\n+/g, ' ').trim())}
                     />
                   </td>
-                )}
+
+                  {/* Équipe (only on Page 3 - 16h) */}
+                  {showTeamColumn && (
+                    <td className="border border-[#CCCCCC] bg-white text-black px-0.5 font-bold text-center align-middle text-[12.5px]">
+                      <div className="flex items-center justify-center gap-0.5">
+                        <EditableText
+                          value={staff.teamGroup}
+                          readOnly={readOnly}
+                          onChange={(v) => onUpdateStaffField(staff.id, 'teamGroup', v)}
+                        />
+                        {guardConflicts?.conflictsByStaffId[staff.id] && (
+                          <span
+                            className="no-print text-amber-600 inline-block ml-0.5 cursor-help"
+                            title={`⚠️ Conflit de congés dans l'Équipe ${staff.teamGroup}`}
+                          >
+                            <AlertTriangle className="w-3 h-3 inline" />
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  )}
 
               {/* 30/31 Days Cells with Horizontally Merged Cells for Maternity Leave */}
               {(() => {
@@ -685,19 +726,48 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
                   const cellVal = staff.dailyActivity[col.day] ?? 'N';
                   const isBlack = col.isBlackColumn;
                   const isHoliday = !!col.isHoliday && !isBlack;
+                  const isFerie = cellVal === 'F';
+                  const isConge = cellVal === 'C' || cellVal === 'CA';
+                  const isLeave = isStaffOnLeaveOnDay(staff, col.day).onLeave;
+                  const dayConflictKey = `${staff.teamGroup}_${col.day}`;
+                  const dayConflict = showTeamColumn ? guardConflicts?.conflictsByDayAndTeam[dayConflictKey] : undefined;
+                  const isCellConflicted = Boolean(dayConflict && isLeave);
+
                   const dayCellBg = isBlack
                     ? 'bg-black text-white border-[#222222]'
-                    : isHoliday
-                      ? 'bg-red-50 text-red-950 border-red-300'
-                      : 'bg-white text-black border-[#CCCCCC]';
+                    : isCellConflicted
+                      ? 'bg-amber-100 text-amber-950 border-amber-400 font-bold ring-1 ring-amber-400'
+                      : isFerie
+                        ? 'bg-red-50 text-red-900 border-red-300 font-bold'
+                        : isConge
+                          ? 'bg-amber-50 text-amber-900 border-[#CCCCCC] font-bold'
+                          : isHoliday
+                            ? 'bg-red-50 text-red-950 border-red-300'
+                            : 'bg-white text-black border-[#CCCCCC]';
 
                   if (readOnly) {
                     cells.push(
                       <td
                         key={col.day}
                         className={`border px-0.5 select-none ${dayCellBg}`}
+                        title={
+                          isCellConflicted
+                            ? `⚠️ Conflit de congés : ${dayConflict!.conflictingStaff.map((s) => s.fullName).join(' & ')} (Équipe ${staff.teamGroup}) sont en congé le Jour ${col.day}`
+                            : isFerie
+                              ? `Jour ${col.day} : Férié (F)`
+                              : undefined
+                        }
                       >
-                        <span>{cellVal}</span>
+                        <div className="flex items-center justify-center gap-0.5">
+                          <span className={isFerie ? 'font-bold text-red-700' : isConge ? 'font-bold text-amber-800' : ''}>
+                            {cellVal}
+                          </span>
+                          {isCellConflicted && (
+                            <span className="no-print text-amber-600 inline-block">
+                              <AlertTriangle className="w-2.5 h-2.5" />
+                            </span>
+                          )}
+                        </div>
                       </td>
                     );
                   } else if (activePaintCode !== null) {
@@ -713,7 +783,11 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
                             onUpdateStaffDayCell(staff.id, col.day, activePaintCode);
                           }
                         }}
-                        title={`Peindre "${activePaintCode}" (Jour ${col.day}${isHoliday ? ' — Férié' : ''})`}
+                        title={
+                          isCellConflicted
+                            ? `⚠️ Conflit de congés : ${dayConflict!.conflictingStaff.map((s) => s.fullName).join(' & ')} (Équipe ${staff.teamGroup}) sont simultanément en congé le Jour ${col.day}`
+                            : `Peindre "${activePaintCode}" (Jour ${col.day}${isHoliday ? ' — Férié' : ''})`
+                        }
                         className={`border cursor-crosshair px-0.5 transition-transform active:scale-95 ${dayCellBg} ${
                           isBlack
                             ? 'hover:bg-neutral-800'
@@ -722,21 +796,45 @@ const ActivityGridTable: React.FC<ActivityGridTableProps> = ({
                               : 'hover:bg-amber-100'
                         }`}
                       >
-                        <span>{cellVal}</span>
+                        <div className="flex items-center justify-center gap-0.5">
+                          <span className={isFerie ? 'font-bold text-red-700' : isConge ? 'font-bold text-amber-800' : ''}>
+                            {cellVal}
+                          </span>
+                          {isCellConflicted && (
+                            <span className="no-print text-amber-600 inline-block">
+                              <AlertTriangle className="w-2.5 h-2.5" />
+                            </span>
+                          )}
+                        </div>
                       </td>
                     );
                   } else {
                     cells.push(
                       <td
                         key={col.day}
-                        className={`border px-0.5 ${dayCellBg}`}
+                        className={`border px-0.5 relative ${dayCellBg}`}
+                        title={
+                          isCellConflicted
+                            ? `⚠️ Conflit de congés : ${dayConflict!.conflictingStaff.map((s) => s.fullName).join(' & ')} (Équipe ${staff.teamGroup}) ont des congés simultanés le Jour ${col.day}`
+                            : isFerie
+                              ? `Jour ${col.day} : Férié (F)`
+                              : undefined
+                        }
                       >
-                        <EditableText
-                          value={cellVal}
-                          darkSurface={isBlack}
-                          readOnly={readOnly}
-                          onChange={(v) => onUpdateStaffDayCell(staff.id, col.day, v)}
-                        />
+                        <div className="flex items-center justify-center gap-0.5">
+                          <EditableText
+                            value={cellVal}
+                            darkSurface={isBlack}
+                            readOnly={readOnly}
+                            className={isFerie ? 'font-bold text-red-700' : isConge ? 'font-bold text-amber-800' : ''}
+                            onChange={(v) => onUpdateStaffDayCell(staff.id, col.day, v)}
+                          />
+                          {isCellConflicted && (
+                            <span className="no-print text-amber-600 inline-block shrink-0">
+                              <AlertTriangle className="w-2.5 h-2.5" />
+                            </span>
+                          )}
+                        </div>
                       </td>
                     );
                   }

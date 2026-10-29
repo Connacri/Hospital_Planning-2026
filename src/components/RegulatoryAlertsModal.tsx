@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { StaffEntity, DayColumnMeta } from '../db/objectboxEngine';
+import { StaffEntity, DayColumnMeta, detectGuardTeamLeaveConflicts } from '../db/objectboxEngine';
 import {
   AlertTriangle,
   X,
@@ -133,6 +133,20 @@ export const RegulatoryAlertsModal: React.FC<RegulatoryAlertsModalProps> = ({
           day: d,
         });
       }
+    });
+
+    // 3. Conflits de congés au sein d'une même équipe de garde
+    const guardConflicts = detectGuardTeamLeaveConflicts(staffList, daysColumns);
+    guardConflicts.conflicts.forEach((conflict) => {
+      const names = conflict.conflictingStaff.map((s) => s.fullName).join(' & ');
+      list.push({
+        id: `guard-team-conflict-${conflict.teamGroup}-${conflict.day}`,
+        type: 'leave_conflict',
+        severity: 'high',
+        title: `Chevauchement de congés — Équipe ${conflict.teamGroup}`,
+        description: `Dans l'Équipe ${conflict.teamGroup}, ${conflict.conflictingStaff.length} membres (${names}) ont des congés qui se chevauchent le Jour ${conflict.day}.`,
+        day: conflict.day,
+      });
     });
 
     return list;

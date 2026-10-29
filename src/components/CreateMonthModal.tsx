@@ -13,6 +13,7 @@ import {
   GUARD_TEAM_THEMES,
   DEFAULT_GUARD_ROTATION_ORDER,
   getTeamBadgeClass,
+  objectBoxStore,
 } from '../db/objectboxEngine';
 
 interface CreateMonthModalProps {
@@ -77,6 +78,10 @@ export const CreateMonthModal: React.FC<CreateMonthModalProps> = ({
       monthName: `${FRENCH_MONTH_NAMES[selectedMonthIdx]} ${selectedYear}`,
     };
   }, [selectedYear, selectedMonthIdx]);
+
+  const existingSavedMonth = useMemo(() => {
+    return objectBoxStore.findMonthInHistory(selectedYear, selectedMonthIdx, isModificatif);
+  }, [selectedYear, selectedMonthIdx, isModificatif]);
 
   if (!isOpen) return null;
 
@@ -322,6 +327,31 @@ export const CreateMonthModal: React.FC<CreateMonthModalProps> = ({
               <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
             </label>
           </div>
+
+          {/* Statut de persistance du mois sélectionné */}
+          {existingSavedMonth ? (
+            <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl flex items-start gap-2.5 text-xs text-emerald-950">
+              <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold text-emerald-900">Mois déjà sauvegardé dans le système :</span>
+                <p className="text-[11px] text-emerald-800 mt-0.5">
+                  Ce mois a déjà été ouvert et personnalisé. Son ouverture restaurera fidèlement
+                  l'ensemble de vos tableaux : toutes les rotations, tous les noms, l'ordre des agents et chaque cellule modifiée.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl flex items-start gap-2.5 text-xs text-indigo-950">
+              <Sparkles className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold text-indigo-900">Nouveau mois à initialiser :</span>
+                <p className="text-[11px] text-indigo-800 mt-0.5">
+                  Ce mois sera créé avec la continuité perpétuelle des équipes de garde, puis sauvegardé
+                  automatiquement en local et synchronisé sur Supabase.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -336,10 +366,18 @@ export const CreateMonthModal: React.FC<CreateMonthModalProps> = ({
           <button
             type="button"
             onClick={() => setConfirmDialog('create')}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl shadow-sm transition-colors min-h-[38px]"
+            className={`inline-flex items-center justify-center gap-2 px-5 py-2 text-xs font-bold text-white rounded-xl shadow-sm transition-colors min-h-[38px] ${
+              existingSavedMonth
+                ? 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800'
+                : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800'
+            }`}
           >
             <Check className="w-4 h-4" />
-            <span>Générer et Appliquer {preview.monthName}</span>
+            <span>
+              {existingSavedMonth
+                ? `Ouvrir et Récupérer ${preview.monthName}`
+                : `Créer et Ouvrir ${preview.monthName}`}
+            </span>
           </button>
         </div>
       </div>
@@ -358,7 +396,9 @@ export const CreateMonthModal: React.FC<CreateMonthModalProps> = ({
                 className={`p-2 rounded-xl shrink-0 ${
                   confirmDialog === 'discard'
                     ? 'bg-amber-100 text-amber-700'
-                    : 'bg-indigo-100 text-indigo-700'
+                    : existingSavedMonth
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-indigo-100 text-indigo-700'
                 }`}
               >
                 {confirmDialog === 'discard' ? (
@@ -370,13 +410,17 @@ export const CreateMonthModal: React.FC<CreateMonthModalProps> = ({
               <div>
                 <h3 className="text-sm font-bold text-slate-900">
                   {confirmDialog === 'discard'
-                    ? 'Quitter sans créer le mois ?'
-                    : `Confirmer la création de ${preview.monthName} ?`}
+                    ? 'Quitter sans ouvrir le mois ?'
+                    : existingSavedMonth
+                      ? `Récupérer et ouvrir ${preview.monthName} ?`
+                      : `Confirmer la création de ${preview.monthName} ?`}
                 </h3>
                 <p className="text-xs text-slate-600 mt-1">
                   {confirmDialog === 'discard'
-                    ? 'Vous avez sélectionné une nouvelle période qui n\'a pas encore été générée.'
-                    : `Voulez-vous initialiser le planning pour ${preview.monthName} (${preview.daysCount} jours) ? La continuité des équipes de garde sera appliquée.`}
+                    ? 'Vous avez sélectionné une nouvelle période qui n\'a pas encore été activée.'
+                    : existingSavedMonth
+                      ? `L'ouverture de ce mois restaurera fidèlement toutes les rotations, ordres, noms et personnalisations enregistrés.`
+                      : `Voulez-vous initialiser le planning pour ${preview.monthName} (${preview.daysCount} jours) ? La continuité perpétuelle des gardes sera appliquée et le mois sauvegardé localement et sur Supabase.`}
                 </p>
               </div>
             </div>
@@ -404,9 +448,13 @@ export const CreateMonthModal: React.FC<CreateMonthModalProps> = ({
                 <button
                   type="button"
                   onClick={handleConfirmCreate}
-                  className="px-4 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg min-h-[36px]"
+                  className={`px-4 py-1.5 text-xs font-bold text-white rounded-lg min-h-[36px] ${
+                    existingSavedMonth
+                      ? 'bg-emerald-600 hover:bg-emerald-700'
+                      : 'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
                 >
-                  Confirmer et Créer
+                  {existingSavedMonth ? 'Confirmer et Récupérer' : 'Confirmer et Créer'}
                 </button>
               )}
             </div>

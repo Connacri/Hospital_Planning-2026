@@ -56,7 +56,7 @@ export interface StaffLeaveAssignmentModalProps {
 }
 
 const COMMON_LEAVE_PRESETS = [
-  { code: 'CA', label: 'Congé Annuel', color: '#16a34a', bg: 'bg-emerald-950/70 border-emerald-600 text-emerald-200' },
+  { code: 'C', label: 'Congé Annuel', color: '#16a34a', bg: 'bg-emerald-950/70 border-emerald-600 text-emerald-200' },
   { code: 'CM', label: 'Congé Maladie', color: '#dc2626', bg: 'bg-red-950/70 border-red-600 text-red-200' },
   { code: 'MAT', label: 'Congé Maternité', color: '#db2777', bg: 'bg-pink-950/70 border-pink-600 text-pink-200' },
   { code: 'REC', label: 'Récupération (RE)', color: '#ca8a04', bg: 'bg-amber-950/70 border-amber-600 text-amber-200' },
@@ -149,7 +149,7 @@ export const StaffLeaveAssignmentModal: React.FC<StaffLeaveAssignmentModalProps>
   });
 
   // Leave parameters
-  const [selectedCode, setSelectedCode] = useState<string>('CA');
+  const [selectedCode, setSelectedCode] = useState<string>('C');
   const [selectedLabel, setSelectedLabel] = useState<string>('Congé Annuel');
   const [isMergedSpan, setIsMergedSpan] = useState<boolean>(true);
   const [customDatesText, setCustomDatesText] = useState<string>('');
