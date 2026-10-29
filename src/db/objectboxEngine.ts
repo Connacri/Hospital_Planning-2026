@@ -42,6 +42,22 @@ export interface StaffEntity {
   weeklySchedule: DoctorWeeklySchedule; // Used on PDF 1 Page 1 for doctors
   dailyActivity: Record<number, string>; // Days 1..31 -> "N" | "RE" | "G" | "Jour" | "Nuit" | "C" | "CM" | "Congé de Maternité"
   maternityLeave?: MaternityLeaveConfig; // Merged horizontal span in activity grid
+  leaves?: StaffLeaveRecord[];
+}
+
+export interface StaffLeaveRecord {
+  id: string;
+  staffId: number;
+  staffName?: string;
+  category?: StaffCategory;
+  leaveCode: string; // e.g. "CA", "CM", "MAT", "REC", etc.
+  leaveLabel: string; // e.g. "Congé Annuel"
+  startDate: string; // ISO format "YYYY-MM-DD" e.g. "2026-10-23"
+  endDate: string; // ISO format "YYYY-MM-DD" e.g. "2026-11-22"
+  durationDays: number;
+  isMergedSpan: boolean;
+  datesText: string;
+  createdAt?: string;
 }
 
 export interface LeaveTypeItem {
@@ -135,6 +151,7 @@ export interface HospitalDocumentConfig {
   guardMonthName?: string;
   guardMonthOffsetDays?: number;
   columnWidths?: TableColumnWidthSettings;
+  staffLeaves?: StaffLeaveRecord[];
 }
 
 export interface TableColumnWidthSettings {
@@ -387,6 +404,78 @@ export function buildDaysColumnsForMonth(year: number, monthIndex: number): DayC
     cols.push({ day: d, dow, isBlackColumn });
   }
   return cols;
+}
+
+/**
+ * Extrait l'année et l'index du mois (0..11) à partir d'un libellé comme "Octobre 2026" ou "Novembre 2026 (Modificatif)"
+ */
+export function parseCurrentMonthYear(guardMonthName?: string): { year: number; monthIndex: number; monthLabel: string } {
+  const name = guardMonthName || 'Octobre 2026';
+  const yMatch = name.match(/\d{4}/);
+  const year = yMatch ? parseInt(yMatch[0], 10) : 2026;
+  const foundIdx = FRENCH_MONTH_NAMES.findIndex((m) =>
+    name.toLowerCase().includes(m.toLowerCase())
+  );
+  const monthIndex = foundIdx !== -1 ? foundIdx : 9; // 9 = Octobre par défaut
+  return { year, monthIndex, monthLabel: FRENCH_MONTH_NAMES[monthIndex] };
+}
+
+export interface MonthDateOverlapResult {
+  startDay: number;
+  endDay: number;
+  overlapDays: number;
+  totalDays: number;
+  isEntireMonth: boolean;
+  startsBeforeMonth: boolean;
+  endsAfterMonth: boolean;
+}
+
+/**
+ * Calcule l'intersection exacte entre une période de congé [startDate, endDate] (format YYYY-MM-DD)
+ * et un mois cible (targetYear, targetMonthIndex 0..11).
+ * Retourne null si le congé ne chevauche pas du tout ce mois.
+ */
+export function calculateMonthDateOverlap(
+  startDateStr: string,
+  endDateStr: string,
+  targetYear: number,
+  targetMonthIndex: number
+): MonthDateOverlapResult | null {
+  if (!startDateStr || !endDateStr) return null;
+  const [sY, sM, sD] = startDateStr.split('-').map(Number);
+  const [eY, eM, eD] = endDateStr.split('-').map(Number);
+  if (!sY || !sM || !sD || !eY || !eM || !eD) return null;
+
+  const startDate = new Date(Date.UTC(sY, sM - 1, sD));
+  const endDate = new Date(Date.UTC(eY, eM - 1, eD));
+  if (endDate.getTime() < startDate.getTime()) return null;
+
+  const totalDays = Math.round((endDate.getTime() - startDate.getTime()) / 86400000) + 1;
+
+  const monthStart = new Date(Date.UTC(targetYear, targetMonthIndex, 1));
+  const daysInMonth = new Date(Date.UTC(targetYear, targetMonthIndex + 1, 0)).getUTCDate();
+  const monthEnd = new Date(Date.UTC(targetYear, targetMonthIndex, daysInMonth, 23, 59, 59, 999));
+
+  if (endDate.getTime() < monthStart.getTime() || startDate.getTime() > monthEnd.getTime()) {
+    return null;
+  }
+
+  const effectiveStart = startDate.getTime() < monthStart.getTime() ? monthStart : startDate;
+  const effectiveEnd = endDate.getTime() > monthEnd.getTime() ? monthEnd : endDate;
+
+  const startDay = effectiveStart.getUTCDate();
+  const endDay = effectiveEnd.getUTCDate();
+  const overlapDays = Math.round((effectiveEnd.getTime() - effectiveStart.getTime()) / 86400000) + 1;
+
+  return {
+    startDay,
+    endDay,
+    overlapDays,
+    totalDays,
+    isEntireMonth: startDay === 1 && endDay === daysInMonth,
+    startsBeforeMonth: startDate.getTime() < monthStart.getTime(),
+    endsAfterMonth: endDate.getTime() > monthEnd.getTime(),
+  };
 }
 
 /**
@@ -718,6 +807,7 @@ export function createOctober2026Snapshot(): ObjectBoxDatabaseSnapshot {
     signaturesPortrait: ['Le Médecin chef', 'Le Surveillant Médical', 'DAPM', 'Le Directeur Général'],
     signaturesLandscape: ['Le Médecin Chef', 'Le Surveillant Médical', 'DAPM', 'Le Directeur Général'],
     daysColumns,
+    staffLeaves: [],
   };
 
   const emptyWeekly: DoctorWeeklySchedule = {
@@ -1865,6 +1955,150 @@ export class ObjectBoxLocalStore {
     this.notify();
   }
 
+  /**
+   * Récupère tous les congés enregistrés dans l'application (synchronisés entre la config et le stockage global)
+   */
+  getAllStaffLeaves(): StaffLeaveRecord[] {
+    const configLeaves = this.snapshot.config.staffLeaves || [];
+    try {
+      const raw = localStorage.getItem('eh_ain_el_turck_global_leaves_v1');
+      if (raw) {
+        const stored = JSON.parse(raw) as StaffLeaveRecord[];
+        if (Array.isArray(stored)) {
+          const map = new Map<string, StaffLeaveRecord>();
+          for (const l of stored) map.set(l.id, l);
+          for (const l of configLeaves) map.set(l.id, l);
+          return Array.from(map.values());
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return configLeaves;
+  }
+
+  /**
+   * Récupère les congés enregistrés pour un agent spécifique ou tous les agents
+   */
+  getStaffLeaves(staffId?: number): StaffLeaveRecord[] {
+    const all = this.getAllStaffLeaves();
+    if (typeof staffId === 'number') {
+      return all.filter((l) => l.staffId === staffId);
+    }
+    return all;
+  }
+
+  /**
+   * Enregistre un congé persistant défini de date à date ou date + nombre de jours.
+   * L'applique automatiquement au mois actuellement affiché s'il y a intersection.
+   */
+  saveStaffLeaveRecord(leaveData: Omit<StaffLeaveRecord, 'id' | 'createdAt'>): StaffLeaveRecord {
+    const id = `leave_${leaveData.staffId}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const record: StaffLeaveRecord = {
+      ...leaveData,
+      id,
+      createdAt: new Date().toISOString(),
+    };
+
+    const currentLeaves = this.getAllStaffLeaves();
+    const existingIdx = currentLeaves.findIndex(
+      (l) => l.staffId === record.staffId && l.startDate === record.startDate && l.endDate === record.endDate
+    );
+    let nextLeaves: StaffLeaveRecord[];
+    if (existingIdx !== -1) {
+      nextLeaves = [...currentLeaves];
+      nextLeaves[existingIdx] = record;
+    } else {
+      nextLeaves = [record, ...currentLeaves];
+    }
+
+    try {
+      localStorage.setItem('eh_ain_el_turck_global_leaves_v1', JSON.stringify(nextLeaves));
+    } catch {
+      // ignore
+    }
+
+    this.snapshot.config = {
+      ...this.snapshot.config,
+      staffLeaves: nextLeaves,
+    };
+
+    // Si ce congé chevauche le mois actuellement affiché dans l'application, l'appliquer immédiatement
+    const currentMonth = parseCurrentMonthYear(this.snapshot.config.guardMonthName);
+    const overlap = calculateMonthDateOverlap(record.startDate, record.endDate, currentMonth.year, currentMonth.monthIndex);
+    if (overlap) {
+      this.snapshot.staffBox = this.snapshot.staffBox.map((staff) => {
+        if (staff.id !== record.staffId) return staff;
+        const newDaily = { ...staff.dailyActivity };
+        for (let d = overlap.startDay; d <= overlap.endDay; d++) {
+          newDaily[d] = record.leaveCode;
+        }
+
+        let maternityConfig = staff.maternityLeave;
+        if (
+          record.isMergedSpan ||
+          /maternité|maternite/i.test(record.leaveLabel) ||
+          record.leaveCode === 'MAT' ||
+          record.leaveCode === 'M'
+        ) {
+          maternityConfig = {
+            startDay: overlap.startDay,
+            endDay: overlap.endDay,
+            label: record.leaveLabel || record.leaveCode,
+            datesText: record.datesText,
+          };
+        }
+
+        let obsPortrait = staff.obsPortrait;
+        if (record.datesText) {
+          obsPortrait = `${record.leaveLabel || record.leaveCode}. ${record.datesText}`;
+        }
+
+        return {
+          ...staff,
+          dailyActivity: newDaily,
+          maternityLeave: maternityConfig,
+          obsPortrait,
+        };
+      });
+    }
+
+    this.persistAsync(this.snapshot);
+    this.notify();
+    return record;
+  }
+
+  /**
+   * Supprime un congé persistant par son identifiant unique
+   */
+  removeStaffLeaveRecord(leaveId: string): boolean {
+    const currentLeaves = this.getAllStaffLeaves();
+    const target = currentLeaves.find((l) => l.id === leaveId);
+    if (!target) return false;
+
+    const nextLeaves = currentLeaves.filter((l) => l.id !== leaveId);
+    try {
+      localStorage.setItem('eh_ain_el_turck_global_leaves_v1', JSON.stringify(nextLeaves));
+    } catch {
+      // ignore
+    }
+
+    this.snapshot.config = {
+      ...this.snapshot.config,
+      staffLeaves: nextLeaves,
+    };
+
+    const currentMonth = parseCurrentMonthYear(this.snapshot.config.guardMonthName);
+    const overlap = calculateMonthDateOverlap(target.startDate, target.endDate, currentMonth.year, currentMonth.monthIndex);
+    if (overlap) {
+      this.removeStaffLeave(target.staffId, overlap.startDay, overlap.endDay);
+    } else {
+      this.persistAsync(this.snapshot);
+      this.notify();
+    }
+    return true;
+  }
+
   assignStaffLeave(
     staffId: number,
     leaveCode: string,
@@ -1872,44 +2106,29 @@ export class ObjectBoxLocalStore {
     startDay: number,
     endDay: number,
     isMergedSpan = false,
-    datesText?: string
+    datesText?: string,
+    dateRange?: { startDate: string; endDate: string; durationDays: number }
   ): void {
-    const nextStaff = this.snapshot.staffBox.map((staff) => {
-      if (staff.id !== staffId) return staff;
+    const currentMonth = parseCurrentMonthYear(this.snapshot.config.guardMonthName);
+    const staff = this.snapshot.staffBox.find((s) => s.id === staffId);
+    const sD = Math.min(startDay, endDay);
+    const eD = Math.max(startDay, endDay);
+    const startDate = dateRange?.startDate || `${currentMonth.year}-${String(currentMonth.monthIndex + 1).padStart(2, '0')}-${String(sD).padStart(2, '0')}`;
+    const endDate = dateRange?.endDate || `${currentMonth.year}-${String(currentMonth.monthIndex + 1).padStart(2, '0')}-${String(eD).padStart(2, '0')}`;
+    const durationDays = dateRange?.durationDays || (eD - sD + 1);
 
-      const newDaily = { ...staff.dailyActivity };
-      for (let d = startDay; d <= endDay; d++) {
-        newDaily[d] = leaveCode;
-      }
-
-      let maternityConfig = staff.maternityLeave;
-      if (isMergedSpan || leaveCode.toLowerCase().includes('maternité') || leaveCode === 'M') {
-        maternityConfig = {
-          startDay,
-          endDay,
-          label: leaveLabel || leaveCode,
-          datesText: datesText || undefined,
-        };
-      }
-
-      let obsPortrait = staff.obsPortrait;
-      if (datesText) {
-        obsPortrait = `${leaveLabel || leaveCode}. ${datesText}`;
-      } else if (!obsPortrait || obsPortrait === '08h-16h' || obsPortrait === '16h' || obsPortrait === '12h') {
-        obsPortrait = `${leaveLabel} (du ${startDay} au ${endDay})`;
-      }
-
-      return {
-        ...staff,
-        dailyActivity: newDaily,
-        maternityLeave: maternityConfig,
-        obsPortrait,
-      };
+    this.saveStaffLeaveRecord({
+      staffId,
+      staffName: staff?.fullName,
+      category: staff?.category,
+      leaveCode,
+      leaveLabel,
+      startDate,
+      endDate,
+      durationDays,
+      isMergedSpan,
+      datesText: datesText || `du ${String(sD).padStart(2, '0')}/${String(currentMonth.monthIndex + 1).padStart(2, '0')}/${currentMonth.year} au ${String(eD).padStart(2, '0')}/${String(currentMonth.monthIndex + 1).padStart(2, '0')}/${currentMonth.year}`,
     });
-
-    this.snapshot.staffBox = nextStaff;
-    this.persistAsync(this.snapshot);
-    this.notify();
   }
 
   removeStaffLeave(
@@ -2222,6 +2441,43 @@ export class ObjectBoxLocalStore {
       }
       return staff;
     });
+
+    // Applique automatiquement tous les congés enregistrés qui chevauchent ce nouveau mois
+    // (ex: congé posé du 23 octobre au 22 novembre apparaîtra du 1er au 22 novembre dans le planning de Novembre)
+    const allLeaves = this.getAllStaffLeaves();
+    for (const leave of allLeaves) {
+      const overlap = calculateMonthDateOverlap(leave.startDate, leave.endDate, year, monthIndex);
+      if (overlap) {
+        const sIdx = nextStaff.findIndex((s) => s.id === leave.staffId);
+        if (sIdx !== -1) {
+          const currentStaff = { ...nextStaff[sIdx] };
+          const updatedDaily = { ...currentStaff.dailyActivity };
+          for (let d = overlap.startDay; d <= overlap.endDay; d++) {
+            updatedDaily[d] = leave.leaveCode;
+          }
+          currentStaff.dailyActivity = updatedDaily;
+
+          if (
+            leave.isMergedSpan ||
+            /maternité|maternite/i.test(leave.leaveLabel) ||
+            leave.leaveCode === 'MAT' ||
+            leave.leaveCode === 'M'
+          ) {
+            currentStaff.maternityLeave = {
+              startDay: overlap.startDay,
+              endDay: overlap.endDay,
+              label: leave.leaveLabel || leave.leaveCode,
+              datesText: leave.datesText,
+            };
+          }
+
+          if (leave.datesText) {
+            currentStaff.obsPortrait = `${leave.leaveLabel || leave.leaveCode}. ${leave.datesText}`;
+          }
+          nextStaff[sIdx] = currentStaff;
+        }
+      }
+    }
 
     this.snapshot = {
       ...this.snapshot,

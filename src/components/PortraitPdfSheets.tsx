@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Tag, Repeat, Check, HeartHandshake, Layers, Sparkles, FileText, Download, ArrowUpDown, GripVertical } from 'lucide-react';
+import { Plus, Trash2, Tag, Repeat, Check, HeartHandshake, Layers, Sparkles, FileText, Download, ArrowUpDown, GripVertical, CalendarPlus } from 'lucide-react';
 import {
   HospitalDocumentConfig,
   StaffEntity,
@@ -38,6 +38,7 @@ interface PortraitPdfSheetsProps {
   onOpenGuardRotationModal?: () => void;
   onOpenLeaveTypesModal?: () => void;
   onOpenMaternityModal?: (staff?: StaffEntity) => void;
+  onOpenStaffLeaveModal?: (staffId?: number) => void;
   onToggleTableModificatif?: (key: TableModificatifKey) => void;
   onOpenTableManagementModal?: (tab: 'table1' | 'table2' | 'table3') => void;
   onOpenAddNoteModal?: (target?: TableTargetKey) => void;
@@ -50,7 +51,8 @@ const LeavePickerButton: React.FC<{
   onSelect: (val: string) => void;
   onOpenLeaveTypesModal?: () => void;
   onOpenMaternityModal?: () => void;
-}> = ({ leaveTypes, onSelect, onOpenLeaveTypesModal, onOpenMaternityModal }) => {
+  onOpenStaffLeaveModal?: () => void;
+}> = ({ leaveTypes, onSelect, onOpenLeaveTypesModal, onOpenMaternityModal, onOpenStaffLeaveModal }) => {
   const [open, setOpen] = useState(false);
 
   return (
@@ -177,6 +179,19 @@ const LeavePickerButton: React.FC<{
               </div>
             </div>
             <div className="pt-1.5 mt-1 space-y-1">
+              {onOpenStaffLeaveModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    onOpenStaffLeaveModal();
+                  }}
+                  className="w-full flex items-center justify-center gap-1.5 px-2 py-1 rounded bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-800/80 text-emerald-200 text-[10px] font-bold transition-colors"
+                >
+                  <CalendarPlus className="w-3 h-3 text-emerald-400" />
+                  <span>+ Poser un Congé (Calendrier)</span>
+                </button>
+              )}
               {onOpenMaternityModal && (
                 <button
                   type="button"
@@ -220,6 +235,7 @@ const TableQuickActionToolbar: React.FC<{
   readOnly?: boolean;
   onOpenOrganizer?: (category: StaffCategory) => void;
   onExportSingleTable?: (sheetId: string, title: string, filename: string, orientation: 'portrait' | 'landscape') => void;
+  onOpenStaffLeaveModal?: (staffId?: number) => void;
   showTeamSort?: boolean;
   onCustomSort?: (criteria: 'team' | 'name' | 'grade') => void;
   onCustomOrganizer?: () => void;
@@ -232,6 +248,7 @@ const TableQuickActionToolbar: React.FC<{
   readOnly,
   onOpenOrganizer,
   onExportSingleTable,
+  onOpenStaffLeaveModal,
   showTeamSort = true,
   onCustomSort,
   onCustomOrganizer,
@@ -302,6 +319,18 @@ const TableQuickActionToolbar: React.FC<{
       </div>
 
       <div className="flex items-center gap-2">
+        {onOpenStaffLeaveModal && (
+          <button
+            type="button"
+            onClick={() => onOpenStaffLeaveModal()}
+            title="Poser ou modifier un congé pour le personnel (avec calendrier interactif)"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm transition-all hover:scale-105 active:scale-95"
+          >
+            <CalendarPlus className="w-3.5 h-3.5 text-emerald-100" />
+            <span>+ Poser un Congé</span>
+          </button>
+        )}
+
         {onExportSingleTable && (
           <button
             type="button"
@@ -462,6 +491,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
   onOpenGuardRotationModal,
   onOpenLeaveTypesModal,
   onOpenMaternityModal,
+  onOpenStaffLeaveModal,
   onToggleTableModificatif,
   onOpenTableManagementModal,
   onOpenAddNoteModal,
@@ -624,6 +654,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                 showTeamSort={false}
                 onOpenOrganizer={onOpenOrganizer}
                 onExportSingleTable={onExportSingleTable}
+                onOpenStaffLeaveModal={onOpenStaffLeaveModal}
               />
               <OfficialPortraitHeader
                 config={config}
@@ -922,6 +953,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                 showTeamSort={false}
                 onOpenOrganizer={onOpenOrganizer}
                 onExportSingleTable={onExportSingleTable}
+                onOpenStaffLeaveModal={onOpenStaffLeaveModal}
               />
               <OfficialPortraitHeader
                 config={config}
@@ -1209,6 +1241,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                 }
               }}
               onExportSingleTable={onExportSingleTable}
+              onOpenStaffLeaveModal={onOpenStaffLeaveModal}
             />
             <OfficialPortraitHeader config={config} onUpdateConfig={onUpdateConfig} readOnly={readOnly} compact={true} />
 
@@ -1457,6 +1490,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                           onSelect={(leaveText) => onUpdateStaffField(staff.id, 'obsPortrait', leaveText)}
                           onOpenLeaveTypesModal={onOpenLeaveTypesModal}
                           onOpenMaternityModal={() => onOpenMaternityModal && onOpenMaternityModal(staff)}
+                          onOpenStaffLeaveModal={() => onOpenStaffLeaveModal && onOpenStaffLeaveModal(staff.id)}
                         />
                       )}
                     </td>
@@ -1585,6 +1619,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                                 onSelect={(leaveText) => onUpdateStaffField(member.id, 'obsPortrait', leaveText)}
                                 onOpenLeaveTypesModal={onOpenLeaveTypesModal}
                                 onOpenMaternityModal={() => onOpenMaternityModal && onOpenMaternityModal(member)}
+                                onOpenStaffLeaveModal={() => onOpenStaffLeaveModal && onOpenStaffLeaveModal(member.id)}
                               />
                             )}
                           </td>
@@ -1666,6 +1701,7 @@ export const PortraitPdfSheets: React.FC<PortraitPdfSheetsProps> = ({
                           onSelect={(leaveText) => onUpdateStaffField(staff.id, 'obsPortrait', leaveText)}
                           onOpenLeaveTypesModal={onOpenLeaveTypesModal}
                           onOpenMaternityModal={() => onOpenMaternityModal && onOpenMaternityModal(staff)}
+                          onOpenStaffLeaveModal={() => onOpenStaffLeaveModal && onOpenStaffLeaveModal(staff.id)}
                         />
                       )}
                     </td>

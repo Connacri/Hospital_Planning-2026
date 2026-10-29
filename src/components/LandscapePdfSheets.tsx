@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, PaintBucket, Repeat, Tag, HeartHandshake, FileText, Download, ArrowUpDown, GripVertical } from 'lucide-react';
+import { Plus, Trash2, PaintBucket, Repeat, Tag, HeartHandshake, FileText, Download, ArrowUpDown, GripVertical, CalendarPlus } from 'lucide-react';
 import {
   HospitalDocumentConfig,
   StaffEntity,
@@ -37,6 +37,7 @@ interface LandscapePdfSheetsProps {
   onOpenGuardRotationModal?: () => void;
   onOpenLeaveTypesModal?: () => void;
   onOpenMaternityModal?: (staff?: StaffEntity) => void;
+  onOpenStaffLeaveModal?: (staffId?: number) => void;
   onToggleTableModificatif?: (key: TableModificatifKey) => void;
   onOpenAddNoteModal?: (target?: TableTargetKey) => void;
   onOpenOrganizer?: (category: StaffCategory) => void;
@@ -52,6 +53,7 @@ const TableQuickActionToolbar: React.FC<{
   readOnly?: boolean;
   onOpenOrganizer?: (category: StaffCategory) => void;
   onExportSingleTable?: (sheetId: string, title: string, filename: string, orientation: 'portrait' | 'landscape') => void;
+  onOpenStaffLeaveModal?: (staffId?: number) => void;
   showTeamSort?: boolean;
 }> = ({
   title,
@@ -62,6 +64,7 @@ const TableQuickActionToolbar: React.FC<{
   readOnly,
   onOpenOrganizer,
   onExportSingleTable,
+  onOpenStaffLeaveModal,
   showTeamSort = true,
 }) => {
   return (
@@ -118,6 +121,18 @@ const TableQuickActionToolbar: React.FC<{
       </div>
 
       <div className="flex items-center gap-2">
+        {onOpenStaffLeaveModal && (
+          <button
+            type="button"
+            onClick={() => onOpenStaffLeaveModal()}
+            title="Poser ou modifier un congé pour le personnel (avec calendrier interactif)"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm transition-all hover:scale-105 active:scale-95"
+          >
+            <CalendarPlus className="w-3.5 h-3.5 text-emerald-100" />
+            <span>+ Poser un Congé</span>
+          </button>
+        )}
+
         {onExportSingleTable && (
           <button
             type="button"
@@ -757,6 +772,7 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
   onOpenGuardRotationModal,
   onOpenLeaveTypesModal,
   onOpenMaternityModal,
+  onOpenStaffLeaveModal,
   onToggleTableModificatif,
   onOpenAddNoteModal,
   onOpenOrganizer,
@@ -827,6 +843,7 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                 showTeamSort={false}
                 onOpenOrganizer={onOpenOrganizer}
                 onExportSingleTable={onExportSingleTable}
+                onOpenStaffLeaveModal={onOpenStaffLeaveModal}
               />
               <OfficialLandscapeHeader
                 config={config}
@@ -970,6 +987,7 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                 showTeamSort={false}
                 onOpenOrganizer={onOpenOrganizer}
                 onExportSingleTable={onExportSingleTable}
+                onOpenStaffLeaveModal={onOpenStaffLeaveModal}
               />
               <OfficialLandscapeHeader
                 config={config}
@@ -1113,6 +1131,7 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                 showTeamSort={true}
                 onOpenOrganizer={onOpenOrganizer}
                 onExportSingleTable={onExportSingleTable}
+                onOpenStaffLeaveModal={onOpenStaffLeaveModal}
               />
               <OfficialLandscapeHeader
                 config={config}
@@ -1289,6 +1308,7 @@ export const LandscapePdfSheets: React.FC<LandscapePdfSheetsProps> = ({
                 showTeamSort={false}
                 onOpenOrganizer={onOpenOrganizer}
                 onExportSingleTable={onExportSingleTable}
+                onOpenStaffLeaveModal={onOpenStaffLeaveModal}
               />
               <OfficialLandscapeHeader
                 config={config}

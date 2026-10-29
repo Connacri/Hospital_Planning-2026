@@ -71,6 +71,7 @@ import {
   GUARD_TEAM_THEMES,
   getTeamBadgeClass,
   getTeamTheme,
+  FRENCH_MONTH_NAMES,
 } from './db/objectboxEngine';
 import { AnimatePresence } from 'framer-motion';
 import { PortraitPdfSheets } from './components/PortraitPdfSheets';
@@ -473,7 +474,8 @@ export default function App() {
     startDay: number,
     endDay: number,
     isMergedSpan: boolean,
-    datesText: string
+    datesText: string,
+    dateRange?: { startDate: string; endDate: string; durationDays: number }
   ) => {
     objectBoxStore.assignStaffLeave(
       staffId,
@@ -482,11 +484,12 @@ export default function App() {
       startDay,
       endDay,
       isMergedSpan,
-      datesText
+      datesText,
+      dateRange
     );
     const staff = staffList.find((s) => s.id === staffId);
     showToast(
-      `Congé ${leaveCode} (${leaveLabel}) affecté à ${staff?.fullName || 'l\'agent'} du ${startDay} au ${endDay} !`
+      `Congé ${leaveCode} (${leaveLabel}) affecté à ${staff?.fullName || 'l\'agent'} : ${datesText || `du ${startDay} au ${endDay}`} !`
     );
   };
 
@@ -1619,6 +1622,7 @@ class HospitalPdfGenerator {
                       onOpenGuardRotationModal={() => setIsGuardRotationModalOpen(true)}
                       onOpenLeaveTypesModal={() => setIsLeaveTypesModalOpen(true)}
                       onOpenMaternityModal={handleOpenMaternityModal}
+                      onOpenStaffLeaveModal={handleOpenStaffLeaveModal}
                       onToggleTableModificatif={handleToggleTableModificatif}
                       onOpenTableManagementModal={handleOpenTableManagement}
                       onOpenOrganizer={handleOpenOrganizer}
@@ -1639,6 +1643,7 @@ class HospitalPdfGenerator {
                       onOpenGuardRotationModal={() => setIsGuardRotationModalOpen(true)}
                       onOpenLeaveTypesModal={() => setIsLeaveTypesModalOpen(true)}
                       onOpenMaternityModal={handleOpenMaternityModal}
+                      onOpenStaffLeaveModal={handleOpenStaffLeaveModal}
                       onToggleTableModificatif={handleToggleTableModificatif}
                       onOpenOrganizer={handleOpenOrganizer}
                       onExportSingleTable={handleExportSingleTable}
@@ -2892,6 +2897,10 @@ class HospitalPdfGenerator {
         initialStaffId={leaveTargetStaffId}
         onAssignLeave={handleAssignStaffLeave}
         onRemoveLeave={handleRemoveStaffLeave}
+        onCreateOrSwitchMonth={(year, monthIndex) => {
+          objectBoxStore.createNewMonth(year, monthIndex, false);
+          showToast(`Planning du mois de ${FRENCH_MONTH_NAMES[monthIndex]} ${year} créé avec succès ! Les congés actifs y sont appliqués.`);
+        }}
       />
 
       {/* MODAL: SERVICE & HOSPITAL CONFIGURATION */}
