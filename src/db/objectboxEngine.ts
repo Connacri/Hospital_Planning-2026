@@ -1776,7 +1776,10 @@ export class ObjectBoxLocalStore {
     cumulativeOffsetDays = 0,
     daysInMonth = 31,
     includeBouazizOverride = true,
-    periodRange?: { startDay: number; endDay: number } | null
+    periodRange?: { startDay: number; endDay: number } | null,
+    customOverrides?: Record<string, Record<number, string>>,
+    repeatCycleAcrossMonth = true,
+    targetMonthName?: string
   ): void {
     const nextStaff = this.snapshot.staffBox.map((staff) => {
       if (staff.category !== 'paramedical_guard' || !staff.teamGroup) {
@@ -1811,17 +1814,53 @@ export class ObjectBoxLocalStore {
         }
       }
 
+      // Application des modifications manuelles de cellules issues de l'aperçu du roulement (cycle 10 jours)
+      const teamEdits = customOverrides?.[staff.teamGroup];
+      if (teamEdits) {
+        Object.entries(teamEdits).forEach(([dayStr, shift]) => {
+          const dayNum = Number(dayStr);
+          if (!dayNum || isNaN(dayNum)) return;
+
+          if (periodRange) {
+            if (dayNum >= periodRange.startDay && dayNum <= periodRange.endDay) {
+              if (!matSpan || dayNum < matSpan.startDay || dayNum > matSpan.endDay) {
+                newActivity[dayNum] = shift;
+              }
+            }
+          } else if (repeatCycleAcrossMonth && dayNum <= 10) {
+            // Répète sur l'ensemble des cycles de 10 jours du mois (d, d+10, d+20, d+30) pour le PDF
+            for (let d = dayNum; d <= daysInMonth; d += 10) {
+              if (!matSpan || d < matSpan.startDay || d > matSpan.endDay) {
+                newActivity[d] = shift;
+              }
+            }
+          } else {
+            if (dayNum <= daysInMonth) {
+              if (!matSpan || dayNum < matSpan.startDay || dayNum > matSpan.endDay) {
+                newActivity[dayNum] = shift;
+              }
+            }
+          }
+        });
+      }
+
       return {
         ...staff,
         dailyActivity: newActivity,
       };
     });
 
-    this.snapshot.config = {
+    const updatedConfig: HospitalDocumentConfig = {
       ...this.snapshot.config,
       guardRotationOrder: rotationOrder,
       guardMonthOffsetDays: cumulativeOffsetDays,
     };
+
+    if (targetMonthName && !this.snapshot.config.guardMonthName?.toLowerCase().includes(targetMonthName.toLowerCase())) {
+      updatedConfig.guardMonthName = targetMonthName;
+    }
+
+    this.snapshot.config = updatedConfig;
     this.snapshot.staffBox = nextStaff;
     this.notify();
   }

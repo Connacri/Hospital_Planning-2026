@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   X,
   RotateCcw,
@@ -28,12 +28,16 @@ interface GuardRotationModalProps {
   onClose: () => void;
   currentRotationOrder: string[];
   currentMonthOffsetDays: number;
+  currentMonthName?: string;
   onApplyRotation: (
     rotationOrder: string[],
     cumulativeOffsetDays: number,
     daysInMonth: number,
     includeBouazizOverride: boolean,
-    periodRange?: { startDay: number; endDay: number } | null
+    periodRange?: { startDay: number; endDay: number } | null,
+    customOverrides?: Record<string, Record<number, string>>,
+    repeatCycleAcrossMonth?: boolean,
+    targetMonthName?: string
   ) => void;
 }
 
@@ -45,16 +49,40 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
   onClose,
   currentRotationOrder = DEFAULT_GUARD_ROTATION_ORDER,
   currentMonthOffsetDays = 0,
+  currentMonthName,
   onApplyRotation,
 }) => {
   const [order, setOrder] = useState<string[]>(
     currentRotationOrder.length === 5 ? currentRotationOrder : [...DEFAULT_GUARD_ROTATION_ORDER]
   );
   const [selectedScope, setSelectedScope] = useState<'perpetual' | 'period'>('perpetual');
-  const [selectedMonthIdx, setSelectedMonthIdx] = useState<number>(0);
+
+  // Mois initial basé sur le mois actif du document (ex: Novembre 2026)
+  const initialMonthIdx = useMemo(() => {
+    if (!currentMonthName) return 0;
+    const found = GUARD_MONTHS_PRESETS.findIndex((m) =>
+      currentMonthName.toLowerCase().includes(m.name.split(' ')[0].toLowerCase())
+    );
+    return found !== -1 ? found : 0;
+  }, [currentMonthName]);
+
+  const [selectedMonthIdx, setSelectedMonthIdx] = useState<number>(initialMonthIdx);
   const [periodStartDay, setPeriodStartDay] = useState<number>(1);
   const [periodEndDay, setPeriodEndDay] = useState<number>(15);
   const [includeBouazizOverride, setIncludeBouazizOverride] = useState<boolean>(true);
+  const [repeatCycleAcrossMonth, setRepeatCycleAcrossMonth] = useState<boolean>(true);
+
+  // Synchronise le mois présélectionné si le modal s'ouvre
+  useEffect(() => {
+    if (isOpen && currentMonthName) {
+      const found = GUARD_MONTHS_PRESETS.findIndex((m) =>
+        currentMonthName.toLowerCase().includes(m.name.split(' ')[0].toLowerCase())
+      );
+      if (found !== -1) {
+        setSelectedMonthIdx(found);
+      }
+    }
+  }, [isOpen, currentMonthName]);
 
   // User cell edits inside preview
   const [customOverrides, setCustomOverrides] = useState<Record<string, Record<number, string>>>({});
@@ -116,7 +144,10 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
       offset,
       currentMonth.daysCount,
       includeBouazizOverride,
-      periodRange
+      periodRange,
+      customOverrides,
+      repeatCycleAcrossMonth,
+      selectedScope === 'perpetual' ? currentMonth.name : undefined
     );
     setShowConfirmApply(false);
     onClose();
@@ -134,7 +165,7 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
     }
   };
 
-  // Preview days count: 5 days or the period length
+  // Aperçu du roulement : cycle complet de 10 jours (car chaque équipe effectue 2 jours consécutifs : Jour puis Nuit)
   const previewDays =
     selectedScope === 'period'
       ? Array.from(
@@ -146,7 +177,7 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
           },
           (_, i) => Math.min(periodStartDay, periodEndDay) + i
         )
-      : [1, 2, 3, 4, 5];
+      : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
   const previewMap = GUARD_TEAMS.reduce<Record<string, Record<number, string>>>((acc, t) => {
     const baseActivity = buildContinuousGuard16hActivity(
@@ -328,7 +359,7 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
             <div className="flex items-center justify-between">
               <span className="text-slate-300 font-semibold flex items-center gap-1.5 text-xs">
                 <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-                <span>Ordre de succession des 5 équipes (cycle de 5 jours) :</span>
+                <span>Ordre de succession des 5 équipes (cycle de 10 jours) :</span>
               </span>
               <span className="text-[11px] text-slate-400 font-mono">
                 {order.map((t, idx) => `Équipe ${t}${idx < 4 ? ' → ' : ''}`)}
@@ -426,41 +457,62 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
           )}
 
           {/* SIMULATION PREVIEW & DIRECT EDITING */}
-          <div className="space-y-2 pt-2 border-t border-slate-800">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-slate-300 font-semibold text-xs">
-              <span className="flex items-center gap-1.5">
-                <Sun className="w-3.5 h-3.5 text-amber-400" />
+          <div className="space-y-2.5 pt-2 border-t border-slate-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-slate-300 font-semibold text-xs">
+              <span className="flex items-center gap-1.5 flex-wrap">
+                <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 <span>Aperçu du roulement (Matin / Nuit / Récupération) :</span>
-                <span className="text-[10px] text-amber-400 font-normal ml-1">
+                <span className="text-[10px] sm:text-[10.5px] text-amber-400 font-normal">
                   (Édition active : Clic sur une cellule pour changer Jour/Nuit/RE)
                 </span>
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {hasManualEdits && (
                   <button
                     type="button"
                     onClick={handleResetOverrides}
-                    className="text-[10px] text-amber-300 hover:underline flex items-center gap-1 font-normal"
+                    className="text-[10px] text-amber-300 hover:underline flex items-center gap-1 font-semibold bg-amber-950/70 border border-amber-500/50 px-2 py-0.5 rounded transition-colors"
                   >
                     <RotateCcw className="w-3 h-3" />
                     Réinitialiser modifications manuelles
                   </button>
                 )}
-                <span className="text-[10px] text-slate-500 font-normal">
+                <span className="text-[10.5px] text-sky-300 font-mono font-bold bg-sky-950/90 border border-sky-700/80 px-2.5 py-0.5 rounded shadow-xs">
                   {selectedScope === 'period'
-                    ? `Jours ${Math.min(periodStartDay, periodEndDay)} à ${Math.max(periodStartDay, periodEndDay)}`
-                    : `${currentMonth.name} · Cycle 5 jours`}
+                    ? `Jours ${Math.min(periodStartDay, periodEndDay)} à ${Math.max(periodStartDay, periodEndDay)} · Période`
+                    : `${currentMonth.name} · Cycle 10 jours`}
                 </span>
               </div>
             </div>
 
+            {/* Explanatory note & Repeat across month option */}
+            <div className="p-2.5 bg-slate-900/70 border border-slate-800 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-300">
+              <div className="flex items-start gap-2">
+                <Info className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">
+                  Cycle complet de <strong>10 jours</strong> : chaque équipe effectue <strong>2 jours de service consécutifs</strong> (1 Jour Matin puis 1 Nuit de garde) avant récupération.
+                </span>
+              </div>
+              {selectedScope === 'perpetual' && (
+                <label className="flex items-center gap-1.5 text-sky-300 hover:text-sky-200 cursor-pointer font-semibold shrink-0 bg-sky-950/80 border border-sky-700/80 px-2.5 py-1 rounded-lg transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={repeatCycleAcrossMonth}
+                    onChange={(e) => setRepeatCycleAcrossMonth(e.target.checked)}
+                    className="rounded border-slate-700 text-sky-600 focus:ring-sky-500 w-3.5 h-3.5"
+                  />
+                  <span>Répéter sur le mois (applicable sur PDF)</span>
+                </label>
+              )}
+            </div>
+
             <div className="border border-slate-800 rounded-xl overflow-x-auto bg-slate-900/40">
-              <table className="w-full text-center text-xs border-collapse min-w-[340px]">
+              <table className="w-full text-center text-xs border-collapse min-w-[560px]">
                 <thead>
                   <tr className="bg-slate-900 text-slate-400 border-b border-slate-800 h-7 text-[11px]">
                     <th className="px-3 text-left w-24">Équipe</th>
                     {previewDays.map((d) => (
-                      <th key={d} className="px-1.5 font-medium">
+                      <th key={d} className="px-1.5 font-semibold">
                         Jour {d}
                       </th>
                     ))}
@@ -528,7 +580,7 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
                   <span>RE (Récupération)</span>
                 </span>
               </div>
-              <span className="text-[10px] text-slate-500">
+              <span className="text-[10px] text-slate-400">
                 Clic sur un badge = alterne Jour → Nuit → RE
               </span>
             </div>
@@ -577,7 +629,7 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
                   Confirmation de rotation
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Application aux plannings officiels
+                  Application aux plannings officiels et au PDF
                 </p>
               </div>
             </div>
@@ -585,8 +637,8 @@ export const GuardRotationModal: React.FC<GuardRotationModalProps> = ({
             <p className="text-xs text-slate-300 leading-relaxed">
               Êtes-vous sûr de vouloir appliquer cette rotation des équipes de garde (16h) ?
               {selectedScope === 'period'
-                ? ` Les gardes de la période (Jours ${Math.min(periodStartDay, periodEndDay)} à ${Math.max(periodStartDay, periodEndDay)}) seront recalculées pour l'ensemble des agents paramédicaux.`
-                : ` L'ensemble des 30/31 jours sera mis à jour avec le cycle continu (${order.join(' → ')}).`}
+                ? ` Les gardes de la période (Jours ${Math.min(periodStartDay, periodEndDay)} à ${Math.max(periodStartDay, periodEndDay)}) seront recalculées pour l'ensemble des agents paramédicaux avec vos modifications éventuelles.`
+                : ` L'ensemble des ${currentMonth.daysCount} jours de ${currentMonth.name} sera mis à jour avec le cycle de 10 jours (${order.join(' → ')})${hasManualEdits ? ' et vos modifications manuelles applicables directement sur le PDF' : ''}.`}
             </p>
 
             <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-800">

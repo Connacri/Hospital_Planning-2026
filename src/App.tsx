@@ -477,19 +477,26 @@ export default function App() {
     cumulativeOffsetDays: number,
     daysInMonth: number,
     includeBouazizOverride: boolean,
-    periodRange?: { startDay: number; endDay: number } | null
+    periodRange?: { startDay: number; endDay: number } | null,
+    customOverrides?: Record<string, Record<number, string>>,
+    repeatCycleAcrossMonth = true,
+    targetMonthName?: string
   ) => {
     objectBoxStore.applyContinuousGuardRotation(
       rotationOrder,
       cumulativeOffsetDays,
       daysInMonth,
       includeBouazizOverride,
-      periodRange
+      periodRange,
+      customOverrides,
+      repeatCycleAcrossMonth,
+      targetMonthName
     );
+    const hasEdits = customOverrides && Object.keys(customOverrides).length > 0;
     showToast(
       periodRange
-        ? `Rotation appliquée pour la période du jour ${periodRange.startDay} au ${periodRange.endDay} !`
-        : 'Rotation continue et perpétuelle des équipes de garde appliquée !'
+        ? `Rotation et modifications appliquées pour la période (Jours ${periodRange.startDay} à ${periodRange.endDay}) sur les plannings et le PDF !`
+        : `Rotation continue (Cycle 10 jours)${hasEdits ? ' et modifications manuelles' : ''} appliquée avec succès sur les tableaux et le PDF !`
     );
   };
 
@@ -2768,6 +2775,7 @@ class HospitalPdfGenerator {
         onClose={() => setIsGuardRotationModalOpen(false)}
         currentRotationOrder={config.guardRotationOrder || DEFAULT_GUARD_ROTATION_ORDER}
         currentMonthOffsetDays={config.guardMonthOffsetDays || 0}
+        currentMonthName={config.guardMonthName}
         onApplyRotation={handleApplyGuardRotation}
       />
 
