@@ -1,5 +1,5 @@
 ; Script Inno Setup 6 pour E.H. Aïn El Türck — Gestion des Plannings & Tableaux d'Activité
-; Génère l'installateur Windows autonome .exe
+; Génère l'installateur Windows autonome .exe 100% compatible Windows 7 SP1, 8, 8.1, 10, 11 (32 & 64-bit)
 
 #define MyAppName "EH Ain El Turck Plannings"
 #define MyAppVersion "1.0.0"
@@ -25,6 +25,8 @@ Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=lowest
+; Compatible Windows 7 SP1 (6.1) minimum jusqu'à Windows 11 (10.0+)
+MinVersion=6.1
 ArchitecturesInstallIn64BitMode=x64compatible
 
 [Languages]
@@ -35,11 +37,14 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-; Distribution web compilée
+; 1. Exécutable natif autonome Windows (Compilé en AnyCPU sans DLL tierces)
+Source: "bin\EH_AinElTurck_Plannings.exe"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Flags: ignoreversion
+; 2. Lanceur de secours .cmd en cas de besoin administrateur
+Source: "windows\Lancer_EH_Plannings.cmd"; DestDir: "{app}"; Flags: ignoreversion
+; 3. Distribution web compilée (React / Vite / Tailwind)
 Source: "dist\*"; DestDir: "{app}\resources\app\dist"; Flags: ignoreversion recursesubdirs createallsubdirs
-; Lanceur / Wrapper webview Windows
+; 4. Icône et images d'application
 Source: "public\*"; DestDir: "{app}\resources\app\public"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "windows-runner.bat"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\resources\app\public\icon.ico"

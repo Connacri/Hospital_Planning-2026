@@ -62,6 +62,7 @@ interface ModernMedicalDashboardProps {
   onOpenCreateMonth: () => void;
   onQuickPrint: () => void;
   onOpenStaffLeaveModal?: () => void;
+  onOpenWindowsIntegrity?: () => void;
 }
 
 export const ModernMedicalDashboard: React.FC<ModernMedicalDashboardProps> = ({
@@ -80,6 +81,7 @@ export const ModernMedicalDashboard: React.FC<ModernMedicalDashboardProps> = ({
   onOpenCreateMonth,
   onQuickPrint,
   onOpenStaffLeaveModal,
+  onOpenWindowsIntegrity,
 }) => {
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>('rhumato');
 
@@ -150,6 +152,17 @@ export const ModernMedicalDashboard: React.FC<ModernMedicalDashboardProps> = ({
             <SlidersHorizontal className="w-3.5 h-3.5 text-amber-600" />
             <span>Régler Largeurs</span>
           </button>
+          {onOpenWindowsIntegrity && (
+            <button
+              type="button"
+              onClick={onOpenWindowsIntegrity}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300/80 text-xs font-bold transition-all shadow-xs"
+              title="Contrôle d'intégrité de la base de données et compatibilité Windows 7/8/10/11"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Système Windows & Base</span>
+            </button>
+          )}
         </div>
       </div>
 

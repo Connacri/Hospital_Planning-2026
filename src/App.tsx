@@ -51,6 +51,7 @@ import {
   Globe,
   Cloud,
   Filter,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   objectBoxStore,
@@ -97,6 +98,7 @@ import { TableManagementModal, TableModalTab } from './components/TableManagemen
 import { ColumnWidthsFloatingModal } from './components/ColumnWidthsFloatingModal';
 import { ExportSelectionModal, ExportTableOption } from './components/ExportSelectionModal';
 import { TableOrganizerModal } from './components/TableOrganizerModal';
+import { WindowsSystemIntegrityModal } from './components/WindowsSystemIntegrityModal';
 import { exportDirectPdf } from './utils/pdfExportHelper';
 import { translations, SupportedLocale } from './i18n/translations';
 import { ModernMedicalDashboard } from './components/ModernMedicalDashboard';
@@ -166,6 +168,7 @@ export default function App() {
   const [isTableOrganizerModalOpen, setIsTableOrganizerModalOpen] = useState(false);
   const [organizerInitialCategory, setOrganizerInitialCategory] = useState<StaffCategory>('medical');
   const [isExportSelectionModalOpen, setIsExportSelectionModalOpen] = useState(false);
+  const [isWindowsIntegrityModalOpen, setIsWindowsIntegrityModalOpen] = useState(false);
 
   const handleOpenOrganizer = (category: StaffCategory = 'medical') => {
     setOrganizerInitialCategory(category);
@@ -1150,6 +1153,7 @@ class HospitalPdfGenerator {
                 onOpenCreateMonth={() => setIsCreateMonthModalOpen(true)}
                 onQuickPrint={() => window.print()}
                 onOpenStaffLeaveModal={() => handleOpenStaffLeaveModal()}
+                onOpenWindowsIntegrity={() => setIsWindowsIntegrityModalOpen(true)}
               />
             )}
         {/* ====================================================================
@@ -2411,6 +2415,15 @@ class HospitalPdfGenerator {
                       <Upload className="w-3.5 h-3.5 text-emerald-400" />
                       <span>{t.importJsonBtn}</span>
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsWindowsIntegrityModalOpen(true)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-600/70 rounded text-xs font-bold transition-colors shadow-xs"
+                      title="Contrôle d'intégrité de la base de données, triple sauvegarde et compatibilité Windows 7/8/10/11"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Diagnostic Windows</span>
+                    </button>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -2999,6 +3012,15 @@ class HospitalPdfGenerator {
         isOpen={isColumnWidthsModalOpen}
         onClose={() => setIsColumnWidthsModalOpen(false)}
         orientation={orientation}
+      />
+
+      {/* MODAL: CONTRÔLE D'INTÉGRITÉ SYSTÈME & BASE WINDOWS */}
+      <WindowsSystemIntegrityModal
+        isOpen={isWindowsIntegrityModalOpen}
+        onClose={() => setIsWindowsIntegrityModalOpen(false)}
+        onExportJson={handleExportJson}
+        onImportJson={() => fileInputRef.current?.click()}
+        showToast={showToast}
       />
 
       {/* FOOTER */}

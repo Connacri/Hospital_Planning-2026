@@ -4,6 +4,17 @@
  * and instant persistence for all PDF tables, headers, staff members, and 30/31-day schedules.
  */
 
+import {
+  saveToIndexedDB,
+  loadFromIndexedDB,
+  syncWithWindowsLauncherDisk,
+  fetchWindowsDiskBackup,
+  saveMirrorBackup,
+  loadMirrorBackup,
+  auditAndRepairSnapshot,
+  DatabaseIntegrityReport,
+} from './windowsDatabaseManager';
+
 export type StaffCategory = 'medical' | 'paramedical_day' | 'paramedical_guard' | 'hygiene';
 
 export interface DayColumnMeta {
@@ -1563,103 +1574,144 @@ export class ObjectBoxLocalStore {
 
   constructor() {
     this.snapshot = this.loadFromStorage();
+    this.initAsyncFallbacks();
+  }
+
+  private initAsyncFallbacks(): void {
+    // Tente de récupérer depuis IndexedDB ou le disque Windows si le stockage local était vide
+    if (typeof window !== 'undefined') {
+      setTimeout(async () => {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) {
+            const diskSnap = await fetchWindowsDiskBackup();
+            if (diskSnap && diskSnap.config && Array.isArray(diskSnap.staffBox)) {
+              this.snapshot = diskSnap;
+              this.persistAsync(diskSnap);
+              this.notify();
+              return;
+            }
+            const idbSnap = await loadFromIndexedDB();
+            if (idbSnap && idbSnap.config && Array.isArray(idbSnap.staffBox)) {
+              this.snapshot = idbSnap;
+              this.persistAsync(idbSnap);
+              this.notify();
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }, 100);
+    }
   }
 
   private loadFromStorage(): ObjectBoxDatabaseSnapshot {
+    let candidate: ObjectBoxDatabaseSnapshot | null = null;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw) as ObjectBoxDatabaseSnapshot;
-        if (parsed && parsed.config && Array.isArray(parsed.staffBox)) {
-          // If stored version is older than 7, refresh to October 2026 official PDF baseline
-          if (!parsed.version || parsed.version < 7) {
-            const seed = createOctober2026Snapshot();
-            this.persistAsync(seed);
-            return seed;
-          }
-
-          // Normalize BenSmir and Mers El Kebir in weekly schedules per requirements
-          let hasNormalized = false;
-          parsed.staffBox.forEach((staff) => {
-            if (staff.weeklySchedule) {
-              const days = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi'] as const;
-              days.forEach((d) => {
-                if (typeof staff.weeklySchedule[d] === 'string') {
-                  const val = staff.weeklySchedule[d];
-                  if (
-                    /Consultation.*Ben\s*Smir/i.test(val) ||
-                    /Consultation.*BenSmir/i.test(val) ||
-                    (/BenSmir/i.test(val) && /E\.?P\.?S\.?P/i.test(val))
-                  ) {
-                    if (staff.weeklySchedule[d] !== 'Consultation\nE.P.S.P BenSmir') {
-                      staff.weeklySchedule[d] = 'Consultation\nE.P.S.P BenSmir';
-                      hasNormalized = true;
-                    }
-                  } else if (
-                    /Consultation.*Mers\s*El\s*Kebir/i.test(val) ||
-                    (/Mers\s*El\s*Kebir/i.test(val) && /E\.?P\.?S\.?P/i.test(val))
-                  ) {
-                    if (staff.weeklySchedule[d] !== 'Consultation\nE.P.S.P Mers El Kebir') {
-                      staff.weeklySchedule[d] = 'Consultation\nE.P.S.P Mers El Kebir';
-                      hasNormalized = true;
-                    }
-                  }
-                }
-              });
-            }
-            // Ensure gradeLandscape has no newlines
-            if (staff.gradeLandscape && /\r?\n/.test(staff.gradeLandscape)) {
-              staff.gradeLandscape = staff.gradeLandscape.replace(/\r?\n+/g, ' ').trim();
-              hasNormalized = true;
-            }
-            // If currently October 2026, ensure maternity leave is removed for Bakhouche Sarra per official PDF
-            if (
-              staff.fullName.toLowerCase().includes('bakhouche') &&
-              (parsed.config?.guardMonthName?.includes('Octobre') || !parsed.config?.guardMonthName)
-            ) {
-              delete staff.maternityLeave;
-              staff.obsPortrait = '';
-            }
-          });
-
-          // Assurer qu'aucun préfixe N.B. n'est doublé dans la config stockée
-          if (parsed.config) {
-            if (parsed.config.nbNotice) {
-              const cleanedNb = cleanNoteText(parsed.config.nbNotice);
-              if (cleanedNb !== parsed.config.nbNotice) {
-                parsed.config.nbNotice = cleanedNb;
-                hasNormalized = true;
-              }
-            }
-            if (parsed.config.documentNotes && Array.isArray(parsed.config.documentNotes)) {
-              const seenNotes = new Set<string>();
-              const dedupedNotes: DocumentNoteItem[] = [];
-              parsed.config.documentNotes.forEach((n) => {
-                const cleanedText = cleanNoteText(n.text, n.prefix);
-                const key = `${(n.prefix || '').trim().toLowerCase()}:::${cleanedText.toLowerCase()}`;
-                if (!seenNotes.has(key) && cleanedText) {
-                  seenNotes.add(key);
-                  if (cleanedText !== n.text) {
-                    hasNormalized = true;
-                  }
-                  dedupedNotes.push({ ...n, text: cleanedText });
-                } else {
-                  hasNormalized = true;
-                }
-              });
-              parsed.config.documentNotes = dedupedNotes;
-            }
-          }
-
-          if (hasNormalized) {
-            this.persistAsync(parsed);
-          }
-          return parsed;
-        }
+        candidate = JSON.parse(raw) as ObjectBoxDatabaseSnapshot;
       }
     } catch {
-      // Fallback to seed snapshot
+      // ignore
     }
+
+    // 2. Secours miroir local si la clé primaire est absente ou corrompue
+    if (!candidate || !candidate.config || !Array.isArray(candidate.staffBox)) {
+      candidate = loadMirrorBackup();
+    }
+
+    if (candidate && candidate.config && Array.isArray(candidate.staffBox)) {
+      // If stored version is older than 7, refresh to October 2026 official PDF baseline
+      if (!candidate.version || candidate.version < 7) {
+        const seed = createOctober2026Snapshot();
+        this.persistAsync(seed);
+        return seed;
+      }
+
+      // Normalisations automatiques de propreté des données
+      let hasNormalized = false;
+      candidate.staffBox.forEach((staff) => {
+        if (staff.weeklySchedule) {
+          const days = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi'] as const;
+          days.forEach((d) => {
+            if (typeof staff.weeklySchedule[d] === 'string') {
+              const val = staff.weeklySchedule[d];
+              if (
+                /Consultation.*Ben\s*Smir/i.test(val) ||
+                /Consultation.*BenSmir/i.test(val) ||
+                (/BenSmir/i.test(val) && /E\.?P\.?S\.?P/i.test(val))
+              ) {
+                if (staff.weeklySchedule[d] !== 'Consultation\nE.P.S.P BenSmir') {
+                  staff.weeklySchedule[d] = 'Consultation\nE.P.S.P BenSmir';
+                  hasNormalized = true;
+                }
+              } else if (
+                /Consultation.*Mers\s*El\s*Kebir/i.test(val) ||
+                (/Mers\s*El\s*Kebir/i.test(val) && /E\.?P\.?S\.?P/i.test(val))
+              ) {
+                if (staff.weeklySchedule[d] !== 'Consultation\nE.P.S.P Mers El Kebir') {
+                  staff.weeklySchedule[d] = 'Consultation\nE.P.S.P Mers El Kebir';
+                  hasNormalized = true;
+                }
+              }
+            }
+          });
+        }
+        // Ensure gradeLandscape has no newlines
+        if (staff.gradeLandscape && /\r?\n/.test(staff.gradeLandscape)) {
+          staff.gradeLandscape = staff.gradeLandscape.replace(/\r?\n+/g, ' ').trim();
+          hasNormalized = true;
+        }
+        // If currently October 2026, ensure maternity leave is removed for Bakhouche Sarra per official PDF
+        if (
+          staff.fullName.toLowerCase().includes('bakhouche') &&
+          (candidate?.config?.guardMonthName?.includes('Octobre') || !candidate?.config?.guardMonthName)
+        ) {
+          delete staff.maternityLeave;
+          staff.obsPortrait = '';
+        }
+      });
+
+      // Assurer qu'aucun préfixe N.B. n'est doublé dans la config stockée
+      if (candidate.config) {
+        if (candidate.config.nbNotice) {
+          const cleanedNb = cleanNoteText(candidate.config.nbNotice);
+          if (cleanedNb !== candidate.config.nbNotice) {
+            candidate.config.nbNotice = cleanedNb;
+            hasNormalized = true;
+          }
+        }
+        if (candidate.config.documentNotes && Array.isArray(candidate.config.documentNotes)) {
+          const seenNotes = new Set<string>();
+          const dedupedNotes: DocumentNoteItem[] = [];
+          candidate.config.documentNotes.forEach((n) => {
+            const cleanedText = cleanNoteText(n.text, n.prefix);
+            const key = `${(n.prefix || '').trim().toLowerCase()}:::${cleanedText.toLowerCase()}`;
+            if (!seenNotes.has(key) && cleanedText) {
+              seenNotes.add(key);
+              if (cleanedText !== n.text) {
+                hasNormalized = true;
+              }
+              dedupedNotes.push({ ...n, text: cleanedText });
+            } else {
+              hasNormalized = true;
+            }
+          });
+          candidate.config.documentNotes = dedupedNotes;
+        }
+      }
+
+      // Audit et réparation de cohérence
+      const { snapshot: repaired } = auditAndRepairSnapshot(candidate);
+
+      if (hasNormalized) {
+        this.persistAsync(repaired);
+      }
+      return repaired;
+    }
+
+    // 3. Fallback ultime garanti : Initialisation avec les plannings officiels d'Aïn El Türck
     const seed = createInitialSeedSnapshot();
     this.persistAsync(seed);
     return seed;
@@ -1667,13 +1719,39 @@ export class ObjectBoxLocalStore {
 
   private persistAsync(snap: ObjectBoxDatabaseSnapshot): void {
     queueMicrotask(() => {
+      // 1. LocalStorage standard
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(snap));
       } catch {
         // Ignore quota errors in sandboxes
       }
+      // 2. Miroir synchrone
+      saveMirrorBackup(snap);
+      // 3. IndexedDB persistant (haute capacité)
+      saveToIndexedDB(snap);
+      // 4. Synchronisation disque dur physique Windows (via lanceur natif .exe)
+      syncWithWindowsLauncherDisk(snap);
+      // 5. Historique mensuel
       this.updateActiveMonthInHistorySilently(snap);
     });
+  }
+
+  /**
+   * Fournit un diagnostic temps réel de l'intégrité de la base de données
+   */
+  getIntegrityReport(): DatabaseIntegrityReport {
+    const { report } = auditAndRepairSnapshot(this.snapshot);
+    return report;
+  }
+
+  /**
+   * Rétablit instantanément la base officielle du Service (Octobre 2026)
+   */
+  restoreOfficialBaseline(): void {
+    const seed = createOctober2026Snapshot();
+    this.snapshot = seed;
+    this.persistAsync(seed);
+    this.notify();
   }
 
   private notify(): void {
