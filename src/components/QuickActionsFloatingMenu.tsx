@@ -51,6 +51,7 @@ interface QuickActionsFloatingMenuProps {
   onOpenLeaveTypesModal?: () => void;
   onOpenHolidayModal?: () => void;
   onOpenMaternityModal?: () => void;
+  onOpenStaffLeaveModal?: () => void;
   isModificatif?: boolean;
   onToggleModificatif?: () => void;
   onOpenModificatifModal?: () => void;
@@ -88,6 +89,7 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
   onOpenLeaveTypesModal,
   onOpenHolidayModal,
   onOpenMaternityModal,
+  onOpenStaffLeaveModal,
   isModificatif = false,
   onToggleModificatif,
   onOpenModificatifModal,
@@ -405,6 +407,17 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
                 <span className="text-[10px] text-slate-500 font-normal">Actions</span>
               </div>
               <div className="space-y-1.5">
+                {onOpenStaffLeaveModal && (
+                  <button
+                    type="button"
+                    onClick={onOpenStaffLeaveModal}
+                    className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-sm shadow-emerald-950/40"
+                    title="Poser un congé pour un agent (Annuel, Maladie, Maternité, Sans solde, etc.)"
+                  >
+                    <Calendar className="w-3.5 h-3.5 text-white" />
+                    <span>+ Poser un Congé (Staff)</span>
+                  </button>
+                )}
                 {onOpenMaternityModal && (
                   <button
                     type="button"

@@ -1865,6 +1865,99 @@ export class ObjectBoxLocalStore {
     this.notify();
   }
 
+  assignStaffLeave(
+    staffId: number,
+    leaveCode: string,
+    leaveLabel: string,
+    startDay: number,
+    endDay: number,
+    isMergedSpan = false,
+    datesText?: string
+  ): void {
+    const nextStaff = this.snapshot.staffBox.map((staff) => {
+      if (staff.id !== staffId) return staff;
+
+      const newDaily = { ...staff.dailyActivity };
+      for (let d = startDay; d <= endDay; d++) {
+        newDaily[d] = leaveCode;
+      }
+
+      let maternityConfig = staff.maternityLeave;
+      if (isMergedSpan || leaveCode.toLowerCase().includes('maternité') || leaveCode === 'M') {
+        maternityConfig = {
+          startDay,
+          endDay,
+          label: leaveLabel || leaveCode,
+          datesText: datesText || undefined,
+        };
+      }
+
+      let obsPortrait = staff.obsPortrait;
+      if (datesText) {
+        obsPortrait = `${leaveLabel || leaveCode}. ${datesText}`;
+      } else if (!obsPortrait || obsPortrait === '08h-16h' || obsPortrait === '16h' || obsPortrait === '12h') {
+        obsPortrait = `${leaveLabel} (du ${startDay} au ${endDay})`;
+      }
+
+      return {
+        ...staff,
+        dailyActivity: newDaily,
+        maternityLeave: maternityConfig,
+        obsPortrait,
+      };
+    });
+
+    this.snapshot.staffBox = nextStaff;
+    this.persistAsync(this.snapshot);
+    this.notify();
+  }
+
+  removeStaffLeave(
+    staffId: number,
+    startDay: number,
+    endDay: number,
+    restoreDefaultShift?: string
+  ): void {
+    const nextStaff = this.snapshot.staffBox.map((staff) => {
+      if (staff.id !== staffId) return staff;
+
+      const newDaily = { ...staff.dailyActivity };
+      for (let d = startDay; d <= endDay; d++) {
+        if (restoreDefaultShift) {
+          newDaily[d] = restoreDefaultShift;
+        } else if (staff.category === 'paramedical_guard') {
+          newDaily[d] = 'RE';
+        } else if (staff.category === 'hygiene') {
+          newDaily[d] = 'RE';
+        } else {
+          const isWeekend = this.snapshot.config.daysColumns.find((c) => c.day === d)?.isBlackColumn;
+          newDaily[d] = isWeekend ? 'RE' : 'N';
+        }
+      }
+
+      let maternityConfig = staff.maternityLeave;
+      if (maternityConfig && maternityConfig.startDay >= startDay && maternityConfig.endDay <= endDay) {
+        maternityConfig = undefined;
+      }
+
+      let obsPortrait = staff.obsPortrait;
+      if (obsPortrait && (obsPortrait.includes('Congé') || obsPortrait.includes('CONGÉ') || obsPortrait.includes('Maternité'))) {
+        obsPortrait = staff.horaireBlock || '08h-16h';
+      }
+
+      return {
+        ...staff,
+        dailyActivity: newDaily,
+        maternityLeave: maternityConfig,
+        obsPortrait,
+      };
+    });
+
+    this.snapshot.staffBox = nextStaff;
+    this.persistAsync(this.snapshot);
+    this.notify();
+  }
+
   resetToOriginalPdfs(): void {
     this.snapshot = createOctober2026Snapshot();
     this.persistAsync(this.snapshot);

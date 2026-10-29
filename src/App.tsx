@@ -100,6 +100,7 @@ import { exportDirectPdf } from './utils/pdfExportHelper';
 import { translations, SupportedLocale } from './i18n/translations';
 import { ModernMedicalDashboard } from './components/ModernMedicalDashboard';
 import { ModernAppSidebar, ActiveTab } from './components/ModernAppSidebar';
+import { StaffLeaveAssignmentModal } from './components/StaffLeaveAssignmentModal';
 
 export default function App() {
   const [locale, setLocale] = useState<SupportedLocale>('fr');
@@ -454,6 +455,45 @@ export default function App() {
   const handleRemoveMaternityLeave = (staffId: number) => {
     objectBoxStore.removeMaternityLeave(staffId);
     showToast('Congé de maternité retiré.');
+  };
+
+  // Staff Leave Assignment Modal State & Handlers
+  const [isStaffLeaveModalOpen, setIsStaffLeaveModalOpen] = useState(false);
+  const [leaveTargetStaffId, setLeaveTargetStaffId] = useState<number | null>(null);
+
+  const handleOpenStaffLeaveModal = (staffId?: number) => {
+    setLeaveTargetStaffId(staffId ?? null);
+    setIsStaffLeaveModalOpen(true);
+  };
+
+  const handleAssignStaffLeave = (
+    staffId: number,
+    leaveCode: string,
+    leaveLabel: string,
+    startDay: number,
+    endDay: number,
+    isMergedSpan: boolean,
+    datesText: string
+  ) => {
+    objectBoxStore.assignStaffLeave(
+      staffId,
+      leaveCode,
+      leaveLabel,
+      startDay,
+      endDay,
+      isMergedSpan,
+      datesText
+    );
+    const staff = staffList.find((s) => s.id === staffId);
+    showToast(
+      `Congé ${leaveCode} (${leaveLabel}) affecté à ${staff?.fullName || 'l\'agent'} du ${startDay} au ${endDay} !`
+    );
+  };
+
+  const handleRemoveStaffLeave = (staffId: number, startDay: number, endDay: number) => {
+    objectBoxStore.removeStaffLeave(staffId, startDay, endDay);
+    const staff = staffList.find((s) => s.id === staffId);
+    showToast(`Congé retiré pour ${staff?.fullName || 'l\'agent'} (jours ${startDay} à ${endDay}).`);
   };
 
   const handleToggleModificatif = () => {
@@ -1094,6 +1134,7 @@ class HospitalPdfGenerator {
                 onOpenDocumentValidation={() => setIsDocumentValidationModalOpen(true)}
                 onOpenCreateMonth={() => setIsCreateMonthModalOpen(true)}
                 onQuickPrint={() => window.print()}
+                onOpenStaffLeaveModal={() => handleOpenStaffLeaveModal()}
               />
             )}
         {/* ====================================================================
@@ -1276,6 +1317,17 @@ class HospitalPdfGenerator {
                     <span>Au Choix</span>
                   </button>
                 </div>
+
+                {/* Staff Leave Assignment Quick Tool Button */}
+                <button
+                  type="button"
+                  onClick={() => handleOpenStaffLeaveModal()}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-emerald-500 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md hover:shadow-emerald-950/50"
+                  title="Poser ou gérer un congé pour un membre du personnel (Annuel CA, Maladie CM, Récupération, etc.)"
+                >
+                  <Calendar className="w-3.5 h-3.5 text-emerald-100" />
+                  <span>+ Poser un Congé</span>
+                </button>
 
                 {/* Maternity Quick Tool Button */}
                 <button
@@ -1659,6 +1711,7 @@ class HospitalPdfGenerator {
               onOpenLeaveTypesModal={() => setIsLeaveTypesModalOpen(true)}
               onOpenHolidayModal={() => setIsHolidayModalOpen(true)}
               onOpenMaternityModal={() => handleOpenMaternityModal()}
+              onOpenStaffLeaveModal={() => handleOpenStaffLeaveModal()}
               isModificatif={config.isModificatif}
               onToggleModificatif={handleToggleModificatif}
               onOpenModificatifModal={() => setIsModificatifModalOpen(true)}
@@ -1737,6 +1790,16 @@ class HospitalPdfGenerator {
                   >
                     <Tag className="w-3.5 h-3.5 text-amber-400" />
                     <span>Types de congés</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleOpenStaffLeaveModal()}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow-md shadow-emerald-950/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    title="Poser un congé pour un agent (Annuel, Maladie, Maternité, Récupération, etc.)"
+                  >
+                    <Calendar className="w-4 h-4 text-emerald-100" />
+                    <span>+ Poser un Congé (Staff)</span>
                   </button>
 
                   <button
@@ -2239,14 +2302,25 @@ class HospitalPdfGenerator {
                               </div>
                             </td>
                             <td className="py-3 px-4 text-center">
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteStaff(staff.id)}
-                                title={t.deleteRow}
-                                className="p-1 text-slate-500 hover:text-red-400 hover:bg-red-950/40 rounded transition-colors"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenStaffLeaveModal(staff.id)}
+                                  title={`Poser ou gérer un congé pour ${staff.fullName}`}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-600/70 text-emerald-300 hover:text-emerald-200 rounded text-[11px] font-bold shadow-xs transition-colors"
+                                >
+                                  <Calendar className="w-3 h-3 text-emerald-400" />
+                                  <span>Congé</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteStaff(staff.id)}
+                                  title={t.deleteRow}
+                                  className="p-1 text-slate-500 hover:text-red-400 hover:bg-red-950/40 rounded transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -2807,6 +2881,17 @@ class HospitalPdfGenerator {
         targetStaff={maternityTargetStaff}
         onApplyMaternityLeave={handleApplyMaternityLeave}
         onRemoveMaternityLeave={handleRemoveMaternityLeave}
+      />
+
+      {/* MODAL: STAFF LEAVE ASSIGNMENT (AFFECTER OU RETIRER UN CONGÉ) */}
+      <StaffLeaveAssignmentModal
+        isOpen={isStaffLeaveModalOpen}
+        onClose={() => setIsStaffLeaveModalOpen(false)}
+        staffList={staffList}
+        config={config}
+        initialStaffId={leaveTargetStaffId}
+        onAssignLeave={handleAssignStaffLeave}
+        onRemoveLeave={handleRemoveStaffLeave}
       />
 
       {/* MODAL: SERVICE & HOSPITAL CONFIGURATION */}

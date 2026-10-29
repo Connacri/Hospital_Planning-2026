@@ -61,6 +61,7 @@ interface ModernMedicalDashboardProps {
   onOpenDocumentValidation: () => void;
   onOpenCreateMonth: () => void;
   onQuickPrint: () => void;
+  onOpenStaffLeaveModal?: () => void;
 }
 
 export const ModernMedicalDashboard: React.FC<ModernMedicalDashboardProps> = ({
@@ -78,6 +79,7 @@ export const ModernMedicalDashboard: React.FC<ModernMedicalDashboardProps> = ({
   onOpenDocumentValidation,
   onOpenCreateMonth,
   onQuickPrint,
+  onOpenStaffLeaveModal,
 }) => {
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>('rhumato');
 
@@ -111,6 +113,17 @@ export const ModernMedicalDashboard: React.FC<ModernMedicalDashboardProps> = ({
 
         {/* Quick Action Pills */}
         <div className="flex items-center gap-2 flex-wrap">
+          {onOpenStaffLeaveModal && (
+            <button
+              type="button"
+              onClick={onOpenStaffLeaveModal}
+              className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-950/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              title="Poser ou modifier un congé pour le personnel (Annuel, Maladie, Maternité, etc.)"
+            >
+              <Calendar className="w-3.5 h-3.5 text-emerald-100" />
+              <span>+ Poser un Congé (Staff)</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => onOpenDocuments('landscape')}
