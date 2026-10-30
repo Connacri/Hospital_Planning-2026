@@ -8,7 +8,7 @@
 - Deterministic binary signing format, version HPL-LICENSE-SIGNATURE-V1.
 - Ed25519 verification using BouncyCastle.Cryptography 2.7.0.
 - DPAPI CurrentUser storage for installed license and pending activation request.
-- SHA-256 machine fingerprint based on Windows MachineGuid and BIOS product UUID; network MAC addresses are excluded.
+- SHA-256 machine fingerprint based on Windows MachineGuid, BIOS product UUID and an optional TPM-backed CNG public-key hash; network MAC addresses are excluded. The TPM private key is non-exportable when the Microsoft Platform Crypto Provider is available; otherwise the engine falls back to the software fingerprint.
 - DPAPI-protected clock high-water mark for obvious rollback detection.
 - QR request/response JSON codec using ISO-8601 UTC strings.
 - Replay-resistant activation flow: short-lived request, random 256-bit nonce, machine binding, signature verification, one-time local consumption.
@@ -36,7 +36,7 @@ After pinning the public key, the gate blocks business features for unactivated,
 - DPAPI CurrentUser protects against other Windows users, not malware running as the same user or an administrator.
 - Clock rollback detection is heuristic, not a trusted offline clock.
 - Offline revocation is learned only when the client reconnects or receives an update.
-- Hardware changes may require administrator reactivation.
+- Hardware changes or a change in TPM availability may require administrator reactivation.
 - Browser-hosted React code can be patched by a determined local attacker. This implementation is tamper resistance, not unbreakable DRM.
 - The current license gate is a UI/native startup layer; sensitive business operations remain in the React application and would need a native enforcement boundary for stronger protection.
 
