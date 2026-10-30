@@ -37,3 +37,10 @@ After running capacitor add android, ensure android/app/src/main/AndroidManifest
     <uses-permission android:name="android.permission.CAMERA" />
 
 The Android CI workflow inserts this permission into its generated project before building. If the camera is denied or unavailable, the admin screen also supports pasting the activation QR JSON manually.
+
+
+## License history and revocation
+
+- The History tab calls the authenticated list-licenses Edge Function; the client never queries licensing tables directly.
+- Owner, issuer and viewer roles can view the list. Only owner can revoke a license.
+- Revocation is transactional with its audit event. It changes server status immediately, but a fully offline Windows installation cannot learn about it until a future synchronization or update.
