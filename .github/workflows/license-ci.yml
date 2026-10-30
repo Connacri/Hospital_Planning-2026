@@ -8,6 +8,7 @@ on:
       - "windows/Launcher.cs"
       - "windows/build-exe.ps1"
       - "tests/licensing/**"
+      - "supabase/**"
       - ".github/workflows/license-ci.yml"
   workflow_dispatch:
 
