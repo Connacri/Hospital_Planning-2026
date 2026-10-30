@@ -28,3 +28,19 @@ npx cap open android
 ```
 
 The Android application ID is currently dz.sante.eh.ainelturck.licenseadmin; change it before first Play Store publication if your package naming policy requires another identifier.
+
+
+## Camera permission
+
+After running capacitor add android, ensure android/app/src/main/AndroidManifest.xml contains this permission inside the manifest element:
+
+    <uses-permission android:name="android.permission.CAMERA" />
+
+The Android CI workflow inserts this permission into its generated project before building. If the camera is denied or unavailable, the admin screen also supports pasting the activation QR JSON manually.
+
+
+## License history and revocation
+
+- The History tab calls the authenticated list-licenses Edge Function; the client never queries licensing tables directly.
+- Owner, issuer and viewer roles can view the list. Only owner can revoke a license.
+- Revocation is transactional with its audit event. It changes server status immediately, but a fully offline Windows installation cannot learn about it until a future synchronization or update.

@@ -1,3 +1,4 @@
+/// <reference lib="deno.ns" />
 import { canonicalLicenseBytes } from "../_shared/license-canonical.ts";
 
 Deno.test("C# and Supabase canonical license payloads share the same test vector", async () => {
@@ -15,7 +16,8 @@ Deno.test("C# and Supabase canonical license payloads share the same test vector
     features: ["REPORTS", "FULL_ACCESS"],
     signing_key_version: 1,
   });
-  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", payload));
+  const digestInput = new Uint8Array(payload).buffer as ArrayBuffer;
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", digestInput));
   const hex = Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
   if (hex !== "0c0dac7a1f38c8892975adcfd32ce6179e9b5f6f4633bdd75c5cab7885c2301b") {
     throw new Error("Canonical payload mismatch: " + hex);

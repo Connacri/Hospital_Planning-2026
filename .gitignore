@@ -13,3 +13,9 @@ bin/
 Output/
 *.user
 *.suo
+
+# Offline license key ceremony artifacts (never commit private signing material)
+license-private*.pem
+license-private*.pk8
+license-public.spki
+supabase-secrets.env

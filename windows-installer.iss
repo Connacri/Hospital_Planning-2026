@@ -52,5 +52,26 @@ Source: "public\*"; DestDir: "{app}\resources\app\public"; Flags: ignoreversion 
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\resources\app\public\icon.ico"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; IconFilename: "{app}\resources\app\public\icon.ico"
 
+
+[Code]
+function HasDotNet461OrNewer: Boolean;
+var
+  ReleaseValue: Cardinal;
+begin
+  Result := False;
+  if RegQueryDWordValue(HKLM, 'SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full', 'Release', ReleaseValue) then
+    Result := ReleaseValue >= 394254;
+  if (not Result) and IsWin64 then
+    if RegQueryDWordValue(HKLM64, 'SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full', 'Release', ReleaseValue) then
+      Result := ReleaseValue >= 394254;
+end;
+
+function InitializeSetup: Boolean;
+begin
+  Result := HasDotNet461OrNewer;
+  if not Result then
+    MsgBox('Cette version nécessite Microsoft .NET Framework 4.6.1 ou supérieur. Installez-le puis relancez le programme d''installation.', mbError, MB_OK);
+end;
+
 [Run]
 Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Filename: "{app}\{#MyAppExeName}"; Flags: nowait postinstall skipifsilent

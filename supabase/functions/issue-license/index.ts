@@ -1,4 +1,5 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+/// <reference lib="deno.ns" />
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.118.0";
 import { canonicalLicenseBytes } from "../_shared/license-canonical.ts";
 
 
@@ -13,6 +14,10 @@ const REQUEST_PROTOCOL = "HPL-ACTIVATION-1";
 const SERIAL_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const ALLOWED_DURATIONS = new Set([7, 30, 90, 180, 365]);
 const encoder = new TextEncoder();
+
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  return new Uint8Array(bytes).buffer as ArrayBuffer;
+}
 
 function json(status: number, body: Record<string, unknown>) {
   return new Response(JSON.stringify(body), {
@@ -50,7 +55,7 @@ function isMachineId(value: unknown): value is string {
 }
 
 async function sha256Hex(value: Uint8Array): Promise<string> {
-  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", value));
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", toArrayBuffer(value)));
   return Array.from(digest, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
@@ -61,12 +66,12 @@ async function signDocument(
 ): Promise<string> {
   const key = await crypto.subtle.importKey(
     "pkcs8",
-    privateKeyPkcs8,
+    toArrayBuffer(privateKeyPkcs8),
     { name: "Ed25519" },
     false,
     ["sign"],
   );
-  const signature = new Uint8Array(await crypto.subtle.sign("Ed25519", key, canonicalLicenseBytes(doc)));
+  const signature = new Uint8Array(await crypto.subtle.sign("Ed25519", key, toArrayBuffer(canonicalLicenseBytes(doc))));
   if (signature.length !== 64) throw new Error("Unexpected Ed25519 signature size.");
   return encodeBase64(signature);
 }
@@ -127,6 +132,9 @@ Deno.serve(async (request: Request) => {
     if (licenseType !== "TIME_LIMITED" && licenseType !== "PERPETUAL") {
       return json(400, { error: "INVALID_LICENSE_TYPE" });
     }
+    if ((licenseType === "PERPETUAL" || body?.custom_duration === true) && admin.role !== "owner") {
+      return json(403, { error: "OWNER_ROLE_REQUIRED_FOR_PERPETUAL_OR_CUSTOM_TERM" });
+    }
     if (licenseType === "TIME_LIMITED"
       && (!Number.isInteger(durationDays) || durationDays < 1 || durationDays > 3650
         || (!ALLOWED_DURATIONS.has(durationDays) && body?.custom_duration !== true))) {
@@ -147,11 +155,11 @@ Deno.serve(async (request: Request) => {
     if (publicKey.length !== 32) throw new Error("INVALID_PUBLIC_KEY_CONFIGURATION");
 
     // Ensure the configured public key matches the private signing key before issuing anything.
-    const verifyKey = await crypto.subtle.importKey("raw", publicKey, { name: "Ed25519" }, false, ["verify"]);
+    const verifyKey = await crypto.subtle.importKey("raw", toArrayBuffer(publicKey), { name: "Ed25519" }, false, ["verify"]);
     const testBytes = encoder.encode("HPL-SIGNING-KEY-PAIR-CHECK");
-    const privateKey = await crypto.subtle.importKey("pkcs8", privateKeyPkcs8, { name: "Ed25519" }, false, ["sign"]);
-    const testSignature = await crypto.subtle.sign("Ed25519", privateKey, testBytes);
-    if (!await crypto.subtle.verify("Ed25519", verifyKey, testSignature, testBytes)) {
+    const privateKey = await crypto.subtle.importKey("pkcs8", toArrayBuffer(privateKeyPkcs8), { name: "Ed25519" }, false, ["sign"]);
+    const testSignature = await crypto.subtle.sign("Ed25519", privateKey, toArrayBuffer(testBytes));
+    if (!await crypto.subtle.verify("Ed25519", verifyKey, testSignature, toArrayBuffer(testBytes))) {
       throw new Error("SIGNING_KEY_PAIR_MISMATCH");
     }
 
@@ -201,8 +209,8 @@ Deno.serve(async (request: Request) => {
         && previousRequest.machine_id === activation.machine_id.toLowerCase()
         && previousRequest.license_id) {
         const { data: previousLicense, error: previousLicenseError } = await adminClient
-          .from("licenses").select("signed_document").eq("id", previousRequest.license_id).maybeSingle();
-        if (!previousLicenseError && previousLicense?.signed_document) {
+          .from("licenses").select("signed_document, status").eq("id", previousRequest.license_id).maybeSingle();
+        if (!previousLicenseError && previousLicense?.status === "active" && previousLicense?.signed_document) {
           return json(200, { license: previousLicense.signed_document, idempotent_retry: true });
         }
       }

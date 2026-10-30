@@ -6,6 +6,7 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using EHAinElTurck.Plannings.Licensing;
 
 namespace EHAinElTurck.Plannings
 {
@@ -71,22 +72,25 @@ namespace EHAinElTurck.Plannings
                     return;
                 }
 
-                // 3. Démarrage du serveur HTTP local
+                // 3. Initialisation du moteur natif de licences hors ligne
+                LicenseRuntime.Initialize(_appDataDir);
+
+                // 4. Démarrage du serveur HTTP local
                 StartLocalWebServer();
 
-                // 4. Sauvegarder le port actif pour les instances suivantes
+                // 5. Sauvegarder le port actif pour les instances suivantes
                 SaveActivePort(_activePort);
 
-                // 5. Création de l'icône dans la zone de notification (Systray)
+                // 6. Création de l'icône dans la zone de notification (Systray)
                 SetupTrayIcon();
 
-                // 6. Ouverture de l'application dans le navigateur
+                // 7. Ouverture de l'application dans le navigateur
                 OpenBrowser("http://127.0.0.1:" + _activePort + "/");
 
-                // 7. Boucle de messages Windows
+                // 8. Boucle de messages Windows
                 Application.Run();
 
-                // 8. Arrêt propre
+                // 9. Arrêt propre
                 StopLocalWebServer();
             }
         }
@@ -173,6 +177,16 @@ namespace EHAinElTurck.Plannings
                 res.AddHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
                 res.AddHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
+                string rawUrl = req.Url.AbsolutePath;
+
+                // License endpoints are loopback-only and reject cross-origin browser requests.
+                if (rawUrl.StartsWith("/api/license/", StringComparison.OrdinalIgnoreCase)
+                    && !IsAllowedLocalLicenseRequest(req))
+                {
+                    WriteJsonResponse(res, 403, "{\"error\":\"LOCAL_ORIGIN_REJECTED\"}");
+                    return;
+                }
+
                 if (req.HttpMethod == "OPTIONS")
                 {
                     res.StatusCode = 200;
@@ -180,7 +194,35 @@ namespace EHAinElTurck.Plannings
                     return;
                 }
 
-                string rawUrl = req.Url.AbsolutePath;
+                // --- Endpoints d'API Locaux Système ---
+                if (rawUrl.Equals("/api/license/status", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (req.HttpMethod != "GET") { WriteJsonResponse(res, 405, "{\"error\":\"METHOD_NOT_ALLOWED\"}"); return; }
+                    WriteJsonResponse(res, 200, LicenseRuntime.GetStatusJson());
+                    return;
+                }
+
+                if (rawUrl.Equals("/api/license/machine", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (req.HttpMethod != "GET") { WriteJsonResponse(res, 405, "{\"error\":\"METHOD_NOT_ALLOWED\"}"); return; }
+                    WriteJsonResponse(res, 200, LicenseRuntime.GetMachineJson());
+                    return;
+                }
+
+                if (rawUrl.Equals("/api/license/request", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (req.HttpMethod != "POST") { WriteJsonResponse(res, 405, "{\"error\":\"METHOD_NOT_ALLOWED\"}"); return; }
+                    WriteJsonResponse(res, 200, LicenseRuntime.CreateRequestJson());
+                    return;
+                }
+
+                if (rawUrl.Equals("/api/license/activate", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (req.HttpMethod != "POST") { WriteJsonResponse(res, 405, "{\"error\":\"METHOD_NOT_ALLOWED\"}"); return; }
+                    string responseQr = ReadLimitedBody(req, 16384);
+                    WriteJsonResponse(res, 200, LicenseRuntime.AcceptResponseJson(responseQr));
+                    return;
+                }
 
                 // --- Endpoints d'API Locaux Système ---
                 if (rawUrl.Equals("/api/ping", StringComparison.OrdinalIgnoreCase))
@@ -291,6 +333,54 @@ namespace EHAinElTurck.Plannings
             {
                 try { res.Close(); } catch { }
             }
+        }
+
+        private static bool IsAllowedLocalLicenseRequest(HttpListenerRequest req)
+        {
+            try
+            {
+                if (req.Url == null
+                    || !(String.Equals(req.Url.Host, "127.0.0.1", StringComparison.OrdinalIgnoreCase)
+                        || String.Equals(req.Url.Host, "localhost", StringComparison.OrdinalIgnoreCase))
+                    || req.Url.Port != _activePort || req.RemoteEndPoint == null
+                    || !IPAddress.IsLoopback(req.RemoteEndPoint.Address)) return false;
+
+                string origin = req.Headers["Origin"];
+                if (!String.IsNullOrEmpty(origin))
+                {
+                    string expected = "http://" + req.Url.Host + ":" + _activePort;
+                    if (!String.Equals(origin, expected, StringComparison.OrdinalIgnoreCase)) return false;
+                }
+                return true;
+            }
+            catch { return false; }
+        }
+
+        private static string ReadLimitedBody(HttpListenerRequest req, int maxBytes)
+        {
+            if (req.ContentLength64 > maxBytes) throw new InvalidDataException("Request body too large.");
+            using (MemoryStream stream = new MemoryStream())
+            {
+                byte[] buffer = new byte[4096];
+                int total = 0;
+                int read;
+                while ((read = req.InputStream.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    total += read;
+                    if (total > maxBytes) throw new InvalidDataException("Request body too large.");
+                    stream.Write(buffer, 0, read);
+                }
+                return Encoding.UTF8.GetString(stream.ToArray());
+            }
+        }
+
+        private static void WriteJsonResponse(HttpListenerResponse response, int statusCode, string json)
+        {
+            byte[] bytes = Encoding.UTF8.GetBytes(json ?? "{}");
+            response.StatusCode = statusCode;
+            response.ContentType = "application/json; charset=utf-8";
+            response.ContentLength64 = bytes.Length;
+            response.OutputStream.Write(bytes, 0, bytes.Length);
         }
 
         private static string GetMimeType(string extension)

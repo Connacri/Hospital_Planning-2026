@@ -6,7 +6,7 @@ using Microsoft.Win32;
 
 namespace EHAinElTurck.Plannings.Licensing
 {
-    /// <summary>Stable-ish v1 fingerprint; MAC addresses are excluded to avoid adapter churn.</summary>
+    /// <summary>Versioned hardware fingerprint; MAC addresses are excluded to avoid adapter churn.</summary>
     public static class MachineFingerprint
     {
         public static string Create()
@@ -14,7 +14,11 @@ namespace EHAinElTurck.Plannings.Licensing
             string machineGuid = ReadMachineGuid();
             if (String.IsNullOrWhiteSpace(machineGuid)) throw new InvalidOperationException("Windows MachineGuid unavailable.");
             string biosUuid = ReadBiosUuid();
-            string material = "HPL-MACHINE-V1\n" + Normalize(machineGuid) + "\n" + Normalize(biosUuid);
+            string tpmPublicKeyHash;
+            bool hasTpm = TpmKeyProvider.TryGetPublicKeyHash(out tpmPublicKeyHash);
+            string tpmComponent = hasTpm ? tpmPublicKeyHash : "TPM-UNAVAILABLE";
+            string material = "HPL-MACHINE-V2\n" + Normalize(machineGuid) + "\n"
+                + Normalize(biosUuid) + "\n" + tpmComponent;
             using (SHA256 sha = SHA256.Create())
             {
                 byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(material));

@@ -216,3 +216,61 @@
   );
 }
 
+
+
+/* Native Windows license activation overlay */
+.license-gate-loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  color: #64748b;
+  font: 600 14px system-ui, sans-serif;
+}
+.license-activation-page {
+  min-height: 100vh;
+  padding: 28px 16px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  background: #eef2f6;
+  color: #172b3d;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.license-activation-card {
+  width: min(100%, 680px);
+  padding: 28px;
+  border: 1px solid #dbe4ec;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 12px 36px rgba(16, 42, 67, .08);
+}
+.license-brand {
+  width: 48px; height: 48px; display: grid; place-items: center;
+  border-radius: 14px; background: #153d5c; color: #fff; font-weight: 800;
+}
+.license-eyebrow { margin: 16px 0 6px; color: #607b93; font-size: 11px; font-weight: 800; letter-spacing: .12em; }
+.license-activation-card h1 { margin: 0 0 10px; font-size: 28px; }
+.license-activation-card h2 { margin: 24px 0 10px; font-size: 17px; }
+.license-muted { color: #6b7e90; font-size: 13px; line-height: 1.55; }
+.license-status, .license-machine {
+  display: grid; grid-template-columns: 90px 1fr; gap: 8px 12px;
+  padding: 14px; margin: 16px 0; border-radius: 12px; background: #f4f7fa; font-size: 13px;
+}
+.license-status span, .license-machine span { color: #718195; }
+.license-status code, .license-machine code { overflow-wrap: anywhere; font-size: 11px; }
+.license-qr { display: flex; justify-content: center; padding: 14px; }
+.license-response-scanner { max-width: 380px; margin: 12px auto; overflow: hidden; border-radius: 14px; }
+.license-response-scanner video { width: 100%; border-radius: 14px; }
+.license-paste-label { display: grid; gap: 8px; margin: 16px 0; font-size: 13px; font-weight: 700; }
+.license-paste-label textarea {
+  width: 100%; padding: 12px; border: 1px solid #ccd7e2; border-radius: 10px;
+  font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; resize: vertical;
+}
+.license-primary-button {
+  width: 100%; padding: 14px 18px; border: 0; border-radius: 11px;
+  background: #14517d; color: #fff; font-weight: 750; cursor: pointer;
+}
+.license-primary-button:disabled { opacity: .55; cursor: wait; }
+.license-error { padding: 12px 14px; border-radius: 10px; background: #fff0ef; color: #a1372e; font-size: 13px; }
+.license-footnote { margin-top: 18px; color: #7b8b9a; font-size: 11px; line-height: 1.5; }
+@media (max-width: 520px) { .license-activation-card { padding: 18px; } .license-activation-card h1 { font-size: 23px; } }

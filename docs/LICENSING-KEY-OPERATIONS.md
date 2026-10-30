@@ -4,7 +4,7 @@ The license signing key is the root of trust for every offline desktop license. 
 
 ## Generate an Ed25519 keypair on Windows
 
-Prerequisites: OpenSSL 3.x and the Supabase CLI. Run from a private working directory outside the repository.
+Prerequisites: OpenSSL 3.x and the Supabase CLI. Run from a private BitLocker-protected working directory outside the repository. Do not paste private key material into chat, source control, CI logs or shell command history.
 
     $work = Join-Path $env:USERPROFILE "HPL-License-KeyCeremony"
     New-Item -ItemType Directory -Force $work | Out-Null
@@ -19,7 +19,15 @@ Prerequisites: OpenSSL 3.x and the Supabase CLI. Run from a private working dire
     $rawPublicKey = $spki[($spki.Length - 32)..($spki.Length - 1)]
     $publicRaw = [Convert]::ToBase64String($rawPublicKey)
 
-    supabase secrets set --project-ref YOUR_PROJECT_REF "LICENSE_ED25519_PRIVATE_KEY_PKCS8_B64=$privatePkcs8" "LICENSE_ED25519_PUBLIC_KEY_B64=$publicRaw" "LICENSE_SIGNING_KEY_VERSION=1"
+    $envFile = Join-Path $work "supabase-secrets.env"
+    $utf8 = New-Object System.Text.UTF8Encoding($false)
+    [IO.File]::WriteAllLines($envFile, [string[]]@(
+      "LICENSE_ED25519_PRIVATE_KEY_PKCS8_B64=$privatePkcs8",
+      "LICENSE_ED25519_PUBLIC_KEY_B64=$publicRaw",
+      "LICENSE_SIGNING_KEY_VERSION=1"
+    ), $utf8)
+    supabase secrets set --project-ref YOUR_PROJECT_REF --env-file $envFile
+    Remove-Item $envFile -Force
 
 Verify the generated keypair with an independent Ed25519 test before issuing production licenses. The Edge Function also performs a sign/verify pair check before issuing.
 
@@ -34,7 +42,16 @@ The current verifier accepts an injected dictionary of version -> 32-byte raw pu
     supabase db push
     supabase functions deploy issue-license --project-ref YOUR_PROJECT_REF
 
-Provision an administrator by creating the user in Supabase Auth, then inserting that user's UUID into public.license_admins with role owner or issuer through a trusted SQL session.
+Provision an administrator by creating the user in Supabase Auth, then inserting that user's UUID into public.license_admins through a trusted SQL session.
+
+Example for the first owner account (replace the UUID with the Auth user's actual id):
+
+    insert into public.license_admins (user_id, role, active)
+    values ('00000000-0000-4000-8000-000000000000', 'owner', true)
+    on conflict (user_id) do update
+      set role = excluded.role, active = true;
+
+Assign issuer or viewer to subsequent accounts as appropriate. Perpetual/custom issuance and revocation are owner-only.
 
 Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in admin-android/.env before building the admin APK. These are public client settings; do not use the service-role key here.
 
@@ -46,3 +63,13 @@ Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in admin-android/.env before bu
 - For rotation, add a new key version and pin its public key in a desktop release before changing the server's signing version.
 - Keep previous public keys in the desktop verifier until all licenses signed by them are no longer valid.
 - Revoke compromised signing keys operationally; offline clients cannot learn about revocation until they reconnect or receive a software update.
+
+
+## Administration and revocation
+
+Deploy the additional authenticated functions after the migration:
+
+    supabase functions deploy list-licenses --project-ref YOUR_PROJECT_REF
+    supabase functions deploy revoke-license --project-ref YOUR_PROJECT_REF
+
+Owner, issuer and viewer roles may list licenses. Only owner may revoke. Revocation updates the license and writes its audit event in one database transaction. A fully offline desktop cannot be revoked remotely. This codebase does not yet include a signed online revocation check; that must be added or a software update delivered before an offline installation can learn of a revocation.

@@ -37,22 +37,22 @@ $references = @(
 
 $launcherArgs = @(
     '/target:winexe', '/platform:anycpu', '/optimize+',
-    '/win32icon:public/icon.ico',
-    '/out:bin/EH_AinElTurck_Plannings.exe',
-    'windows/Launcher.cs'
+    ('/win32icon:' + (Join-Path $repoRoot 'public\icon.ico')),
+    ('/out:' + (Join-Path $repoRoot 'bin\EH_AinElTurck_Plannings.exe')),
+    (Join-Path $repoRoot 'windows\Launcher.cs')
 ) + $licenseSources + $references
 Write-Host 'Compiling native launcher and offline licensing engine...'
 & $csc @launcherArgs
 if ($LASTEXITCODE -ne 0) { throw "Launcher compilation failed with exit code $LASTEXITCODE" }
 Copy-Item $cryptoDll -Destination (Join-Path $repoRoot 'bin/BouncyCastle.Cryptography.dll') -Force
 
-$testArgs = @('/target:exe', '/optimize+', '/out:bin/LicenseCryptoSelfTest.exe') +
-    $licenseSources + @('tests/licensing/LicenseCryptoSelfTest.cs') + $references
+$testArgs = @('/target:exe', '/optimize+', ('/out:' + (Join-Path $repoRoot 'bin\LicenseCryptoSelfTest.exe'))) +
+    $licenseSources + @((Join-Path $repoRoot 'tests\licensing\LicenseCryptoSelfTest.cs')) + $references
 Write-Host 'Compiling Ed25519 known-answer and tamper tests...'
 & $csc @testArgs
 if ($LASTEXITCODE -ne 0) { throw "License self-test compilation failed with exit code $LASTEXITCODE" }
-& (Join-Path $repoRoot 'bin/LicenseCryptoSelfTest.exe')
+& (Join-Path $repoRoot 'bin\LicenseCryptoSelfTest.exe')
 if ($LASTEXITCODE -ne 0) { throw "License crypto self-tests failed with exit code $LASTEXITCODE" }
 
 Write-Host 'Windows launcher build and crypto self-tests completed successfully.'
-Get-Item 'bin/EH_AinElTurck_Plannings.exe','bin/BouncyCastle.Cryptography.dll' | Format-Table Name,Length
+Get-Item (Join-Path $repoRoot 'bin\EH_AinElTurck_Plannings.exe'), (Join-Path $repoRoot 'bin\BouncyCastle.Cryptography.dll') | Format-Table Name,Length

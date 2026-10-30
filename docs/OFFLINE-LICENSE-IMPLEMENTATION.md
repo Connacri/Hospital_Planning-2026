@@ -21,3 +21,10 @@ A local serial check, hidden JavaScript variable, local HTTP endpoint or hardwar
 ## Rollout safety
 
 All work is isolated on `feature/offline-license-system`. The initial commit adds contracts and policy only. It does not modify the production launcher, React application, Supabase schema, Android build or installer. The licensing gate must not be enabled until the cryptographic verifier and recovery path are tested. Existing hospital records and backup paths must remain untouched.
+
+
+## Native activation integration
+
+The C# launcher now exposes loopback-only license status, machine identity, request QR and response activation endpoints. The React app wraps its existing application in a license gate only when it is running from the installed Windows launcher's reserved loopback port range. Android and web deployments remain unaffected. The activation screen shows the request QR, scans the administrator response QR, and offers a manual JSON paste fallback.
+
+The public-key ring is intentionally empty in source. Until the production public key from the key ceremony is pinned in TrustedPublicKeyRing.cs, the native runtime reports configured=false and does not block the hospital. Once pinned, the gate enforces the signed license state. This avoids shipping a placeholder trust anchor or locking out the hospital before key provisioning.
