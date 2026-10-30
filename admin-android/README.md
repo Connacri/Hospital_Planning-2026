@@ -28,3 +28,12 @@ npx cap open android
 ```
 
 The Android application ID is currently dz.sante.eh.ainelturck.licenseadmin; change it before first Play Store publication if your package naming policy requires another identifier.
+
+
+## Camera permission
+
+After running capacitor add android, ensure android/app/src/main/AndroidManifest.xml contains this permission inside the manifest element:
+
+    <uses-permission android:name="android.permission.CAMERA" />
+
+The Android CI workflow inserts this permission into its generated project before building. If the camera is denied or unavailable, the admin screen also supports pasting the activation QR JSON manually.
