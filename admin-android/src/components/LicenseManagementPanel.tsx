@@ -77,13 +77,17 @@ export default function LicenseManagementPanel() {
 
     {rows.length === 0 && !loading && <p className="muted">Aucune licence trouvée.</p>}
     <div className="license-list">
-      {rows.map(row => <article className="license-row" key={row.id}>
+      {rows.map(row => {
+        const expired = row.status === "active" && !!row.expires_at_utc && new Date(row.expires_at_utc).getTime() <= Date.now();
+        const statusLabel = row.status === "revoked" ? "Révoquée" : expired ? "Expirée" : "Active";
+        const statusClass = row.status === "revoked" ? "status-revoked" : expired ? "status-expired" : "status-active";
+        return <article className="license-row" key={row.id}>
         <div className="license-row-main">
-          <div className="license-row-title"><strong>{row.serial}</strong><span className={row.status === "active" ? "status-active" : "status-revoked"}>{row.status === "active" ? "Active" : "Révoquée"}</span></div>
+          <div className="license-row-title"><strong>{row.serial}</strong><span className={statusClass}>{statusLabel}</span></div>
           <div className="license-row-meta">{row.license_type === "PERPETUAL" ? "Perpétuelle" : "Temporaire"} · Expiration : {dateLabel(row.expires_at_utc)}</div>
           <code className="license-machine-short">{row.machine_id.slice(0, 12)}…{row.machine_id.slice(-8)}</code>
         </div>
-        {role === "owner" && row.status === "active" && <button className="danger small" onClick={() => { setTarget(row); setReason("Révocation administrative"); }}>Révoquer</button>}
+        {role === "owner" && row.status === "active" && !expired && <button className="danger small" onClick={() => { setTarget(row); setReason("Révocation administrative"); }}>Révoquer</button>}
         {target?.id === row.id && <div className="revoke-confirm">
           <label>Motif de révocation<input value={reason} onChange={event => setReason(event.target.value)} maxLength={500} /></label>
           <div className="revoke-actions">
@@ -91,7 +95,8 @@ export default function LicenseManagementPanel() {
             <button className="secondary" onClick={() => setTarget(null)} disabled={busy}>Annuler</button>
           </div>
         </div>}
-      </article>)}
+      </article>;
+      })}
     </div>
     {notice && <p className="notice">{notice}</p>}
     {error && <p className="error">{error}</p>}
