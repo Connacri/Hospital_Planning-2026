@@ -68,7 +68,7 @@ namespace EHAinElTurck.Plannings.Licensing
             catch
             {
                 CngKeyCreationParameters parameters = new CngKeyCreationParameters();
-                parameters.Provider = CngProvider.MicrosoftPlatformCryptoProvider;
+                parameters.Provider = PlatformProvider;
                 parameters.ExportPolicy = CngExportPolicies.None;
                 parameters.KeyUsage = CngKeyUsages.Signing;
                 return CngKey.Create(CngAlgorithm.ECDsaP256, KeyName, parameters);
