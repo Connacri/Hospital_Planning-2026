@@ -15,19 +15,20 @@ namespace EHAinElTurck.Plannings.Licensing
         {
             lock (Sync)
             {
+                _configured = TrustedPublicKeyRing.IsConfigured;
                 try
                 {
-                    _machineId = MachineFingerprint.Create();
                     IDictionary<int, byte[]> keys = TrustedPublicKeyRing.Create();
+                    _configured = keys.Count > 0;
+                    _machineId = MachineFingerprint.Create();
                     _protocol = new ActivationProtocolService(appDataDirectory, _machineId,
                         new Ed25519LicenseVerifier(keys));
-                    _configured = keys.Count > 0;
                     _initializationError = String.Empty;
                 }
                 catch
                 {
                     _protocol = null;
-                    _configured = false;
+                    // Preserve configured=true when a pinned key exists but native initialization fails.
                     _initializationError = "MACHINE_OR_LICENSE_ENGINE_INITIALIZATION_FAILED";
                 }
             }
