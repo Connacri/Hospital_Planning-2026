@@ -11,7 +11,7 @@ export default function QrScanner({ onDecoded, onError }: Props) {
   const deliveredRef = useRef(false);
 
   useEffect(() => {
-    const scanner = new Html5Qrcode("license-qr-reader", { verbose: false });
+    const scanner = new Html5Qrcode("license-qr-reader", false);
     scannerRef.current = scanner;
     let disposed = false;
 
