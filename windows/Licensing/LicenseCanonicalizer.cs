@@ -32,6 +32,7 @@ namespace EHAinElTurck.Plannings.Licensing
             {
                 WriteString(writer, "HPL-LICENSE-SIGNATURE-V1");
                 writer.Write(license.Version);
+                WriteString(writer, license.SignatureAlgorithm);
                 WriteString(writer, license.ProductId);
                 WriteString(writer, license.LicenseId);
                 WriteString(writer, license.Serial.ToUpperInvariant());
