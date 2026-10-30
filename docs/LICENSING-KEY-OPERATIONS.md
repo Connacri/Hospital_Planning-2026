@@ -55,4 +55,4 @@ Deploy the additional authenticated functions after the migration:
     supabase functions deploy list-licenses --project-ref YOUR_PROJECT_REF
     supabase functions deploy revoke-license --project-ref YOUR_PROJECT_REF
 
-Owner, issuer and viewer roles may list licenses. Only owner may revoke. Revocation updates the license and writes its audit event in one database transaction. An offline desktop cannot learn about a revocation until it reconnects or receives an update.
+Owner, issuer and viewer roles may list licenses. Only owner may revoke. Revocation updates the license and writes its audit event in one database transaction. A fully offline desktop cannot be revoked remotely. This codebase does not yet include a signed online revocation check; that must be added or a software update delivered before an offline installation can learn of a revocation.
