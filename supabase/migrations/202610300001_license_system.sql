@@ -198,6 +198,40 @@ begin
 end;
 $finalize$;
 
+create or replace function public.revoke_license_atomic(
+    p_license_id uuid,
+    p_actor_user_id uuid,
+    p_reason text
+) returns boolean
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $revoke$
+begin
+    update public.licenses
+       set status = 'revoked',
+           revoked_at = now(),
+           revoked_by = p_actor_user_id
+     where id = p_license_id
+       and status = 'active';
+
+    if not found then
+        return false;
+    end if;
+
+    insert into public.license_events (
+        license_id, actor_user_id, event_type, details
+    ) values (
+        p_license_id,
+        p_actor_user_id,
+        'license_revoked',
+        jsonb_build_object('reason', left(coalesce(p_reason, ''), 500))
+    );
+
+    return true;
+end;
+$revoke$;
+
 alter table public.license_admins enable row level security;
 alter table public.license_signing_keys enable row level security;
 alter table public.licenses enable row level security;
@@ -213,6 +247,8 @@ grant all on public.license_admins, public.license_signing_keys, public.licenses
 revoke all on function public.claim_license_request(uuid, text, text, timestamptz, uuid) from public, anon, authenticated;
 revoke all on function public.release_license_request(uuid, uuid) from public, anon, authenticated;
 revoke all on function public.finalize_license_issuance(jsonb, uuid, uuid, uuid, text) from public, anon, authenticated;
+revoke all on function public.revoke_license_atomic(uuid, uuid, text) from public, anon, authenticated;
 grant execute on function public.claim_license_request(uuid, text, text, timestamptz, uuid) to service_role;
 grant execute on function public.release_license_request(uuid, uuid) to service_role;
 grant execute on function public.finalize_license_issuance(jsonb, uuid, uuid, uuid, text) to service_role;
+grant execute on function public.revoke_license_atomic(uuid, uuid, text) to service_role;
