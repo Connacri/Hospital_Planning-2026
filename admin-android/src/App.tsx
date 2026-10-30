@@ -186,7 +186,7 @@ export default function App() {
 
     {signedLicense && <section className="panel issued-panel">
       <div className="step-heading"><span>03</span><div><h2>Licence prête</h2><p className="muted">Scannez ce QR depuis le poste Windows.</p></div></div>
-      <div className="qr-output"><QRCodeSVG value={qrValue} size={280} level="H" includeMargin /></div>
+      <div className="qr-output"><QRCodeSVG value={qrValue} size={320} level="H" includeMargin /></div>
       <div className="serial-box"><span>NUMÉRO DE LICENCE</span><strong>{signedLicense.serial}</strong></div>
       <div className="machine-row"><span>Type</span><strong>{signedLicense.license_type === "PERPETUAL" ? "Perpétuelle" : "Temporaire"}</strong></div>
       <div className="machine-row"><span>Expiration</span><strong>{formatDate(signedLicense.expires_at_utc)}</strong></div>
