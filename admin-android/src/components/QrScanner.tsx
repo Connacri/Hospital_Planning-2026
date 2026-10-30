@@ -24,19 +24,18 @@ export default function QrScanner({ onDecoded, onError }: Props) {
         onDecoded(decodedText);
       },
       () => undefined,
-    ).catch((error: unknown) => {
+    ).then(() => {
+      if (disposed && scanner.isScanning) return scanner.stop();
+    }).catch((error: unknown) => {
       if (!disposed) onError(error instanceof Error ? error.message : "Caméra indisponible.");
+    }).finally(() => {
+      if (disposed) scanner.clear();
     });
 
     return () => {
       disposed = true;
-      const active = scannerRef.current;
       scannerRef.current = null;
-      if (active?.isScanning) {
-        active.stop().catch(() => undefined).finally(() => active.clear());
-      } else {
-        active?.clear();
-      }
+      if (scanner.isScanning) scanner.stop().catch(() => undefined).finally(() => scanner.clear());
     };
   }, [onDecoded, onError]);
 
