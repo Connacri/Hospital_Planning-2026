@@ -26,6 +26,9 @@ export default function LicenseGate({ children }: Props) {
         return;
       }
       const value = await response.json() as LicenseStatus;
+      if (typeof value.configured !== "boolean" || typeof value.state !== "string") {
+        throw new Error("Invalid native license status response.");
+      }
       setStatus(value);
       setMode("native");
     } catch {
