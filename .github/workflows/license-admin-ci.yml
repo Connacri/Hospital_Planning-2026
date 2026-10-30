@@ -42,6 +42,9 @@ jobs:
         with:
           packages: platform-tools
 
+      - name: Install Android 36 platform and build tools
+        run: yes | sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
       - name: Create and sync Capacitor Android project
         working-directory: admin-android
         run: |
