@@ -5,7 +5,8 @@ Set-Location $repoRoot
 $nuget = Join-Path $env:TEMP 'nuget.exe'
 if (-not (Test-Path $nuget)) {
     Write-Host 'Downloading NuGet CLI...'
-    Invoke-WebRequest -Uri 'https://dist.nuget.org/win-x86-commandline/latest/nuget.exe' -OutFile $nuget
+    $client = New-Object System.Net.WebClient
+    $client.DownloadFile('https://dist.nuget.org/win-x86-commandline/latest/nuget.exe', $nuget)
 }
 & $nuget install windows/Licensing/packages.config -OutputDirectory packages -NonInteractive -Verbosity quiet
 if ($LASTEXITCODE -ne 0) { throw 'NuGet dependency restore failed.' }
@@ -18,13 +19,9 @@ if (-not (Test-Path $csc)) { $csc = Join-Path $env:WINDIR 'Microsoft.NET/Framewo
 if (-not (Test-Path $csc)) { throw '.NET Framework C# compiler (csc.exe) not found.' }
 
 New-Item -ItemType Directory -Force -Path (Join-Path $repoRoot 'bin') | Out-Null
-$licenseSources = Get-ChildItem -Path (Join-Path $repoRoot 'windows/Licensing') -Filter '*.cs' -File | ForEach-Object { $_.FullName }
-$arguments = @(
-    '/target:winexe', '/platform:anycpu', '/optimize+',
-    '/win32icon:public/icon.ico',
-    '/out:bin/EH_AinElTurck_Plannings.exe',
-    'windows/Launcher.cs'
-) + $licenseSources + @(
+$licenseSources = Get-ChildItem -Path (Join-Path $repoRoot 'windows/Licensing') -Filter '*.cs' |
+    Where-Object { -not $_.PSIsContainer } | ForEach-Object { $_.FullName }
+$references = @(
     '/reference:System.dll',
     '/reference:System.Core.dll',
     '/reference:System.Drawing.dll',
@@ -34,9 +31,25 @@ $arguments = @(
     '/reference:System.Management.dll',
     "/reference:$cryptoDll"
 )
+
+$launcherArgs = @(
+    '/target:winexe', '/platform:anycpu', '/optimize+',
+    '/win32icon:public/icon.ico',
+    '/out:bin/EH_AinElTurck_Plannings.exe',
+    'windows/Launcher.cs'
+) + $licenseSources + $references
 Write-Host 'Compiling native launcher and offline licensing engine...'
-& $csc @arguments
+& $csc @launcherArgs
 if ($LASTEXITCODE -ne 0) { throw "Launcher compilation failed with exit code $LASTEXITCODE" }
 Copy-Item $cryptoDll -Destination (Join-Path $repoRoot 'bin/BouncyCastle.Cryptography.dll') -Force
-Write-Host 'Build completed.'
+
+$testArgs = @('/target:exe', '/optimize+', '/out:bin/LicenseCryptoSelfTest.exe') +
+    $licenseSources + @('tests/licensing/LicenseCryptoSelfTest.cs') + $references
+Write-Host 'Compiling Ed25519 known-answer and tamper tests...'
+& $csc @testArgs
+if ($LASTEXITCODE -ne 0) { throw "License self-test compilation failed with exit code $LASTEXITCODE" }
+& (Join-Path $repoRoot 'bin/LicenseCryptoSelfTest.exe')
+if ($LASTEXITCODE -ne 0) { throw "License crypto self-tests failed with exit code $LASTEXITCODE" }
+
+Write-Host 'Windows launcher build and crypto self-tests completed successfully.'
 Get-Item 'bin/EH_AinElTurck_Plannings.exe','bin/BouncyCastle.Cryptography.dll' | Format-Table Name,Length
