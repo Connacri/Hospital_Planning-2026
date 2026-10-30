@@ -17,13 +17,16 @@ export default function ResponseQrScanner({ onDecoded, onError }: Props) {
         onDecoded(value);
       },
       () => undefined,
-    ).catch((error: unknown) => {
+    ).then(() => {
+      if (disposed && scanner.isScanning) return scanner.stop();
+    }).catch((error: unknown) => {
       if (!disposed) onError(error instanceof Error ? error.message : "Caméra indisponible.");
+    }).finally(() => {
+      if (disposed) scanner.clear();
     });
     return () => {
       disposed = true;
       if (scanner.isScanning) scanner.stop().catch(() => undefined).finally(() => scanner.clear());
-      else scanner.clear();
     };
   }, [onDecoded, onError]);
   return <div id="license-response-qr-reader" className="license-response-scanner" />;
