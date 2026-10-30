@@ -209,8 +209,8 @@ Deno.serve(async (request: Request) => {
         && previousRequest.machine_id === activation.machine_id.toLowerCase()
         && previousRequest.license_id) {
         const { data: previousLicense, error: previousLicenseError } = await adminClient
-          .from("licenses").select("signed_document").eq("id", previousRequest.license_id).maybeSingle();
-        if (!previousLicenseError && previousLicense?.signed_document) {
+          .from("licenses").select("signed_document, status").eq("id", previousRequest.license_id).maybeSingle();
+        if (!previousLicenseError && previousLicense?.status === "active" && previousLicense?.signed_document) {
           return json(200, { license: previousLicense.signed_document, idempotent_retry: true });
         }
       }
