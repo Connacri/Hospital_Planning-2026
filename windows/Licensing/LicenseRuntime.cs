@@ -39,7 +39,7 @@ namespace EHAinElTurck.Plannings.Licensing
             lock (Sync)
             {
                 if (_protocol == null)
-                    return Status(false, LicenseState.Invalid, _initializationError, false);
+                    return Status(_configured, LicenseState.Invalid, _initializationError, false);
                 if (!_configured)
                     return Status(false, LicenseState.Unactivated, "TRUSTED_PUBLIC_KEY_NOT_PINNED", false);
                 LicenseEvaluation evaluation = _protocol.EvaluateInstalledLicense(DateTime.UtcNow);
