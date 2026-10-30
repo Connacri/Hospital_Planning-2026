@@ -131,7 +131,7 @@ create or replace function public.finalize_license_issuance(
 language plpgsql
 security definer
 set search_path = public, pg_temp
-as $
+as $finalize$
 declare
     v_license_id uuid;
     v_serial text;
@@ -196,7 +196,7 @@ begin
 
     return v_license_id;
 end;
-$;
+$finalize$;
 
 alter table public.license_admins enable row level security;
 alter table public.license_signing_keys enable row level security;
