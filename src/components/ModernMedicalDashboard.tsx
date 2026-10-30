@@ -38,6 +38,7 @@ import {
 import avatarChief from '../assets/images/doctor_chief_avatar_1791546807017.jpg';
 import avatarSpecialist from '../assets/images/doctor_specialist_avatar_1791546817441.jpg';
 import avatarResident from '../assets/images/doctor_resident_avatar_1791546827755.jpg';
+import hospitalLogo from '../assets/images/eh_ain_el_turck_logo.png';
 
 // Images d'avatars de médecins avec repli garanti
 const AVATAR_CHIEF = avatarChief;
@@ -95,8 +96,12 @@ export const ModernMedicalDashboard: React.FC<ModernMedicalDashboardProps> = ({
       {/* Top Banner / Welcome Kicker */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-slate-100 shadow-sm">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-100 via-pink-50 to-amber-50 border border-rose-200/50 flex items-center justify-center text-rose-500 shadow-inner">
-            <Activity className="w-6 h-6" />
+          <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200/80 p-1 flex items-center justify-center shadow-md shrink-0 overflow-hidden">
+            <img
+              src={hospitalLogo}
+              alt="Logo E.H. Aïn El Türck"
+              className="w-full h-full object-contain"
+            />
           </div>
           <div>
             <div className="flex items-center gap-2">

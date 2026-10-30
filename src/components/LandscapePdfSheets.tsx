@@ -21,6 +21,7 @@ import {
 import { EditableText } from './EditableText';
 import { OfficialHospitalStamp, OfficialHospitalQrCode } from './OfficialStampAndQr';
 import { ValidationStatus } from './DocumentValidationModal';
+import hospitalLogo from '../assets/images/eh_ain_el_turck_logo.png';
 
 interface LandscapePdfSheetsProps {
   activeSubPage: 'all' | 'p1' | 'p2' | 'p3' | 'p4' | 'p5';
@@ -158,30 +159,38 @@ const OfficialLandscapeHeader: React.FC<{
   readOnly?: boolean;
 }> = ({ config, onUpdateConfig, compact = false, readOnly = false }) => (
   <div className="font-pdf text-black">
-    <div className="text-center leading-tight">
-      <div className={`${compact ? 'text-[18px]' : 'text-[20px]'} font-semibold tracking-tight`}>
-        <EditableText
-          value={config.republicHeader}
-          readOnly={readOnly}
-          onChange={(v) => onUpdateConfig({ republicHeader: v })}
-        />
+    <div className="flex items-center justify-between gap-4">
+      <img
+        src={hospitalLogo}
+        alt="Logo E.H. Aïn El Türck"
+        className={`${compact ? 'w-14 h-14' : 'w-18 h-18'} object-contain shrink-0`}
+      />
+      <div className="flex-1 text-center leading-tight">
+        <div className={`${compact ? 'text-[18px]' : 'text-[20px]'} font-semibold tracking-tight`}>
+          <EditableText
+            value={config.republicHeader}
+            readOnly={readOnly}
+            onChange={(v) => onUpdateConfig({ republicHeader: v })}
+          />
+        </div>
+        <div className={`${compact ? 'text-[14px]' : 'text-[15.5px]'} font-medium tracking-tight mt-0.5`}>
+          <EditableText
+            value={config.ministryHeader}
+            readOnly={readOnly}
+            onChange={(v) => onUpdateConfig({ ministryHeader: v })}
+          />
+        </div>
+        <div className={`${compact ? 'text-[14px]' : 'text-[15.5px]'} font-medium mt-0.5`}>
+          <EditableText
+            value={config.hospitalHeader}
+            readOnly={readOnly}
+            onChange={(v) => onUpdateConfig({ hospitalHeader: v })}
+          />
+        </div>
       </div>
-      <div className={`${compact ? 'text-[14px]' : 'text-[15.5px]'} font-medium tracking-tight mt-0.5`}>
-        <EditableText
-          value={config.ministryHeader}
-          readOnly={readOnly}
-          onChange={(v) => onUpdateConfig({ ministryHeader: v })}
-        />
-      </div>
-      <div className={`${compact ? 'text-[14px]' : 'text-[15.5px]'} font-medium mt-0.5`}>
-        <EditableText
-          value={config.hospitalHeader}
-          readOnly={readOnly}
-          onChange={(v) => onUpdateConfig({ hospitalHeader: v })}
-        />
-      </div>
+      <div className={`${compact ? 'w-14' : 'w-18'} shrink-0 opacity-0`} aria-hidden="true" />
     </div>
-    <div className={`${compact ? 'mt-2 text-[15px]' : 'mt-6 text-[16.5px]'} font-medium`}>
+    <div className={`${compact ? 'mt-2 text-[15px]' : 'mt-4 text-[16.5px]'} font-medium`}>
       <EditableText
         value={config.unitTitle}
         readOnly={readOnly}

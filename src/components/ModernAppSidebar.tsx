@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { SupportedLocale } from '../i18n/translations';
 import avatarChief from '../assets/images/doctor_chief_avatar_1791546807017.jpg';
+import hospitalLogo from '../assets/images/eh_ain_el_turck_logo.png';
 
 const AVATAR_CHIEF = avatarChief;
 const FALLBACK_AVATAR =
@@ -53,28 +54,19 @@ export const ModernAppSidebar: React.FC<ModernAppSidebarProps> = ({
   return (
     <aside className="no-print w-full lg:w-[82px] bg-[#1A1C29] m-2 sm:m-3 lg:m-4 rounded-[26px] sm:rounded-[32px] p-3 sm:py-5 flex lg:flex-col items-center justify-between shrink-0 shadow-2xl border border-white/5 select-none z-30">
       
-      {/* Top Brand Medical Crescent Icon */}
+      {/* Top Brand Official Hospital Logo */}
       <div className="flex lg:flex-col items-center gap-3">
         <button
           type="button"
           onClick={() => onSelectTab('dashboard')}
           title="Accueil Dashboard Médical — E.H. Aïn El Türck"
-          className="group relative w-11 h-11 rounded-full bg-[#27293A] hover:bg-[#303348] border border-white/10 flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95"
+          className="group relative w-12 h-12 rounded-2xl bg-white p-1 hover:bg-slate-50 border border-white/20 flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95 overflow-hidden"
         >
-          {/* Medical Crescent & Star (Croissant Médical Hospitalier) */}
-          <div className="relative flex items-center justify-center">
-            <svg
-              viewBox="0 0 24 24"
-              className="w-5 h-5 text-[#FF758F] transition-transform group-hover:scale-110 drop-shadow-[0_0_6px_rgba(255,117,143,0.6)]"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              {/* Croissant */}
-              <path d="M12 2.2a9.8 9.8 0 1 0 9.8 9.8c0-.52-.04-1.03-.12-1.53a8 8 0 1 1-8.15-8.15c.5-.08 1.01-.12 1.53-.12-.35 0-.7.03-1.06.08v-.08z" />
-              {/* Étoile */}
-              <polygon points="16.5,7.8 17.2,9.4 18.9,9.5 17.6,10.6 18,12.3 16.5,11.3 15,12.3 15.4,10.6 14.1,9.5 15.8,9.4" />
-            </svg>
-          </div>
+          <img
+            src={hospitalLogo}
+            alt="Logo Officiel E.H. Aïn El Türck"
+            className="w-full h-full object-contain"
+          />
         </button>
 
         {/* Separator on desktop */}
