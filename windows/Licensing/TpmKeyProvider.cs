@@ -13,6 +13,7 @@ namespace EHAinElTurck.Plannings.Licensing
     public static class TpmKeyProvider
     {
         private const string KeyName = "EH_AinElTurck_Plannings_TpmBinding_V1";
+        private static readonly CngProvider PlatformProvider = new CngProvider("Microsoft Platform Crypto Provider");
 
         public static bool TryGetPublicKeyHash(out string hash)
         {
@@ -62,7 +63,7 @@ namespace EHAinElTurck.Plannings.Licensing
         {
             try
             {
-                return CngKey.Open(KeyName, CngProvider.MicrosoftPlatformCryptoProvider);
+                return CngKey.Open(KeyName, PlatformProvider);
             }
             catch
             {
