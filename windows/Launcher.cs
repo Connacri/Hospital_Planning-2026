@@ -339,14 +339,16 @@ namespace EHAinElTurck.Plannings
         {
             try
             {
-                if (req.Url == null || !String.Equals(req.Url.Host, "127.0.0.1", StringComparison.OrdinalIgnoreCase)
+                if (req.Url == null
+                    || !(String.Equals(req.Url.Host, "127.0.0.1", StringComparison.OrdinalIgnoreCase)
+                        || String.Equals(req.Url.Host, "localhost", StringComparison.OrdinalIgnoreCase))
                     || req.Url.Port != _activePort || req.RemoteEndPoint == null
                     || !IPAddress.IsLoopback(req.RemoteEndPoint.Address)) return false;
 
                 string origin = req.Headers["Origin"];
                 if (!String.IsNullOrEmpty(origin))
                 {
-                    string expected = "http://127.0.0.1:" + _activePort;
+                    string expected = "http://" + req.Url.Host + ":" + _activePort;
                     if (!String.Equals(origin, expected, StringComparison.OrdinalIgnoreCase)) return false;
                 }
                 return true;
