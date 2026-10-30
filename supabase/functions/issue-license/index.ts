@@ -157,10 +157,10 @@ Deno.serve(async (request: Request) => {
 
     const publicKeyBase64 = encodeBase64(publicKey);
     const { data: existingKey, error: keyReadError } = await adminClient
-      .from("license_signing_keys").select("public_key_base64, algorithm")
+      .from("license_signing_keys").select("public_key_base64, algorithm, active")
       .eq("key_version", keyVersion).maybeSingle();
     if (keyReadError) throw new Error("SIGNING_KEY_LOOKUP_FAILED");
-    if (existingKey && (existingKey.public_key_base64 !== publicKeyBase64 || existingKey.algorithm !== "Ed25519")) {
+    if (existingKey && (existingKey.public_key_base64 !== publicKeyBase64 || existingKey.algorithm !== "Ed25519" || !existingKey.active)) {
       throw new Error("SIGNING_KEY_VERSION_ALREADY_BOUND");
     }
     if (!existingKey) {
@@ -170,9 +170,9 @@ Deno.serve(async (request: Request) => {
       if (keyInsertError) {
         if (keyInsertError.code !== "23505") throw new Error("SIGNING_PUBLIC_KEY_REGISTRATION_FAILED");
         const { data: racedKey, error: racedKeyError } = await adminClient
-          .from("license_signing_keys").select("public_key_base64, algorithm")
+          .from("license_signing_keys").select("public_key_base64, algorithm, active")
           .eq("key_version", keyVersion).maybeSingle();
-        if (racedKeyError || !racedKey || racedKey.public_key_base64 !== publicKeyBase64 || racedKey.algorithm !== "Ed25519") {
+        if (racedKeyError || !racedKey || racedKey.public_key_base64 !== publicKeyBase64 || racedKey.algorithm !== "Ed25519" || !racedKey.active) {
           throw new Error("SIGNING_KEY_VERSION_ALREADY_BOUND");
         }
       }
@@ -190,7 +190,24 @@ Deno.serve(async (request: Request) => {
       p_claim_token: claimToken,
     });
     if (claimError) throw new Error("ACTIVATION_REQUEST_CLAIM_FAILED");
-    if (claimed !== true) return json(409, { error: "ACTIVATION_REQUEST_ALREADY_USED" });
+    if (claimed !== true) {
+      // Idempotent retry: if the original issuance committed but the response was lost,
+      // return the exact same signed document instead of issuing a second license.
+      const { data: previousRequest, error: previousRequestError } = await adminClient
+        .from("license_requests").select("status, nonce_hash, machine_id, license_id")
+        .eq("request_id", requestUuid).maybeSingle();
+      if (!previousRequestError && previousRequest && previousRequest.status === "issued"
+        && previousRequest.nonce_hash === nonceHash
+        && previousRequest.machine_id === activation.machine_id.toLowerCase()
+        && previousRequest.license_id) {
+        const { data: previousLicense, error: previousLicenseError } = await adminClient
+          .from("licenses").select("signed_document").eq("id", previousRequest.license_id).maybeSingle();
+        if (!previousLicenseError && previousLicense?.signed_document) {
+          return json(200, { license: previousLicense.signed_document, idempotent_retry: true });
+        }
+      }
+      return json(409, { error: "ACTIVATION_REQUEST_ALREADY_USED_OR_IN_PROGRESS" });
+    }
     claim = { requestId: requestUuid, claimToken };
 
     const issuedAt = new Date().toISOString();
@@ -199,73 +216,40 @@ Deno.serve(async (request: Request) => {
       : new Date(Date.parse(issuedAt) + durationDays * 86400000).toISOString();
     const features = ["FULL_ACCESS"];
 
-    let saved: Record<string, unknown> | null = null;
     let signedDocument: Record<string, unknown> | null = null;
     for (let attempt = 0; attempt < 5; attempt++) {
-      const serial = randomSerial();
       const document = {
         version: 1,
         signature_algorithm: "Ed25519",
         product_id: PRODUCT_ID,
         license_id: crypto.randomUUID(),
-        serial,
+        serial: randomSerial(),
         machine_id: activation.machine_id.toLowerCase(),
         request_nonce: activation.nonce,
         license_type: licenseType,
         issued_at_utc: issuedAt,
         expires_at_utc: expiresAt,
         features,
-        signature_algorithm: "Ed25519",
         signing_key_version: keyVersion,
       };
       const signature = await signDocument(document, privateKeyPkcs8);
       const completeDocument = { ...document, signature };
-      const { data: inserted, error: insertError } = await adminClient.from("licenses").insert({
-        id: document.license_id,
-        serial,
-        product_id: PRODUCT_ID,
-        machine_id: document.machine_id,
-        license_type: licenseType,
-        issued_at_utc: issuedAt,
-        expires_at_utc: expiresAt,
-        features,
-        request_id: requestUuid,
-        request_nonce_hash: nonceHash,
-        signing_key_version: keyVersion,
-        signature_base64: signature,
-        signed_document: completeDocument,
-        created_by: authData.user.id,
-      }).select("id, serial").single();
-      if (!insertError) {
-        saved = inserted;
+      const { data: finalizedId, error: finalizeError } = await adminClient.rpc("finalize_license_issuance", {
+        p_license_document: completeDocument,
+        p_actor_user_id: authData.user.id,
+        p_request_id: requestUuid,
+        p_claim_token: claimToken,
+        p_nonce_hash: nonceHash,
+      });
+      if (!finalizeError) {
+        if (finalizedId !== document.license_id) throw new Error("LICENSE_FINALIZATION_ID_MISMATCH");
         signedDocument = completeDocument;
         licenseId = document.license_id;
         break;
       }
-      if (insertError.code !== "23505") throw new Error("LICENSE_PERSIST_FAILED");
+      if (finalizeError.code !== "23505") throw new Error("LICENSE_FINALIZATION_FAILED");
     }
-    if (!saved || !signedDocument || !licenseId) throw new Error("SERIAL_ALLOCATION_FAILED");
-
-    const { data: updatedRequest, error: consumeError } = await adminClient
-      .from("license_requests")
-      .update({ status: "issued", consumed_at: new Date().toISOString(), license_id: licenseId })
-      .eq("request_id", requestUuid)
-      .eq("claim_token", claimToken)
-      .is("consumed_at", null)
-      .select("request_id")
-      .maybeSingle();
-    if (consumeError || !updatedRequest) {
-      await adminClient.from("licenses").update({ status: "revoked", revoked_at: new Date().toISOString() }).eq("id", licenseId);
-      throw new Error("ACTIVATION_REQUEST_CONSUME_FAILED");
-    }
-
-    await adminClient.from("license_events").insert({
-      license_id: licenseId,
-      request_id: requestUuid,
-      actor_user_id: authData.user.id,
-      event_type: "license_issued",
-      details: { serial: saved.serial, license_type: licenseType, duration_days: durationDays ?? null },
-    });
+    if (!signedDocument || !licenseId) throw new Error("SERIAL_ALLOCATION_FAILED");
 
     return json(200, { license: signedDocument });
   } catch (error) {
