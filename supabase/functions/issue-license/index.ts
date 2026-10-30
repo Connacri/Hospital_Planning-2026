@@ -127,6 +127,9 @@ Deno.serve(async (request: Request) => {
     if (licenseType !== "TIME_LIMITED" && licenseType !== "PERPETUAL") {
       return json(400, { error: "INVALID_LICENSE_TYPE" });
     }
+    if ((licenseType === "PERPETUAL" || body?.custom_duration === true) && admin.role !== "owner") {
+      return json(403, { error: "OWNER_ROLE_REQUIRED_FOR_PERPETUAL_OR_CUSTOM_TERM" });
+    }
     if (licenseType === "TIME_LIMITED"
       && (!Number.isInteger(durationDays) || durationDays < 1 || durationDays > 3650
         || (!ALLOWED_DURATIONS.has(durationDays) && body?.custom_duration !== true))) {
