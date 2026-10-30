@@ -60,6 +60,7 @@ function dotNetTicks(isoUtc: string): bigint {
 
 function canonicalLicenseBytes(doc: {
   version: number;
+  signature_algorithm: string;
   product_id: string;
   license_id: string;
   serial: string;
@@ -91,6 +92,7 @@ function canonicalLicenseBytes(doc: {
 
   str("HPL-LICENSE-SIGNATURE-V1");
   int32(doc.version);
+  str(doc.signature_algorithm);
   str(doc.product_id);
   str(doc.license_id);
   str(doc.serial.toUpperCase());
@@ -260,6 +262,7 @@ Deno.serve(async (request: Request) => {
       const serial = randomSerial();
       const document = {
         version: 1,
+        signature_algorithm: "Ed25519",
         product_id: PRODUCT_ID,
         license_id: crypto.randomUUID(),
         serial,
