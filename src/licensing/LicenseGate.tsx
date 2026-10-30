@@ -47,7 +47,7 @@ export default function LicenseGate({ children }: Props) {
   useEffect(() => {
     const port = Number(window.location.port);
     const isWindowsLauncher = window.location.protocol === "http:"
-      && window.location.hostname === "127.0.0.1"
+      && (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost")
       && port >= 48922 && port <= 48960;
     if (!isWindowsLauncher) {
       setMode("web");
