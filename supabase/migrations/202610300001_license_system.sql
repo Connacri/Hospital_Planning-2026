@@ -121,6 +121,83 @@ as $$
        and consumed_at is null;
 $$;
 
+create or replace function public.finalize_license_issuance(
+    p_license_document jsonb,
+    p_actor_user_id uuid,
+    p_request_id uuid,
+    p_claim_token uuid,
+    p_nonce_hash text
+) returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $
+declare
+    v_license_id uuid;
+    v_serial text;
+begin
+    if p_license_document->>'product_id' <> 'HOSPITAL_PLANNING_2026'
+       or p_license_document->>'signature_algorithm' <> 'Ed25519' then
+        raise exception 'invalid signed license document';
+    end if;
+
+    v_license_id := (p_license_document->>'license_id')::uuid;
+    v_serial := p_license_document->>'serial';
+
+    insert into public.licenses (
+        id, serial, product_id, machine_id, license_type,
+        issued_at_utc, expires_at_utc, features, request_id,
+        request_nonce_hash, signing_key_version, signature_base64,
+        signed_document, created_by
+    ) values (
+        v_license_id,
+        v_serial,
+        p_license_document->>'product_id',
+        lower(p_license_document->>'machine_id'),
+        p_license_document->>'license_type',
+        (p_license_document->>'issued_at_utc')::timestamptz,
+        nullif(p_license_document->>'expires_at_utc', '')::timestamptz,
+        array(select jsonb_array_elements_text(p_license_document->'features')),
+        p_request_id,
+        p_nonce_hash,
+        (p_license_document->>'signing_key_version')::integer,
+        p_license_document->>'signature',
+        p_license_document,
+        p_actor_user_id
+    );
+
+    update public.license_requests
+       set status = 'issued',
+           consumed_at = now(),
+           license_id = v_license_id
+     where request_id = p_request_id
+       and nonce_hash = p_nonce_hash
+       and claim_token = p_claim_token
+       and status = 'issuing'
+       and consumed_at is null;
+
+    if not found then
+        raise exception 'activation request claim lost before finalization';
+    end if;
+
+    insert into public.license_events (
+        license_id, request_id, actor_user_id, event_type, details
+    ) values (
+        v_license_id,
+        p_request_id,
+        p_actor_user_id,
+        'license_issued',
+        jsonb_build_object(
+            'serial', v_serial,
+            'license_type', p_license_document->>'license_type',
+            'expires_at_utc', p_license_document->>'expires_at_utc'
+        )
+    );
+
+    return v_license_id;
+end;
+$;
+
 alter table public.license_admins enable row level security;
 alter table public.license_signing_keys enable row level security;
 alter table public.licenses enable row level security;
@@ -135,5 +212,7 @@ grant all on public.license_admins, public.license_signing_keys, public.licenses
 
 revoke all on function public.claim_license_request(uuid, text, text, timestamptz, uuid) from public, anon, authenticated;
 revoke all on function public.release_license_request(uuid, uuid) from public, anon, authenticated;
+revoke all on function public.finalize_license_issuance(jsonb, uuid, uuid, uuid, text) from public, anon, authenticated;
 grant execute on function public.claim_license_request(uuid, text, text, timestamptz, uuid) to service_role;
 grant execute on function public.release_license_request(uuid, uuid) to service_role;
+grant execute on function public.finalize_license_issuance(jsonb, uuid, uuid, uuid, text) to service_role;
