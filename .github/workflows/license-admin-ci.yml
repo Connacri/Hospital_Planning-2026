@@ -1,0 +1,60 @@
+name: License Admin Android CI
+
+on:
+  pull_request:
+    branches: [ "main", "master" ]
+    paths:
+      - "admin-android/**"
+      - ".github/workflows/license-admin-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-admin-android:
+    runs-on: ubuntu-latest
+    name: Build Android license admin APK
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: admin-android/package-lock.json
+
+      - name: Install dependencies
+        working-directory: admin-android
+        run: npm install
+
+      - name: Type-check and build web assets
+        working-directory: admin-android
+        run: npm run build
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Create and sync Capacitor Android project
+        working-directory: admin-android
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Build debug APK
+        working-directory: admin-android/android
+        run: ./gradlew assembleDebug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: hospital-planning-license-admin-debug
+          path: admin-android/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
