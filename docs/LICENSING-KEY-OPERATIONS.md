@@ -46,3 +46,13 @@ Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in admin-android/.env before bu
 - For rotation, add a new key version and pin its public key in a desktop release before changing the server's signing version.
 - Keep previous public keys in the desktop verifier until all licenses signed by them are no longer valid.
 - Revoke compromised signing keys operationally; offline clients cannot learn about revocation until they reconnect or receive a software update.
+
+
+## Administration and revocation
+
+Deploy the additional authenticated functions after the migration:
+
+    supabase functions deploy list-licenses --project-ref YOUR_PROJECT_REF
+    supabase functions deploy revoke-license --project-ref YOUR_PROJECT_REF
+
+Owner, issuer and viewer roles may list licenses. Only owner may revoke. Revocation updates the license and writes its audit event in one database transaction. An offline desktop cannot learn about a revocation until it reconnects or receives an update.
