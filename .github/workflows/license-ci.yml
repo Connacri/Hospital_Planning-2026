@@ -6,6 +6,10 @@ on:
     paths:
       - "windows/Licensing/**"
       - "windows/Launcher.cs"
+      - "src/licensing/**"
+      - "src/main.tsx"
+      - "src/index.css"
+      - "package.json"
       - "windows/build-exe.ps1"
       - "tests/licensing/**"
       - "supabase/**"
@@ -55,3 +59,28 @@ jobs:
 
       - name: Type-check license issuance function
         run: deno check supabase/functions/issue-license/index.ts
+
+  react-windows-gate:
+    runs-on: ubuntu-latest
+    name: Type-check and build React Windows activation gate
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://vjwmocxrqxdybaijhsuo.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_PUBLISHABLE_KEY || secrets.SUPABASE_PUBLISHABLE_KEY || secrets.PUBLISH_KEY }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || secrets.SUPABASE_PUBLISHABLE_KEY || secrets.PUBLISH_KEY || secrets.VITE_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
+        run: npm run build
