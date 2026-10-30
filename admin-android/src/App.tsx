@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import type { Session } from "@supabase/supabase-js";
 import QrScanner from "./components/QrScanner";
+import LicenseManagementPanel from "./components/LicenseManagementPanel";
 import { supabase, supabaseConfigured } from "./lib/supabase";
 
 type ActivationRequest = {
@@ -50,6 +51,7 @@ function formatDate(value: string | null): string {
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
+  const [activeTab, setActiveTab] = useState<"issue" | "manage">("issue");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [activation, setActivation] = useState<ActivationRequest | null>(null);
@@ -145,6 +147,11 @@ export default function App() {
 
   return <main className="shell">
     <header className="topbar"><div><p className="eyebrow">ESPACE ADMINISTRATEUR</p><strong>Hospital Planning · Licences</strong></div><button className="secondary small" onClick={signOut}>Déconnexion</button></header>
+    <nav className="admin-tabs">
+      <button className={activeTab === "issue" ? "selected" : "secondary"} onClick={() => setActiveTab("issue")}>Délivrer une licence</button>
+      <button className={activeTab === "manage" ? "selected" : "secondary"} onClick={() => setActiveTab("manage")}>Historique et révocation</button>
+    </nav>
+    {activeTab === "manage" ? <LicenseManagementPanel /> : <>
     <section className="panel">
       <div className="step-heading"><span>01</span><div><h1>Scanner une demande</h1><p className="muted">Sur le poste Windows, ouvrez Activation et affichez le QR de demande.</p></div></div>
       {!activation && <>
@@ -189,6 +196,7 @@ export default function App() {
 
     {notice && <p className="notice">{notice}</p>}
     {error && <p className="error">{error}</p>}
+    </>}
     <footer>Accès réservé aux administrateurs autorisés · Toute émission est journalisée.</footer>
   </main>;
 }
