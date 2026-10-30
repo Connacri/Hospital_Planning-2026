@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Crypto.Signers;
 using EHAinElTurck.Plannings.Licensing;
@@ -57,6 +58,12 @@ internal static class LicenseCryptoSelfTest
         license.Signature = "placeholder";
 
         byte[] first = LicenseCanonicalizer.GetSigningBytes(license);
+        using (SHA256 sha = SHA256.Create())
+        {
+            string canonicalHash = BitConverter.ToString(sha.ComputeHash(first)).Replace("-", "").ToLowerInvariant();
+            if (canonicalHash != "0c0dac7a1f38c8892975adcfd32ce6179e9b5f6f4633bdd75c5cab7885c2301b")
+                throw new InvalidOperationException("Canonical payload cross-language test vector mismatch: " + canonicalHash);
+        }
         license.Features = new string[] { "FULL_ACCESS", "REPORTS" };
         byte[] second = LicenseCanonicalizer.GetSigningBytes(license);
         if (!Equal(first, second)) throw new InvalidOperationException("Feature ordering changed canonical signing bytes.");
