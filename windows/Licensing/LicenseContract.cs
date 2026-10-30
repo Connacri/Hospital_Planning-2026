@@ -38,9 +38,11 @@ namespace EHAinElTurck.Plannings.Licensing
                 && (LicenseType == "TIME_LIMITED" || LicenseType == "PERPETUAL")
                 && IssuedAtUtc.Kind == DateTimeKind.Utc
                 && (LicenseType != "PERPETUAL" || !ExpiresAtUtc.HasValue)
-                && (LicenseType != "TIME_LIMITED" || (ExpiresAtUtc.HasValue && ExpiresAtUtc.Value.Kind == DateTimeKind.Utc))
+                && IssuedAtUtc > DateTime.MinValue
+                && (LicenseType != "TIME_LIMITED" || (ExpiresAtUtc.HasValue && ExpiresAtUtc.Value.Kind == DateTimeKind.Utc && ExpiresAtUtc.Value > IssuedAtUtc))
                 && Features != null
                 && Features.Length > 0
+                && Features.Length <= 32
                 && SignatureAlgorithm == ExpectedSignatureAlgorithm
                 && SigningKeyVersion > 0
                 && !String.IsNullOrWhiteSpace(Signature);
@@ -85,17 +87,29 @@ namespace EHAinElTurck.Plannings.Licensing
 
         public const string CurrentProtocol = "HPL-ACTIVATION-1";
 
+        private static bool IsBase64Url(string value)
+        {
+            for (int i = 0; i < value.Length; i++)
+            {
+                char ch = value[i];
+                if (!((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z')
+                    || (ch >= '0' && ch <= '9') || ch == '-' || ch == '_')) return false;
+            }
+            return true;
+        }
+
         public bool IsStructurallyValid()
         {
             return Protocol == CurrentProtocol
                 && ProductId == LicenseDocument.ExpectedProductId
                 && LicenseSerial.IsSha256Hex(MachineId)
                 && !String.IsNullOrWhiteSpace(RequestId)
-                && RequestId.Length <= 64
+                && Guid.TryParseExact(RequestId, "N", out Guid parsedRequestId)
                 && !String.IsNullOrWhiteSpace(Nonce)
-                && Nonce.Length >= 32
-                && Nonce.Length <= 128
-                && CreatedAtUtc.Kind == DateTimeKind.Utc;
+                && Nonce.Length == 43
+                && IsBase64Url(Nonce)
+                && CreatedAtUtc.Kind == DateTimeKind.Utc
+                && CreatedAtUtc > DateTime.MinValue;
         }
     }
 }
