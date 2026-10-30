@@ -29,6 +29,9 @@ jobs:
 
       - name: Type-check and build web assets
         working-directory: admin-android
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://vjwmocxrqxdybaijhsuo.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_PUBLISHABLE_KEY || secrets.SUPABASE_PUBLISHABLE_KEY || secrets.PUBLISH_KEY }}
         run: npm run build
 
       - name: Setup Java
