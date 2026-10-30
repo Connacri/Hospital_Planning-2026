@@ -1,0 +1,38 @@
+name: Offline License Engine CI
+
+on:
+  pull_request:
+    branches: [ "main", "master" ]
+    paths:
+      - "windows/Licensing/**"
+      - "windows/Launcher.cs"
+      - "windows/build-exe.ps1"
+      - "tests/licensing/**"
+      - ".github/workflows/license-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-license-engine:
+    runs-on: windows-latest
+    name: Compile Windows license engine and run crypto tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build launcher and run Ed25519 tests
+        shell: powershell
+        run: |
+          & powershell -NoProfile -ExecutionPolicy Bypass -File windows/build-exe.ps1
+          if ($LASTEXITCODE -ne 0) { throw "Windows license engine build failed: $LASTEXITCODE" }
+
+      - name: Upload compiled test evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: offline-license-self-test
+          path: |
+            bin/LicenseCryptoSelfTest.exe
+            bin/BouncyCastle.Cryptography.dll
+          retention-days: 7

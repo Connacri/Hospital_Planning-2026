@@ -6,3 +6,10 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Windows licensing build outputs
+packages/
+bin/
+Output/
+*.user
+*.suo

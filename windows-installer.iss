@@ -15,7 +15,7 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
-DefaultDirName={autopf}\{#MyAppName}
+DefaultDirName={localappdata}\Programs\{#MyAppName}
 DisableProgramGroupPage=yes
 LicenseFile=LICENSE.txt
 OutputDir=Output
@@ -39,6 +39,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 ; 1. Exécutable natif autonome Windows (Compilé en AnyCPU sans DLL tierces)
 Source: "bin\EH_AinElTurck_Plannings.exe"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Flags: ignoreversion
+; Cryptographic runtime for the offline Ed25519 verifier
+Source: "bin\BouncyCastle.Cryptography.dll"; DestDir: "{app}"; Flags: ignoreversion
 ; 2. Lanceur de secours .cmd en cas de besoin administrateur
 Source: "windows\Lancer_EH_Plannings.cmd"; DestDir: "{app}"; Flags: ignoreversion
 ; 3. Distribution web compilée (React / Vite / Tailwind)
