@@ -183,7 +183,7 @@ namespace EHAinElTurck.Plannings
                 if (rawUrl.StartsWith("/api/license/", StringComparison.OrdinalIgnoreCase)
                     && !IsAllowedLocalLicenseRequest(req))
                 {
-                    WriteJsonResponse(res, 403, "{\\"error\\":\\"LOCAL_ORIGIN_REJECTED\\"}");
+                    WriteJsonResponse(res, 403, "{\"error\":\"LOCAL_ORIGIN_REJECTED\"}");
                     return;
                 }
 
@@ -197,28 +197,28 @@ namespace EHAinElTurck.Plannings
                 // --- Endpoints d'API Locaux Système ---
                 if (rawUrl.Equals("/api/license/status", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (req.HttpMethod != "GET") { WriteJsonResponse(res, 405, "{\\"error\\":\\"METHOD_NOT_ALLOWED\\"}"); return; }
+                    if (req.HttpMethod != "GET") { WriteJsonResponse(res, 405, "{\"error\":\"METHOD_NOT_ALLOWED\"}"); return; }
                     WriteJsonResponse(res, 200, LicenseRuntime.GetStatusJson());
                     return;
                 }
 
                 if (rawUrl.Equals("/api/license/machine", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (req.HttpMethod != "GET") { WriteJsonResponse(res, 405, "{\\"error\\":\\"METHOD_NOT_ALLOWED\\"}"); return; }
+                    if (req.HttpMethod != "GET") { WriteJsonResponse(res, 405, "{\"error\":\"METHOD_NOT_ALLOWED\"}"); return; }
                     WriteJsonResponse(res, 200, LicenseRuntime.GetMachineJson());
                     return;
                 }
 
                 if (rawUrl.Equals("/api/license/request", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (req.HttpMethod != "POST") { WriteJsonResponse(res, 405, "{\\"error\\":\\"METHOD_NOT_ALLOWED\\"}"); return; }
+                    if (req.HttpMethod != "POST") { WriteJsonResponse(res, 405, "{\"error\":\"METHOD_NOT_ALLOWED\"}"); return; }
                     WriteJsonResponse(res, 200, LicenseRuntime.CreateRequestJson());
                     return;
                 }
 
                 if (rawUrl.Equals("/api/license/activate", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (req.HttpMethod != "POST") { WriteJsonResponse(res, 405, "{\\"error\\":\\"METHOD_NOT_ALLOWED\\"}"); return; }
+                    if (req.HttpMethod != "POST") { WriteJsonResponse(res, 405, "{\"error\":\"METHOD_NOT_ALLOWED\"}"); return; }
                     string responseQr = ReadLimitedBody(req, 16384);
                     WriteJsonResponse(res, 200, LicenseRuntime.AcceptResponseJson(responseQr));
                     return;
