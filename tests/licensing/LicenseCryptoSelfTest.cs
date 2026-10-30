@@ -130,10 +130,16 @@ internal static class LicenseCryptoSelfTest
         try
         {
             DpapiLicenseStorage storage = new DpapiLicenseStorage(temp);
+            byte[] originalPayload = LicenseCanonicalizer.GetSigningBytes(decodedLicense);
             storage.Save(decodedLicense);
             LicenseDocument loaded = storage.Load();
-            if (loaded == null || !verifier.Verify(loaded))
-                throw new InvalidOperationException("DPAPI protected license storage round-trip failed.");
+            if (loaded == null) throw new InvalidOperationException("DPAPI returned no license document.");
+            byte[] loadedPayload = LicenseCanonicalizer.GetSigningBytes(loaded);
+            if (!ByteArraysEqual(originalPayload, loadedPayload))
+                throw new InvalidOperationException("DPAPI serialization changed signed payload. Original="
+                    + Sha256Hex(originalPayload) + " Loaded=" + Sha256Hex(loadedPayload));
+            if (!verifier.Verify(loaded))
+                throw new InvalidOperationException("DPAPI returned the same payload but signature verification failed.");
 
             ClockGuard guard = new ClockGuard(temp, TimeSpan.FromMinutes(1));
             DateTime current = DateTime.UtcNow;
@@ -144,6 +150,20 @@ internal static class LicenseCryptoSelfTest
         {
             if (Directory.Exists(temp)) Directory.Delete(temp, true);
         }
+    }
+
+    private static bool ByteArraysEqual(byte[] left, byte[] right)
+    {
+        if (left == null || right == null || left.Length != right.Length) return false;
+        int diff = 0;
+        for (int i = 0; i < left.Length; i++) diff |= left[i] ^ right[i];
+        return diff == 0;
+    }
+
+    private static string Sha256Hex(byte[] value)
+    {
+        using (SHA256 sha = SHA256.Create())
+            return BitConverter.ToString(sha.ComputeHash(value)).Replace("-", "").ToLowerInvariant();
     }
 
     private static byte[] Hex(string value)
