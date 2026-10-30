@@ -54,6 +54,9 @@ export default function LicenseGate({ children }: Props) {
       return;
     }
     void refresh();
+    // Re-evaluate expiration and clock rollback while the desktop app remains open.
+    const timer = window.setInterval(() => { void refresh(); }, 60 * 1000);
+    return () => window.clearInterval(timer);
   }, [refresh]);
 
   if (mode === "checking") {
