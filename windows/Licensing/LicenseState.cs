@@ -1,3 +1,5 @@
+using System;
+
 namespace EHAinElTurck.Plannings.Licensing
 {
     public enum LicenseState
