@@ -24,6 +24,9 @@ namespace EHAinElTurck.Plannings.Licensing
             if (clockRollbackDetected)
                 return new LicenseEvaluation(LicenseState.ClockTampered, "CLOCK_ROLLBACK_DETECTED");
 
+            if (utcNow.Kind != DateTimeKind.Utc || license.IssuedAtUtc > utcNow.AddMinutes(2))
+                return new LicenseEvaluation(LicenseState.Invalid, "LICENSE_ISSUE_TIME_INVALID");
+
             if (!String.Equals(license.MachineId, currentMachineId, StringComparison.OrdinalIgnoreCase))
                 return new LicenseEvaluation(LicenseState.HardwareMismatch, "MACHINE_MISMATCH");
 
