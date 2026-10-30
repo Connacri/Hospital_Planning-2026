@@ -36,3 +36,21 @@ jobs:
             bin/LicenseCryptoSelfTest.exe
             bin/BouncyCastle.Cryptography.dll
           retention-days: 7
+
+  supabase-canonical-tests:
+    runs-on: ubuntu-latest
+    name: Verify Supabase signing format
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Run canonical signing interoperability test
+        run: deno test supabase/functions/tests/license-canonical.test.ts
+
+      - name: Type-check license issuance function
+        run: deno check supabase/functions/issue-license/index.ts
