@@ -128,7 +128,8 @@ Deno.serve(async (request: Request) => {
       return json(400, { error: "INVALID_LICENSE_TYPE" });
     }
     if (licenseType === "TIME_LIMITED"
-      && (!Number.isInteger(durationDays) || durationDays < 1 || durationDays > 3650)) {
+      && (!Number.isInteger(durationDays) || durationDays < 1 || durationDays > 3650
+        || (!ALLOWED_DURATIONS.has(durationDays) && body?.custom_duration !== true))) {
       return json(400, { error: "INVALID_DURATION_DAYS" });
     }
     if (licenseType === "PERPETUAL" && durationDays !== null && durationDays !== undefined) {
