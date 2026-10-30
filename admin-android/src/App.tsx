@@ -53,6 +53,7 @@ export default function App() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [activation, setActivation] = useState<ActivationRequest | null>(null);
+  const [manualQr, setManualQr] = useState("");
   const [duration, setDuration] = useState<LicenseDuration>("30");
   const [customDays, setCustomDays] = useState("30");
   const [signedLicense, setSignedLicense] = useState<SignedLicense | null>(null);
@@ -146,7 +147,13 @@ export default function App() {
     <header className="topbar"><div><p className="eyebrow">ESPACE ADMINISTRATEUR</p><strong>Hospital Planning · Licences</strong></div><button className="secondary small" onClick={signOut}>Déconnexion</button></header>
     <section className="panel">
       <div className="step-heading"><span>01</span><div><h1>Scanner une demande</h1><p className="muted">Sur le poste Windows, ouvrez Activation et affichez le QR de demande.</p></div></div>
-      {!activation && <QrScanner onDecoded={onDecoded} onError={onScannerError} />}
+      {!activation && <>
+        <QrScanner onDecoded={onDecoded} onError={onScannerError} />
+        <label>Ou coller le contenu du QR
+          <textarea rows={4} value={manualQr} onChange={e => setManualQr(e.target.value)} placeholder="Collez ici le JSON de la demande Windows…" />
+        </label>
+        <button className="secondary" onClick={() => onDecoded(manualQr.trim())} disabled={!manualQr.trim()}>Valider le QR collé</button>
+      </>}
       {activation && <div className="machine-card">
         <p className="eyebrow">DEMANDE VALIDÉE</p>
         <div className="machine-row"><span>Produit</span><strong>Hospital Planning 2026</strong></div>
