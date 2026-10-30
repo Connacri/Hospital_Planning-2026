@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import ActivationScreen from "./ActivationScreen";
 
@@ -17,7 +17,7 @@ export default function LicenseGate({ children }: Props) {
   const [status, setStatus] = useState<LicenseStatus | null>(null);
   const [mode, setMode] = useState<"checking" | "web" | "native">("checking");
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     try {
       const response = await fetch("/api/license/status", { cache: "no-store" });
       const contentType = response.headers.get("content-type") || "";
@@ -42,7 +42,7 @@ export default function LicenseGate({ children }: Props) {
         activationAvailable: true,
       });
     }
-  };
+  }, []);
 
   useEffect(() => {
     const port = Number(window.location.port);
@@ -53,8 +53,8 @@ export default function LicenseGate({ children }: Props) {
       setMode("web");
       return;
     }
-    refresh();
-  }, []);
+    void refresh();
+  }, [refresh]);
 
   if (mode === "checking") {
     return <div className="license-gate-loading">Vérification de la licence…</div>;
