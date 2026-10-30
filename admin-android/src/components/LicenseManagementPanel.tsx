@@ -84,7 +84,7 @@ export default function LicenseManagementPanel() {
         return <article className="license-row" key={row.id}>
         <div className="license-row-main">
           <div className="license-row-title"><strong>{row.serial}</strong><span className={statusClass}>{statusLabel}</span></div>
-          <div className="license-row-meta">{row.license_type === "PERPETUAL" ? "Perpétuelle" : "Temporaire"} · Expiration : {dateLabel(row.expires_at_utc)}</div>
+          <div className="license-row-meta">{row.license_type === "PERPETUAL" ? "Perpétuelle" : "Temporaire"} · Émise le {dateLabel(row.issued_at_utc)} · Expiration : {dateLabel(row.expires_at_utc)}</div>
           <code className="license-machine-short">{row.machine_id.slice(0, 12)}…{row.machine_id.slice(-8)}</code>
         </div>
         {role === "owner" && row.status === "active" && !expired && <button className="danger small" onClick={() => { setTarget(row); setReason("Révocation administrative"); }}>Révoquer</button>}
