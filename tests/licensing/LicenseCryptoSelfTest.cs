@@ -13,6 +13,7 @@ internal static class LicenseCryptoSelfTest
         {
             VerifyRfc8032Vector();
             VerifyCanonicalPayloadAndTamperDetection();
+            VerifyQrRoundTripAndDpapiStorage();
             Console.WriteLine("All offline license crypto self-tests passed.");
             return 0;
         }
@@ -72,6 +73,69 @@ internal static class LicenseCryptoSelfTest
 
         license.MachineId = new String('c', 64);
         if (licenseVerifier.Verify(license)) throw new InvalidOperationException("Tampered license was accepted.");
+    }
+
+    private static void VerifyQrRoundTripAndDpapiStorage()
+    {
+        LicenseActivationRequest request = new LicenseActivationRequest();
+        request.Protocol = LicenseActivationRequest.CurrentProtocol;
+        request.ProductId = LicenseDocument.ExpectedProductId;
+        request.MachineId = new String('a', 64);
+        request.RequestId = Guid.NewGuid().ToString("N");
+        request.Nonce = new String('A', 43);
+        request.CreatedAtUtc = DateTime.UtcNow;
+        string requestQr = LicenseQrCodec.EncodeRequest(request);
+        LicenseActivationRequest decodedRequest = LicenseQrCodec.DecodeRequest(requestQr);
+        if (decodedRequest.RequestId != request.RequestId || decodedRequest.Nonce != request.Nonce)
+            throw new InvalidOperationException("Activation request QR round-trip failed.");
+
+        byte[] seed = Hex("9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60");
+        Ed25519PrivateKeyParameters privateKey = new Ed25519PrivateKeyParameters(seed, 0);
+        LicenseDocument license = new LicenseDocument();
+        license.Version = LicenseDocument.CurrentVersion;
+        license.ProductId = LicenseDocument.ExpectedProductId;
+        license.LicenseId = "qr-test-license";
+        license.Serial = "ABCDEFGHJK";
+        license.MachineId = new String('a', 64);
+        license.RequestNonce = new String('B', 43);
+        license.LicenseType = "TIME_LIMITED";
+        license.IssuedAtUtc = DateTime.UtcNow;
+        license.ExpiresAtUtc = license.IssuedAtUtc.AddDays(30);
+        license.Features = new string[] { "FULL_ACCESS" };
+        license.SignatureAlgorithm = LicenseDocument.ExpectedSignatureAlgorithm;
+        license.SigningKeyVersion = 1;
+        license.Signature = "placeholder";
+        byte[] payload = LicenseCanonicalizer.GetSigningBytes(license);
+        Ed25519Signer signer = new Ed25519Signer();
+        signer.Init(true, privateKey);
+        signer.BlockUpdate(payload, 0, payload.Length);
+        license.Signature = Convert.ToBase64String(signer.GenerateSignature());
+
+        string licenseQr = LicenseQrCodec.EncodeLicense(license);
+        LicenseDocument decodedLicense = LicenseQrCodec.DecodeLicense(licenseQr);
+        Dictionary<int, byte[]> keys = new Dictionary<int, byte[]>();
+        keys.Add(1, privateKey.GeneratePublicKey().GetEncoded());
+        Ed25519LicenseVerifier verifier = new Ed25519LicenseVerifier(keys);
+        if (!verifier.Verify(decodedLicense)) throw new InvalidOperationException("License QR round-trip signature check failed.");
+
+        string temp = Path.Combine(Path.GetTempPath(), "HPL-License-Test-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            DpapiLicenseStorage storage = new DpapiLicenseStorage(temp);
+            storage.Save(decodedLicense);
+            LicenseDocument loaded = storage.Load();
+            if (loaded == null || !verifier.Verify(loaded))
+                throw new InvalidOperationException("DPAPI protected license storage round-trip failed.");
+
+            ClockGuard guard = new ClockGuard(temp, TimeSpan.FromMinutes(1));
+            DateTime current = DateTime.UtcNow;
+            if (!guard.Observe(current)) throw new InvalidOperationException("Clock guard rejected current time.");
+            if (guard.Observe(current.AddHours(-1))) throw new InvalidOperationException("Clock guard failed to detect rollback.");
+        }
+        finally
+        {
+            if (Directory.Exists(temp)) Directory.Delete(temp, true);
+        }
     }
 
     private static byte[] Hex(string value)
