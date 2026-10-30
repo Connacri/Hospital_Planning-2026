@@ -2,6 +2,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.118.0";
 import { canonicalLicenseBytes } from "../_shared/license-canonical.ts";
 
+declare const Deno: {
+  env: { get(name: string): string | undefined };
+  serve(handler: (request: Request) => Response | Promise<Response>): void;
+};
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
