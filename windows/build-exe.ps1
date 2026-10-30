@@ -1,10 +1,13 @@
 $ErrorActionPreference = 'Stop'
-$repoRoot = Split-Path -Parent $PSScriptRoot
+$scriptPath = $MyInvocation.MyCommand.Path
+$scriptDirectory = Split-Path -Parent $scriptPath
+$repoRoot = Split-Path -Parent $scriptDirectory
 Set-Location $repoRoot
 
 $nuget = Join-Path $env:TEMP 'nuget.exe'
 if (-not (Test-Path $nuget)) {
     Write-Host 'Downloading NuGet CLI...'
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     $client = New-Object System.Net.WebClient
     $client.DownloadFile('https://dist.nuget.org/win-x86-commandline/latest/nuget.exe', $nuget)
 }
