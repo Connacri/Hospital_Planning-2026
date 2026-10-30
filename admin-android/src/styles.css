@@ -73,3 +73,5 @@ button.danger { background: #a73731; color: #fff; }
   .license-search button { width: 100%; }
   .manage-heading { align-items: flex-start; flex-direction: column; }
 }
+
+.status-expired { padding: 4px 8px; border-radius: 20px; background: #fff4e5; color: #965b10; font-size: 10px; font-weight: 800; }
