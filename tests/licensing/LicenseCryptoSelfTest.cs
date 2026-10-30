@@ -106,7 +106,8 @@ internal static class LicenseCryptoSelfTest
         license.MachineId = new String('a', 64);
         license.RequestNonce = new String('B', 43);
         license.LicenseType = "TIME_LIMITED";
-        license.IssuedAtUtc = DateTime.UtcNow;
+        DateTime issuedNow = DateTime.UtcNow;
+        license.IssuedAtUtc = new DateTime(issuedNow.Ticks - (issuedNow.Ticks % TimeSpan.TicksPerMillisecond), DateTimeKind.Utc);
         license.ExpiresAtUtc = license.IssuedAtUtc.AddDays(30);
         license.Features = new string[] { "FULL_ACCESS" };
         license.SignatureAlgorithm = LicenseDocument.ExpectedSignatureAlgorithm;
