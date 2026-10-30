@@ -4,7 +4,7 @@ The license signing key is the root of trust for every offline desktop license. 
 
 ## Generate an Ed25519 keypair on Windows
 
-Prerequisites: OpenSSL 3.x and the Supabase CLI. Run from a private working directory outside the repository.
+Prerequisites: OpenSSL 3.x and the Supabase CLI. Run from a private BitLocker-protected working directory outside the repository. Do not paste private key material into chat, source control, CI logs or shell command history.
 
     $work = Join-Path $env:USERPROFILE "HPL-License-KeyCeremony"
     New-Item -ItemType Directory -Force $work | Out-Null
@@ -19,7 +19,15 @@ Prerequisites: OpenSSL 3.x and the Supabase CLI. Run from a private working dire
     $rawPublicKey = $spki[($spki.Length - 32)..($spki.Length - 1)]
     $publicRaw = [Convert]::ToBase64String($rawPublicKey)
 
-    supabase secrets set --project-ref YOUR_PROJECT_REF "LICENSE_ED25519_PRIVATE_KEY_PKCS8_B64=$privatePkcs8" "LICENSE_ED25519_PUBLIC_KEY_B64=$publicRaw" "LICENSE_SIGNING_KEY_VERSION=1"
+    $envFile = Join-Path $work "supabase-secrets.env"
+    $utf8 = New-Object System.Text.UTF8Encoding($false)
+    [IO.File]::WriteAllLines($envFile, [string[]]@(
+      "LICENSE_ED25519_PRIVATE_KEY_PKCS8_B64=$privatePkcs8",
+      "LICENSE_ED25519_PUBLIC_KEY_B64=$publicRaw",
+      "LICENSE_SIGNING_KEY_VERSION=1"
+    ), $utf8)
+    supabase secrets set --project-ref YOUR_PROJECT_REF --env-file $envFile
+    Remove-Item $envFile -Force
 
 Verify the generated keypair with an independent Ed25519 test before issuing production licenses. The Edge Function also performs a sign/verify pair check before issuing.
 
