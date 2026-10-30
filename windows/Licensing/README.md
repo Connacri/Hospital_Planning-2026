@@ -27,3 +27,13 @@ Offline revocation cannot be instantaneous: a disconnected desktop can only lear
 3. Implement DPAPI storage, machine identity with component-tolerance policy, nonce lifecycle and clock rollback heuristics.
 4. Add a native launcher gate and hardened loopback bridge; preserve backups and all hospital data.
 5. Add Supabase migrations and Edge Functions with deny-by-default RLS, then the separate Android admin app.
+
+
+## Native loopback endpoints
+
+- GET /api/license/status — state, reason, machine ID and whether the public-key ring is configured.
+- GET /api/license/machine — product and machine identity.
+- POST /api/license/request — creates and DPAPI-persists a fresh activation challenge and returns QR JSON.
+- POST /api/license/activate — accepts the signed response QR JSON, validates nonce/machine/signature and persists the license.
+
+These routes are served only by the existing loopback listener. License routes check the 127.0.0.1 host, active port, loopback remote address and exact browser Origin when present; activation bodies are size-limited. The existing app still runs with no key pinned, so rollout cannot accidentally lock out the hospital.
