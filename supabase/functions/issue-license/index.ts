@@ -222,30 +222,37 @@ Deno.serve(async (request: Request) => {
       const { error: keyInsertError } = await adminClient.from("license_signing_keys").insert({
         key_version: keyVersion, algorithm: "Ed25519", public_key_base64: publicKeyBase64, active: true,
       });
-      if (keyInsertError && keyInsertError.code !== "23505") throw new Error("SIGNING_PUBLIC_KEY_REGISTRATION_FAILED");
+      if (keyInsertError) {
+        if (keyInsertError.code !== "23505") throw new Error("SIGNING_PUBLIC_KEY_REGISTRATION_FAILED");
+        const { data: racedKey, error: racedKeyError } = await adminClient
+          .from("license_signing_keys").select("public_key_base64, algorithm")
+          .eq("key_version", keyVersion).maybeSingle();
+        if (racedKeyError || !racedKey || racedKey.public_key_base64 !== publicKeyBase64 || racedKey.algorithm !== "Ed25519") {
+          throw new Error("SIGNING_KEY_VERSION_ALREADY_BOUND");
+        }
+      }
     }
 
     const nonceHash = await sha256Hex(nonceBytes);
-    const requestId = crypto.randomUUID();
+    // The QR uses UUID-N (32 hex chars); PostgreSQL expects canonical UUID text.
+    const requestUuid = activation.request_id.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, "$1-$2-$3-$4-$5").toLowerCase();
     const claimToken = crypto.randomUUID();
     const { data: claimed, error: claimError } = await adminClient.rpc("claim_license_request", {
-      p_request_id: crypto.randomUUID(), // replaced below with canonical UUID form
+      p_request_id: requestUuid,
       p_nonce_hash: nonceHash,
       p_machine_id: activation.machine_id.toLowerCase(),
       p_requested_at_utc: new Date(requestedAt).toISOString(),
       p_claim_token: claimToken,
     });
-    // The activation QR uses UUID-N (32 hex chars); PostgreSQL expects canonical UUID text.
     if (claimError) throw new Error("ACTIVATION_REQUEST_CLAIM_FAILED");
     if (claimed !== true) return json(409, { error: "ACTIVATION_REQUEST_ALREADY_USED" });
-    claim = { requestId, claimToken };
+    claim = { requestId: requestUuid, claimToken };
 
     const issuedAt = new Date().toISOString();
     const expiresAt = licenseType === "PERPETUAL"
       ? null
       : new Date(Date.parse(issuedAt) + durationDays * 86400000).toISOString();
     const features = ["FULL_ACCESS"];
-    const requestUuid = activation.request_id.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, "$1-$2-$3-$4-$5").toLowerCase();
 
     let saved: Record<string, unknown> | null = null;
     let signedDocument: Record<string, unknown> | null = null;
@@ -317,6 +324,15 @@ Deno.serve(async (request: Request) => {
     return json(200, { license: signedDocument });
   } catch (error) {
     console.error("issue-license failed:", error);
+    if (licenseId) {
+      const url = Deno.env.get("SUPABASE_URL");
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      if (url && serviceKey) {
+        const cleanup = createClient(url, serviceKey, { auth: { persistSession: false } });
+        await cleanup.from("licenses").update({ status: "revoked", revoked_at: new Date().toISOString() })
+          .eq("id", licenseId).eq("status", "active");
+      }
+    }
     if (claim) {
       const url = Deno.env.get("SUPABASE_URL");
       const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -325,6 +341,6 @@ Deno.serve(async (request: Request) => {
         await cleanup.rpc("release_license_request", { p_request_id: claim.requestId, p_claim_token: claim.claimToken });
       }
     }
-    return json(500, { error: error instanceof Error ? error.message : "INTERNAL_ERROR" });
+    return json(500, { error: "LICENSE_ISSUANCE_FAILED" });
   }
 });
