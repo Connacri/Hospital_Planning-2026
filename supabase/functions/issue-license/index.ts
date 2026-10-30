@@ -190,7 +190,24 @@ Deno.serve(async (request: Request) => {
       p_claim_token: claimToken,
     });
     if (claimError) throw new Error("ACTIVATION_REQUEST_CLAIM_FAILED");
-    if (claimed !== true) return json(409, { error: "ACTIVATION_REQUEST_ALREADY_USED" });
+    if (claimed !== true) {
+      // Idempotent retry: if the original issuance committed but the response was lost,
+      // return the exact same signed document instead of issuing a second license.
+      const { data: previousRequest, error: previousRequestError } = await adminClient
+        .from("license_requests").select("status, nonce_hash, machine_id, license_id")
+        .eq("request_id", requestUuid).maybeSingle();
+      if (!previousRequestError && previousRequest && previousRequest.status === "issued"
+        && previousRequest.nonce_hash === nonceHash
+        && previousRequest.machine_id === activation.machine_id.toLowerCase()
+        && previousRequest.license_id) {
+        const { data: previousLicense, error: previousLicenseError } = await adminClient
+          .from("licenses").select("signed_document").eq("id", previousRequest.license_id).maybeSingle();
+        if (!previousLicenseError && previousLicense?.signed_document) {
+          return json(200, { license: previousLicense.signed_document, idempotent_retry: true });
+        }
+      }
+      return json(409, { error: "ACTIVATION_REQUEST_ALREADY_USED_OR_IN_PROGRESS" });
+    }
     claim = { requestId: requestUuid, claimToken };
 
     const issuedAt = new Date().toISOString();
