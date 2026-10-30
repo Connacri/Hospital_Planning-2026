@@ -59,7 +59,7 @@ export default function LicenseManagementPanel() {
       setError(revokeError?.message || "La révocation a été refusée.");
       return;
     }
-    setNotice("Licence " + target.serial + " révoquée. Les postes hors ligne recevront cette information lors de leur prochaine synchronisation.");
+    setNotice("Licence " + target.serial + " révoquée. Les postes totalement hors ligne ne recevront cette information qu’après l’ajout d’un contrôle de révocation en ligne ou une mise à jour.");
     setTarget(null);
     await loadLicenses(query.trim());
   };
@@ -95,6 +95,6 @@ export default function LicenseManagementPanel() {
     </div>
     {notice && <p className="notice">{notice}</p>}
     {error && <p className="error">{error}</p>}
-    <p className="small-text muted">La révocation est immédiate côté serveur. Un poste totalement hors ligne ne peut la connaître qu’à sa prochaine synchronisation ou mise à jour.</p>
+    <p className="small-text muted">La révocation est immédiate côté serveur. Un poste totalement hors ligne ne peut pas être bloqué à distance ; il faudra lui ajouter un contrôle de révocation en ligne ou lui transmettre une mise à jour.</p>
   </section>;
 }
