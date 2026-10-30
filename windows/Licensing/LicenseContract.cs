@@ -37,6 +37,7 @@ namespace EHAinElTurck.Plannings.Licensing
                 && RequestNonce.Length <= 128
                 && (LicenseType == "TIME_LIMITED" || LicenseType == "PERPETUAL")
                 && IssuedAtUtc.Kind == DateTimeKind.Utc
+                && IssuedAtUtc.Ticks % TimeSpan.TicksPerMillisecond == 0
                 && (LicenseType != "PERPETUAL" || !ExpiresAtUtc.HasValue)
                 && IssuedAtUtc > DateTime.MinValue
                 && (LicenseType != "TIME_LIMITED" || (ExpiresAtUtc.HasValue && ExpiresAtUtc.Value.Kind == DateTimeKind.Utc && ExpiresAtUtc.Value > IssuedAtUtc))
