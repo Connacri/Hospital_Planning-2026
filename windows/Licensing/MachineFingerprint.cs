@@ -6,7 +6,7 @@ using Microsoft.Win32;
 
 namespace EHAinElTurck.Plannings.Licensing
 {
-    /// <summary>Stable-ish v1 fingerprint; MAC addresses are excluded to avoid adapter churn.</summary>
+    /// <summary>Versioned hardware fingerprint; MAC addresses are excluded to avoid adapter churn.</summary>
     public static class MachineFingerprint
     {
         public static string Create()
