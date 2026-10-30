@@ -100,11 +100,12 @@ namespace EHAinElTurck.Plannings.Licensing
 
         public bool IsStructurallyValid()
         {
+            Guid parsedRequestId;
             return Protocol == CurrentProtocol
                 && ProductId == LicenseDocument.ExpectedProductId
                 && LicenseSerial.IsSha256Hex(MachineId)
                 && !String.IsNullOrWhiteSpace(RequestId)
-                && Guid.TryParseExact(RequestId, "N", out Guid parsedRequestId)
+                && Guid.TryParseExact(RequestId, "N", out parsedRequestId)
                 && !String.IsNullOrWhiteSpace(Nonce)
                 && Nonce.Length == 43
                 && IsBase64Url(Nonce)
