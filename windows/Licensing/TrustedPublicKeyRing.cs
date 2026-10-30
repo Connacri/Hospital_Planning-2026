@@ -9,6 +9,11 @@ namespace EHAinElTurck.Plannings.Licensing
         // Public key only. Never place the private signing key in this application.
         private const string PublicKeyV1Base64 = "";
 
+        public static bool IsConfigured
+        {
+            get { return !String.IsNullOrWhiteSpace(PublicKeyV1Base64); }
+        }
+
         public static IDictionary<int, byte[]> Create()
         {
             Dictionary<int, byte[]> keys = new Dictionary<int, byte[]>();
