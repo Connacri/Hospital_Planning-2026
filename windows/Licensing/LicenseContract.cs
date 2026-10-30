@@ -40,7 +40,10 @@ namespace EHAinElTurck.Plannings.Licensing
                 && IssuedAtUtc.Ticks % TimeSpan.TicksPerMillisecond == 0
                 && (LicenseType != "PERPETUAL" || !ExpiresAtUtc.HasValue)
                 && IssuedAtUtc > DateTime.MinValue
-                && (LicenseType != "TIME_LIMITED" || (ExpiresAtUtc.HasValue && ExpiresAtUtc.Value.Kind == DateTimeKind.Utc && ExpiresAtUtc.Value > IssuedAtUtc))
+                && (LicenseType != "TIME_LIMITED" || (ExpiresAtUtc.HasValue
+                    && ExpiresAtUtc.Value.Kind == DateTimeKind.Utc
+                    && ExpiresAtUtc.Value.Ticks % TimeSpan.TicksPerMillisecond == 0
+                    && ExpiresAtUtc.Value > IssuedAtUtc))
                 && Features != null
                 && Features.Length > 0
                 && Features.Length <= 32
