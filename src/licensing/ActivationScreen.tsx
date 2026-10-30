@@ -82,7 +82,7 @@ export default function ActivationScreen({ status, onActivated }: Props) {
 
       <h2>1. Affichez cette demande sur le téléphone administrateur</h2>
       {requestQr ? <div className="license-qr"><QRCodeSVG value={requestQr} size={250} level="H" includeMargin /></div> : <p className="license-muted">Préparation du QR de demande…</p>}
-      <p className="license-muted">Ouvrez l’application Android License Admin et scannez ce code. L’administrateur choisira ensuite la durée de la licence.</p>
+      <p className="license-muted">Ouvrez l’application Android License Admin et scannez ce code. L’administrateur choisira ensuite la durée de la licence. Le QR expire après 20 minutes ; rechargez cette page pour générer une nouvelle demande.</p>
 
       <h2>2. Scannez le QR de réponse</h2>
       <div className="license-response-scanner"><ResponseQrScanner onDecoded={onDecoded} onError={onScannerError} /></div>
