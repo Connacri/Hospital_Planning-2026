@@ -42,7 +42,16 @@ The current verifier accepts an injected dictionary of version -> 32-byte raw pu
     supabase db push
     supabase functions deploy issue-license --project-ref YOUR_PROJECT_REF
 
-Provision an administrator by creating the user in Supabase Auth, then inserting that user's UUID into public.license_admins with role owner or issuer through a trusted SQL session.
+Provision an administrator by creating the user in Supabase Auth, then inserting that user's UUID into public.license_admins through a trusted SQL session.
+
+Example for the first owner account (replace the UUID with the Auth user's actual id):
+
+    insert into public.license_admins (user_id, role, active)
+    values ('00000000-0000-4000-8000-000000000000', 'owner', true)
+    on conflict (user_id) do update
+      set role = excluded.role, active = true;
+
+Assign issuer or viewer to subsequent accounts as appropriate. Perpetual/custom issuance and revocation are owner-only.
 
 Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in admin-android/.env before building the admin APK. These are public client settings; do not use the service-role key here.
 
