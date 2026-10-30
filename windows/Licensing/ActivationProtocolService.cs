@@ -52,7 +52,9 @@ namespace EHAinElTurck.Plannings.Licensing
                     return new LicenseEvaluation(LicenseState.ClockTampered, "CLOCK_ROLLBACK_DETECTED");
             }
             catch { return new LicenseEvaluation(LicenseState.ClockTampered, "CLOCK_GUARD_UNAVAILABLE"); }
-            LicenseActivationRequest pending = _pending.Load();
+            LicenseActivationRequest pending;
+            try { pending = _pending.Load(); }
+            catch { return new LicenseEvaluation(LicenseState.Invalid, "PENDING_ACTIVATION_STORAGE_INVALID"); }
             if (pending == null) return new LicenseEvaluation(LicenseState.Invalid, "NO_PENDING_ACTIVATION_REQUEST");
 
             TimeSpan age = utcNow - pending.CreatedAtUtc;
